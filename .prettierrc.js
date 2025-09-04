@@ -5,9 +5,9 @@ module.exports = {
   singleQuote: true,
   trailingComma: 'all',
   plugins: [
+    'prettier-plugin-organize-imports',
     '@ianvs/prettier-plugin-sort-imports',
-    'prettier-plugin-unused-imports-configurable',
-    'prettier-plugin-tailwindcss',
+    'prettier-plugin-tailwindcss', // MUST come last
   ],
   importOrder: [
     '^react',
