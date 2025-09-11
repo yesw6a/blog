@@ -1,0 +1,16 @@
+.section {
+  p {
+    @apply my-2;
+  }
+
+  .link {
+    @apply cursor-pointer;
+    &:hover {
+      @apply text-theme_primary underline;
+    }
+  }
+
+  .game-item {
+    @apply my-2 flex h-11 items-center rounded px-2;
+  }
+}

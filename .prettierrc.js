@@ -21,7 +21,6 @@ module.exports = {
     '',
     '',
     '^[.]((?!.s?css$|.less$).)*$',
-    '',
     '(.s?css|.less)$',
   ],
   importOrderSafeSideEffects: ['\\.(css|less|scss|sass)$'],
