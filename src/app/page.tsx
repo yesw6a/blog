@@ -2,7 +2,7 @@
 
 import IconDNF from '@/assets/img/icon-dnf.webp';
 import IconLOL from '@/assets/img/icon-lol.png';
-import { PageTitle, TextKeyword } from '@/components';
+import { PageTitle, SteamIcon, TextKeyword } from '@/components';
 import { useRequest } from 'ahooks';
 import classNames from 'classnames';
 import Image from 'next/image';
@@ -48,10 +48,6 @@ export default function Home() {
       return `${minutes} 分钟`;
     }
     return `${hours} 小时 ${minutes} 分钟`;
-  };
-
-  const genSteamIconUrl = (appid: number, hash: string) => {
-    return `https://wsrv.nl/?url=http://media.steampowered.com/steamcommunity/public/images/apps/${appid}/${hash}.jpg`;
   };
 
   return (
@@ -116,14 +112,7 @@ export default function Home() {
                 key={game.appid}
                 className={classNames(styles['game-item'], 'hover:bg-gray-200 hover:dark:bg-white/10')}
               >
-                <Image
-                  src={genSteamIconUrl(game.appid, game.img_icon_url)}
-                  className="rounded"
-                  width={32}
-                  height={32}
-                  alt={game.name}
-                  referrerPolicy="no-referrer"
-                />
+                <SteamIcon appid={game.appid} hash={game.img_icon_url} className="rounded" width={32} height={32} />
                 <div className="ml-2">{game.name}</div>
                 <div className="flex-1" />
                 <div>{formatSteamGamePlayedTime(game.playtime_2weeks)}</div>
