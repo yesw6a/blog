@@ -29,6 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning>
+      <meta name="referrer" content="no-referrer" />
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class">
           <AppLayout>{children}</AppLayout>
