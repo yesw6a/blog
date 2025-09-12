@@ -51,7 +51,7 @@ export default function Home() {
   };
 
   const genSteamIconUrl = (appid: number, hash: string) => {
-    return `http://media.steampowered.com/steamcommunity/public/images/apps/${appid}/${hash}.jpg`;
+    return `https://wsrv.nl/?url=http://media.steampowered.com/steamcommunity/public/images/apps/${appid}/${hash}.jpg`;
   };
 
   return (

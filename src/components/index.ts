@@ -1,4 +1,3 @@
-export { default as SteamIcon } from './steam-icon';
 export {
   default as DropdownMenu,
   DropdownMenuContent,
