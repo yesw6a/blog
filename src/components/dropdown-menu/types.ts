@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 
+import type { StyleXStyles } from '@stylexjs/stylex';
+
 export type DropdownMenuProps = {
   children: ReactNode;
   open?: boolean;
@@ -16,18 +18,18 @@ export type DropdownMenuContentProps = {
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'right' | 'bottom' | 'left';
   sideOffset?: number;
-  className?: string;
+  style?: StyleXStyles;
 };
 
 export type DropdownMenuItemProps = {
   children: ReactNode;
   onClick?: () => void;
   disabled?: boolean;
-  className?: string;
+  style?: StyleXStyles;
 };
 
 export type DropdownMenuSeparatorProps = {
-  className?: string;
+  style?: StyleXStyles;
 };
 
 export type DropdownMenuContext = {

@@ -1,6 +1,7 @@
+import type { StyleXStyles } from '@stylexjs/stylex';
 import type { ReactNode } from 'react';
 
 export type PageTitleProps = {
   children: ReactNode;
-  className?: string;
+  style?: StyleXStyles;
 };

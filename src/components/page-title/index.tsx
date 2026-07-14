@@ -1,12 +1,24 @@
 'use client';
 
-import classNames from 'classnames';
-import { usePathname, useRouter } from 'next/navigation';
 import { FC } from 'react';
-import styles from './index.module.scss';
+
+import { usePathname, useRouter } from 'next/navigation';
+import * as stylex from '@stylexjs/stylex';
+
 import { PageTitleProps } from './types';
 
-const PageTitle: FC<PageTitleProps> = ({ children, className }) => {
+const styles = stylex.create({
+  title: {
+    width: 'fit-content',
+    cursor: 'pointer',
+    fontSize: '1.25rem',
+    fontWeight: 700,
+    textDecorationLine: 'underline',
+    textUnderlineOffset: '4px',
+  },
+});
+
+const PageTitle: FC<PageTitleProps> = ({ children, style }) => {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -17,7 +29,7 @@ const PageTitle: FC<PageTitleProps> = ({ children, className }) => {
   };
 
   return (
-    <h1 className={classNames(styles['title'], className)} onClick={handleClick}>
+    <h1 {...stylex.props(styles.title, style)} onClick={handleClick}>
       {children}
     </h1>
   );

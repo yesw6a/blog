@@ -1,11 +1,21 @@
 'use client';
 
 import { createContext, FC, useContext, useRef, useState } from 'react';
+
+import * as stylex from '@stylexjs/stylex';
+
 import DropdownMenuContent from './dropdown-menu-content';
 import DropdownMenuTrigger from './dropdown-menu-trigger';
 import { DropdownMenuContext, DropdownMenuProps } from './types';
 
 const DropdownMenuContextProvider = createContext<DropdownMenuContext | null>(null);
+
+const styles = stylex.create({
+  root: {
+    position: 'relative',
+    display: 'inline-block',
+  },
+});
 
 export const useDropdownMenu = () => {
   const context = useContext(DropdownMenuContextProvider);
@@ -39,7 +49,7 @@ const DropdownMenu: FC<DropdownMenuProps> = ({ children, open: controlledOpen, o
 
   return (
     <DropdownMenuContextProvider.Provider value={contextValue}>
-      <div className="relative inline-block">{children}</div>
+      <div {...stylex.props(styles.root)}>{children}</div>
     </DropdownMenuContextProvider.Provider>
   );
 };

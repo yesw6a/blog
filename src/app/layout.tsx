@@ -1,26 +1,21 @@
 import type { Metadata } from 'next';
 
-import { Geist, Geist_Mono } from 'next/font/google';
-
-import AppLayout from '@/layouts/app-layout';
 import { ThemeProvider } from 'next-themes';
+import AppLayout from '@/layouts/app-layout';
+import * as stylex from '@stylexjs/stylex';
+
 import './globals.css';
-import './tailwind.css';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 
 export const metadata: Metadata = {
   title: '我的博客',
   description: '基于 Next.js 构建的现代化博客应用',
 };
+
+const styles = stylex.create({
+  body: {
+    minHeight: '100dvh',
+  },
+});
 
 export default function RootLayout({
   children,
@@ -29,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body {...stylex.props(styles.body)}>
         <ThemeProvider attribute="class">
           <AppLayout>{children}</AppLayout>
         </ThemeProvider>

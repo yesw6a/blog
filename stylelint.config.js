@@ -1,39 +1,11 @@
 module.exports = {
-  extends: ['stylelint-config-standard', 'stylelint-config-recess-order'],
+  extends: ['stylelint-config-recommended', 'stylelint-config-recess-order'],
   plugins: ['stylelint-order', 'stylelint-prettier'],
-  overrides: [
-    {
-      files: ['**/*.(css|tsx|jsx)'],
-      customSyntax: 'postcss-html',
-    },
-    {
-      files: ['*.scss', '**/*.scss'],
-      customSyntax: 'postcss-scss',
-      extends: ['stylelint-config-standard-scss'],
-    },
-  ],
   rules: {
     'prettier/prettier': true,
     'selector-class-pattern': null,
     'no-descending-specificity': null,
-    'at-rule-no-unknown': [
-      true,
-      {
-        ignoreAtRules: [
-          'tailwind',
-          'apply',
-          'variants',
-          'responsive',
-          'screen',
-          'function',
-          'if',
-          'each',
-          'include',
-          'mixin',
-          'use',
-        ],
-      },
-    ],
+    'at-rule-no-unknown': [true, { ignoreAtRules: ['stylex'] }],
     'unit-no-unknown': [true, { ignoreUnits: ['rpx'] }],
     'order/order': [
       [

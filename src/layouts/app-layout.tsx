@@ -1,24 +1,33 @@
 'use client';
 
-import { NavigationItem } from '@/components';
+import { useEffect, useRef, useState } from 'react';
+
+import type { IconName } from '@/components';
+
 import { useScroll } from 'ahooks';
-import classNames from 'classnames';
 import { useTheme } from 'next-themes';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import styles from './app-layout.module.scss';
+import { Icon, NavigationItem } from '@/components';
+import { colors, darkTheme } from '@/styles/tokens.stylex';
+import * as stylex from '@stylexjs/stylex';
 
 type AppLayoutProps = {
   children: React.ReactNode;
 };
 
+const ROUTES: ReadonlyArray<{ label: string; key: string; icon: IconName; path: string }> = [
+  { label: '首页', key: 'home', icon: 'home', path: '/' },
+  { label: '博客组件', key: 'storybook', icon: 'components', path: '/storybook' },
+];
+
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
 
   // 滚动容器引用
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const navigationContainerRef = useRef<HTMLDivElement>(null);
 
   const [mounted, setMounted] = useState(false);
 
@@ -57,11 +66,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setLastScrollTop(currentScrollTop);
   }, [pageScroll, lastScrollTop]);
 
-  const ROUTES = [
-    { label: '首页', key: 'home', icon: 'icon-[hugeicons--home-01]', path: '/' },
-    { label: '博客组件', key: 'storybook', icon: 'icon-[hugeicons--3rd-bracket-square]', path: '/storybook' },
-  ];
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -76,49 +80,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     // 计算滑动指示器的位置和宽度
     const updateSlidePosition = () => {
-      const button = document.querySelector(`[data-nav-index="${activeIndex}"]`) as HTMLElement;
+      const container = navigationContainerRef.current;
+      const button = container?.querySelector(`[data-nav-index="${activeIndex}"]`) as HTMLElement | null;
 
-      if (button) {
-        // 由于按钮被Tooltip包裹，需要查找真正的导航容器
-        // 首先尝试使用精确的CSS选择器
-        let container = button.closest('div.relative.flex.flex-1.items-center') as HTMLElement;
+      if (button && container) {
+        const buttonRect = button.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
 
-        if (!container) {
-          // 如果没有找到，尝试查找包含多个按钮的父容器
-          let currentElement = button.parentElement;
-          let attempts = 0;
-          const maxAttempts = 5; // 防止无限循环
+        // 计算背景滑动指示器位置
+        const leftPosition = buttonRect.left - containerRect.left;
 
-          while (currentElement && attempts < maxAttempts) {
-            // 检查是否包含多个 data-nav-index 元素
-            const navButtons = currentElement.querySelectorAll('[data-nav-index]');
-            if (navButtons.length > 1) {
-              container = currentElement;
-              break;
-            }
-            currentElement = currentElement.parentElement;
-            attempts++;
-          }
-        }
+        // 确保位置值是有效的
+        if (buttonRect.width > 0) {
+          setSlidePosition(leftPosition);
+          setSlideWidth(buttonRect.width);
 
-        if (container) {
-          const buttonRect = button.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-
-          // 计算背景滑动指示器位置
-          const leftPosition = buttonRect.left - containerRect.left;
-
-          // 确保位置值是有效的
-          if (buttonRect.width > 0) {
-            setSlidePosition(leftPosition);
-            setSlideWidth(buttonRect.width);
-
-            // 计算底部指示器位置
-            const buttonCenter = leftPosition + buttonRect.width / 2;
-            const indicatorWidth = 24;
-            setBottomIndicatorPosition(buttonCenter - indicatorWidth / 2);
-            setBottomIndicatorWidth(indicatorWidth);
-          }
+          // 计算底部指示器位置
+          const buttonCenter = leftPosition + buttonRect.width / 2;
+          const indicatorWidth = 24;
+          setBottomIndicatorPosition(buttonCenter - indicatorWidth / 2);
+          setBottomIndicatorWidth(indicatorWidth);
         }
       }
     };
@@ -130,7 +111,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       const maxRetries = 5;
 
       const tryUpdate = () => {
-        const button = document.querySelector(`[data-nav-index="${activeIndex}"]`);
+        const button = navigationContainerRef.current?.querySelector(`[data-nav-index="${activeIndex}"]`);
         if (button) {
           updateSlidePosition();
         } else if (retryCount < maxRetries) {
@@ -152,7 +133,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   if (!mounted) {
     // SSR 时渲染的内容，避免水合不一致
-    return <div className="flex h-screen w-screen items-center justify-center">主题加载中...</div>;
+    return <div {...stylex.props(styles.loading)}>主题加载中...</div>;
   }
 
   const goPage = (path: string, index: number) => {
@@ -174,22 +155,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return path === pathname;
   };
 
+  const isDark = resolvedTheme === 'dark';
+  const rootStyleProps = stylex.props(styles.root, isDark && darkTheme);
+
   return (
-    <div ref={scrollContainerRef} className="relative h-screen w-screen overflow-y-auto bg-primary">
-      <div className="layout mx-auto h-full w-1/2">
+    <div ref={scrollContainerRef} {...rootStyleProps}>
+      <div {...stylex.props(styles.layout)}>
         {/* 顶部导航栏 */}
         <div
           data-visible={showMenuTop}
-          className={classNames([
-            styles['menu-top'],
-            'fixed top-5 z-50 flex h-14 w-[calc(50%-10px)] items-center rounded-full bg-white px-8 shadow transition-transform dark:border-[1px] dark:border-solid dark:border-white/10 dark:bg-gray-800',
-          ])}
+          {...stylex.props(styles.menuTop, showMenuTop ? styles.menuVisible : styles.menuHidden)}
         >
           {/* 左侧导航 */}
-          <div className="relative flex flex-1 items-center gap-6">
+          <div ref={navigationContainerRef} {...stylex.props(styles.navigation)}>
             {/* 滑动背景指示器 */}
             <div
-              className="absolute top-1/2 h-12 -translate-y-1/2 rounded-full bg-theme_primary/10 transition-all duration-500 ease-out"
+              {...stylex.props(styles.slideIndicator)}
               style={{
                 left: `${slidePosition}px`,
                 width: `${slideWidth}px`,
@@ -198,7 +179,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             />
             {/* 统一的滑动底部指示器 */}
             <div
-              className="absolute -bottom-[5px] h-px rounded-full bg-gradient-to-r from-theme_primary/0 via-theme_primary to-theme_primary/0 transition-all duration-500 ease-out"
+              {...stylex.props(styles.bottomIndicator)}
               style={{
                 left: `${bottomIndicatorPosition}px`,
                 width: `${bottomIndicatorWidth}px`,
@@ -218,20 +199,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
             ))}
           </div>
           {/* 右侧主题切换 */}
-          <div className="flex cursor-pointer items-center text-2xl hover:text-theme_primary">
-            {theme === 'light' ? (
-              <span className="icon-[hugeicons--moon-02]" onClick={() => setTheme('dark')} />
-            ) : (
-              <span className="icon-[hugeicons--sun-01]" onClick={() => setTheme('light')} />
-            )}
-          </div>
+          <button
+            type="button"
+            {...stylex.props(styles.themeToggle)}
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            aria-label={isDark ? '切换到浅色主题' : '切换到深色主题'}
+          >
+            <Icon name={isDark ? 'sun' : 'moon'} />
+          </button>
         </div>
 
         {/* 主要内容区域 */}
-        <div className="min-h-full flex-1 overflow-hidden pt-[120]">
-          <div className="h-full transform-gpu overflow-auto transition-all duration-500 ease-out">
+        <div {...stylex.props(styles.main)}>
+          <div {...stylex.props(styles.contentViewport)}>
             <div
-              className="transform-gpu transition-all duration-500 ease-out"
+              {...stylex.props(styles.content)}
               style={{
                 transform: `translateX(${activeIndex * -2}px)`,
                 opacity: 1,
@@ -243,8 +225,140 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         {/* 底部导航栏 */}
-        <div className="py-10 text-center text-gray-500">兮兮 © {new Date().getFullYear()}</div>
+        <div {...stylex.props(styles.footer)}>兮兮 © {new Date().getFullYear()}</div>
       </div>
     </div>
   );
 }
+
+const motionDuration = {
+  default: '500ms',
+  '@media (prefers-reduced-motion: reduce)': '0ms',
+} as const;
+
+const styles = stylex.create({
+  loading: {
+    display: 'flex',
+    width: '100vw',
+    height: '100dvh',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  root: {
+    position: 'relative',
+    width: '100vw',
+    height: '100dvh',
+    overflowY: 'auto',
+    backgroundColor: colors.canvas,
+  },
+  layout: {
+    width: '50%',
+    height: '100%',
+    marginInline: 'auto',
+  },
+  menuTop: {
+    position: 'fixed',
+    top: '1.25rem',
+    zIndex: 50,
+    display: 'flex',
+    width: 'calc(50% - 10px)',
+    height: '3.5rem',
+    alignItems: 'center',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors.navigationBorder,
+    borderRadius: '9999px',
+    backgroundColor: colors.navigationSurface,
+    paddingInline: '2rem',
+    boxShadow: '0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%)',
+    transitionProperty: 'transform',
+  },
+  menuVisible: {
+    transform: 'translateY(0)',
+    transitionDuration: {
+      default: '100ms',
+      '@media (prefers-reduced-motion: reduce)': '0ms',
+    },
+  },
+  menuHidden: {
+    transform: 'translateY(-7rem)',
+    transitionDuration: {
+      default: '300ms',
+      '@media (prefers-reduced-motion: reduce)': '0ms',
+    },
+  },
+  navigation: {
+    position: 'relative',
+    display: 'flex',
+    flex: 1,
+    alignItems: 'center',
+    gap: '1.5rem',
+  },
+  slideIndicator: {
+    position: 'absolute',
+    top: '50%',
+    height: '3rem',
+    borderRadius: '9999px',
+    backgroundColor: colors.primaryTransparent10,
+    transform: 'translateY(-50%)',
+    transitionProperty: 'all',
+    transitionDuration: motionDuration,
+    transitionTimingFunction: 'ease-out',
+  },
+  bottomIndicator: {
+    position: 'absolute',
+    bottom: '-5px',
+    height: '1px',
+    borderRadius: '9999px',
+    backgroundImage: `linear-gradient(to right, ${colors.primaryTransparent}, ${colors.primary}, ${colors.primaryTransparent})`,
+    transitionProperty: 'all',
+    transitionDuration: motionDuration,
+    transitionTimingFunction: 'ease-out',
+  },
+  themeToggle: {
+    display: 'flex',
+    minWidth: '44px',
+    minHeight: '44px',
+    cursor: 'pointer',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '9999px',
+    backgroundColor: 'transparent',
+    color: {
+      default: 'inherit',
+      ':hover': colors.primary,
+    },
+    fontSize: '1.5rem',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primary}`,
+    },
+    outlineOffset: {
+      default: null,
+      ':focus-visible': '2px',
+    },
+  },
+  main: {
+    minHeight: '100%',
+    flexGrow: 1,
+    overflow: 'hidden',
+    paddingTop: '120px',
+  },
+  contentViewport: {
+    height: '100%',
+    overflow: 'auto',
+    transitionProperty: 'all',
+    transitionDuration: motionDuration,
+    transitionTimingFunction: 'ease-out',
+  },
+  content: {
+    transitionProperty: 'all',
+    transitionDuration: motionDuration,
+    transitionTimingFunction: 'ease-out',
+  },
+  footer: {
+    paddingBlock: '2.5rem',
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+});

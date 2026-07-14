@@ -1,9 +1,0 @@
-.menu-top {
-  &[data-visible='true'] {
-    @apply translate-y-0 duration-100;
-  }
-
-  &[data-visible='false'] {
-    @apply -translate-y-28 duration-300;
-  }
-}

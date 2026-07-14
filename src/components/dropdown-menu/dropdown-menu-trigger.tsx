@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
+
+import { colors } from '@/styles/tokens.stylex';
+import * as stylex from '@stylexjs/stylex';
+
 import { useDropdownMenu } from './index';
 import { DropdownMenuTriggerProps } from './types';
 
-const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({ 
-  children, 
-  asChild = false 
-}) => {
+const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({ children, asChild = false }) => {
   const { open, setOpen, triggerRef } = useDropdownMenu();
 
   const handleClick = () => {
@@ -22,7 +23,6 @@ const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({
   };
 
   if (asChild && React.isValidElement(children)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const childProps = children.props as any;
     return React.cloneElement(children, {
       ...childProps,
@@ -57,11 +57,41 @@ const DropdownMenuTrigger: React.FC<DropdownMenuTriggerProps> = ({
       onKeyDown={handleKeyDown}
       aria-expanded={open}
       aria-haspopup="menu"
-      className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-theme_primary focus:ring-offset-2"
+      {...stylex.props(styles.trigger)}
     >
       {children}
     </button>
   );
 };
+
+const styles = stylex.create({
+  trigger: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: '#d1d5db',
+    borderRadius: '0.375rem',
+    backgroundColor: {
+      default: '#ffffff',
+      ':hover': '#f9fafb',
+    },
+    paddingBlock: '0.5rem',
+    paddingInline: '1rem',
+    color: '#374151',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    boxShadow: '0 1px 2px 0 rgb(0 0 0 / 5%)',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primary}`,
+    },
+    outlineOffset: {
+      default: null,
+      ':focus-visible': '2px',
+    },
+  },
+});
 
 export default DropdownMenuTrigger;

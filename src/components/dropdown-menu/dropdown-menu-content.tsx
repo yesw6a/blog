@@ -1,7 +1,11 @@
 'use client';
 
-import classNames from 'classnames';
 import React, { useEffect } from 'react';
+
+import type { CSSProperties } from 'react';
+
+import * as stylex from '@stylexjs/stylex';
+
 import { useDropdownMenu } from './index';
 import { DropdownMenuContentProps } from './types';
 
@@ -10,7 +14,7 @@ const DropdownMenuContent: React.FC<DropdownMenuContentProps> = ({
   align = 'start',
   side = 'bottom',
   sideOffset = 4,
-  className,
+  style,
 }) => {
   const { open, setOpen, triggerRef, contentRef } = useDropdownMenu();
 
@@ -46,34 +50,49 @@ const DropdownMenuContent: React.FC<DropdownMenuContentProps> = ({
 
   if (!open) return null;
 
-  const getPositionClasses = () => {
-    const alignClasses = {
-      start: 'left-0',
-      center: 'left-1/2 -translate-x-1/2',
-      end: 'right-0',
-    };
+  const getPositionStyle = (): CSSProperties => {
+    const position: CSSProperties = {};
 
-    const sideClasses = {
-      top: `bottom-full mb-${sideOffset}`,
-      bottom: `top-full mt-${sideOffset}`,
-      left: `right-full mr-${sideOffset}`,
-      right: `left-full ml-${sideOffset}`,
-    };
+    if (side === 'top') {
+      position.bottom = '100%';
+      position.marginBottom = sideOffset;
+    } else if (side === 'bottom') {
+      position.top = '100%';
+      position.marginTop = sideOffset;
+    } else if (side === 'left') {
+      position.right = '100%';
+      position.marginRight = sideOffset;
+    } else {
+      position.left = '100%';
+      position.marginLeft = sideOffset;
+    }
 
-    return `${alignClasses[align]} ${sideClasses[side]}`;
+    if (side === 'top' || side === 'bottom') {
+      if (align === 'start') position.left = 0;
+      if (align === 'center') {
+        position.left = '50%';
+        position.transform = 'translateX(-50%)';
+      }
+      if (align === 'end') position.right = 0;
+    } else {
+      if (align === 'start') position.top = 0;
+      if (align === 'center') {
+        position.top = '50%';
+        position.transform = 'translateY(-50%)';
+      }
+      if (align === 'end') position.bottom = 0;
+    }
+
+    return position;
   };
 
-  const contentClasses = classNames(
-    'absolute z-50 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white p-1 text-gray-900 shadow-lg',
-    'animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-    getPositionClasses(),
-    className,
-  );
+  const styleProps = stylex.props(styles.content, style);
 
   return (
     <div
       ref={contentRef as React.RefObject<HTMLDivElement>}
-      className={contentClasses}
+      className={styleProps.className}
+      style={{ ...styleProps.style, ...getPositionStyle() }}
       data-side={side}
       role="menu"
       aria-orientation="vertical"
@@ -82,5 +101,33 @@ const DropdownMenuContent: React.FC<DropdownMenuContentProps> = ({
     </div>
   );
 };
+
+const appear = stylex.keyframes({
+  from: { opacity: 0, scale: 0.95 },
+  to: { opacity: 1, scale: 1 },
+});
+
+const styles = stylex.create({
+  content: {
+    position: 'absolute',
+    zIndex: 50,
+    minWidth: '8rem',
+    overflow: 'hidden',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: '#e5e7eb',
+    borderRadius: '0.375rem',
+    backgroundColor: '#ffffff',
+    padding: '0.25rem',
+    color: '#111827',
+    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%)',
+    animationName: appear,
+    animationDuration: {
+      default: '200ms',
+      '@media (prefers-reduced-motion: reduce)': '0ms',
+    },
+    animationTimingFunction: 'ease-out',
+  },
+});
 
 export default DropdownMenuContent;

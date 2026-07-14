@@ -4,11 +4,7 @@ module.exports = {
   semi: true,
   singleQuote: true,
   trailingComma: 'all',
-  plugins: [
-    'prettier-plugin-organize-imports',
-    '@ianvs/prettier-plugin-sort-imports',
-    'prettier-plugin-tailwindcss', // MUST come last
-  ],
+  plugins: ['prettier-plugin-organize-imports', '@ianvs/prettier-plugin-sort-imports'],
   importOrder: [
     '^react',
     '',
@@ -20,8 +16,8 @@ module.exports = {
     '^@/(.*)',
     '',
     '',
-    '^[.]((?!.s?css$|.less$).)*$',
-    '(.s?css|.less)$',
+    '^[.]((?!.css$|.less$).)*$',
+    '(.css|.less)$',
   ],
-  importOrderSafeSideEffects: ['\\.(css|less|scss|sass)$'],
+  importOrderSafeSideEffects: ['\\.(css|less)$'],
 };

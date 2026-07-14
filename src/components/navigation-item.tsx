@@ -1,12 +1,16 @@
 'use client';
 
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components';
-import classNames from 'classnames';
 import { memo, useCallback } from 'react';
+
+import type { IconName } from '@/components';
+
+import { Icon, Tooltip, TooltipContent, TooltipTrigger } from '@/components';
+import { colors } from '@/styles/tokens.stylex';
+import * as stylex from '@stylexjs/stylex';
 
 interface NavigationItemProps {
   label: string;
-  icon: string;
+  icon: IconName;
   path: string;
   index: number;
   isActive: boolean;
@@ -21,23 +25,17 @@ const NavigationItem = memo(
 
     return (
       <Tooltip key={`nav-${index}-${isActive ? 'active' : 'inactive'}`}>
-        <TooltipTrigger>
-          <div
+        <TooltipTrigger asChild>
+          <button
+            type="button"
             data-nav-index={index}
-            className={classNames({
-              'relative z-10 flex transform-gpu items-center rounded-full p-3 text-2xl transition-all duration-300 ease-in-out hover:scale-105 hover:text-theme_primary': true,
-              'scale-105 text-theme_primary': isActive,
-            })}
+            {...stylex.props(styles.item, isActive && styles.itemActive)}
             onClick={handleClick}
+            aria-current={isActive ? 'page' : undefined}
+            aria-label={label}
           >
-            <span
-              className={classNames(
-                icon,
-                'transition-all duration-200 ease-in-out',
-                isActive ? 'scale-110' : 'scale-100',
-              )}
-            ></span>
-          </div>
+            <Icon name={icon} style={[styles.icon, isActive && styles.iconActive]} />
+          </button>
         </TooltipTrigger>
         <TooltipContent hideArrow>{label}</TooltipContent>
       </Tooltip>
@@ -56,5 +54,60 @@ const NavigationItem = memo(
 );
 
 NavigationItem.displayName = 'NavigationItem';
+
+const styles = stylex.create({
+  item: {
+    position: 'relative',
+    zIndex: 10,
+    display: 'flex',
+    minWidth: '48px',
+    minHeight: '48px',
+    cursor: 'pointer',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '9999px',
+    backgroundColor: 'transparent',
+    padding: '0.75rem',
+    color: {
+      default: 'inherit',
+      ':hover': colors.primary,
+    },
+    fontSize: '1.5rem',
+    transform: {
+      default: 'scale(1)',
+      ':hover': 'scale(1.05)',
+    },
+    transitionProperty: 'color, transform',
+    transitionDuration: {
+      default: '300ms',
+      '@media (prefers-reduced-motion: reduce)': '0ms',
+    },
+    transitionTimingFunction: 'ease-in-out',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primary}`,
+    },
+    outlineOffset: {
+      default: null,
+      ':focus-visible': '2px',
+    },
+  },
+  itemActive: {
+    color: colors.primary,
+    transform: 'scale(1.05)',
+  },
+  icon: {
+    transform: 'scale(1)',
+    transitionProperty: 'transform',
+    transitionDuration: {
+      default: '200ms',
+      '@media (prefers-reduced-motion: reduce)': '0ms',
+    },
+    transitionTimingFunction: 'ease-in-out',
+  },
+  iconActive: {
+    transform: 'scale(1.1)',
+  },
+});
 
 export default NavigationItem;

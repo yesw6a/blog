@@ -1,9 +1,19 @@
 'use client';
 
 import { createContext, FC, useContext, useRef, useState } from 'react';
+
+import * as stylex from '@stylexjs/stylex';
+
 import { TooltipContext, TooltipProps } from './types';
 
 const TooltipContextProvider = createContext<TooltipContext | null>(null);
+
+const styles = stylex.create({
+  root: {
+    position: 'relative',
+    display: 'inline-block',
+  },
+});
 
 export const useTooltip = () => {
   const context = useContext(TooltipContextProvider);
@@ -38,7 +48,7 @@ const Tooltip: FC<TooltipProps> = ({ children, delayDuration = 700, open: contro
 
   return (
     <TooltipContextProvider.Provider value={contextValue}>
-      <div className="relative inline-block">{children}</div>
+      <div {...stylex.props(styles.root)}>{children}</div>
     </TooltipContextProvider.Provider>
   );
 };

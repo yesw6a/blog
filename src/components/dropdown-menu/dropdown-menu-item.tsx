@@ -1,16 +1,13 @@
 'use client';
 
-import classNames from 'classnames';
 import React from 'react';
+
+import * as stylex from '@stylexjs/stylex';
+
 import { useDropdownMenu } from './index';
 import { DropdownMenuItemProps } from './types';
 
-const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
-  children,
-  onClick,
-  disabled = false,
-  className,
-}) => {
+const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({ children, onClick, disabled = false, style }) => {
   const { setOpen } = useDropdownMenu();
 
   const handleClick = () => {
@@ -27,18 +24,9 @@ const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
     }
   };
 
-  const itemClasses = classNames(
-    'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none',
-    {
-      'pointer-events-none opacity-50': disabled,
-      'text-gray-900 focus:bg-gray-100 focus:text-gray-900 hover:bg-gray-100': !disabled,
-    },
-    className
-  );
-
   return (
     <div
-      className={itemClasses}
+      {...stylex.props(styles.item, disabled ? styles.disabled : styles.enabled, style)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="menuitem"
@@ -49,5 +37,32 @@ const DropdownMenuItem: React.FC<DropdownMenuItemProps> = ({
     </div>
   );
 };
+
+const styles = stylex.create({
+  item: {
+    position: 'relative',
+    display: 'flex',
+    cursor: 'default',
+    userSelect: 'none',
+    alignItems: 'center',
+    borderRadius: '0.125rem',
+    paddingBlock: '0.375rem',
+    paddingInline: '0.5rem',
+    fontSize: '0.875rem',
+    outline: 'none',
+  },
+  enabled: {
+    color: '#111827',
+    backgroundColor: {
+      default: 'transparent',
+      ':hover': '#f3f4f6',
+      ':focus': '#f3f4f6',
+    },
+  },
+  disabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
+  },
+});
 
 export default DropdownMenuItem;

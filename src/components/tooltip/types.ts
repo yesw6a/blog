@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 
+import type { StyleXStyles } from '@stylexjs/stylex';
+
 export type TooltipProps = {
   children: ReactNode;
   delayDuration?: number;
@@ -18,8 +20,8 @@ export type TooltipContentProps = {
   align?: 'start' | 'center' | 'end';
   sideOffset?: number;
   alignOffset?: number;
-  className?: string;
-  arrowClassName?: string;
+  style?: StyleXStyles;
+  arrowStyle?: StyleXStyles;
   hideArrow?: boolean;
 };
 

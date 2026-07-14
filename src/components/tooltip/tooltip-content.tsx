@@ -2,6 +2,9 @@
 
 import { FC, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import * as stylex from '@stylexjs/stylex';
+
 import { useTooltip } from './index';
 import { TooltipContentProps } from './types';
 
@@ -13,14 +16,43 @@ type PositionResult = {
   finalAlign: 'start' | 'center' | 'end';
 };
 
+const appear = stylex.keyframes({
+  from: { opacity: 0, transform: 'scale(0.95)' },
+  to: { opacity: 1, transform: 'scale(1)' },
+});
+
+const styles = stylex.create({
+  content: {
+    position: 'fixed',
+    zIndex: 50,
+    borderRadius: '0.375rem',
+    backgroundColor: '#0f172a',
+    paddingBlock: '0.375rem',
+    paddingInline: '0.75rem',
+    color: '#ffffff',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%)',
+    animationName: appear,
+    animationDuration: {
+      default: '200ms',
+      '@media (prefers-reduced-motion: reduce)': '0ms',
+    },
+    animationTimingFunction: 'ease-out',
+  },
+  arrow: {
+    pointerEvents: 'none',
+  },
+});
+
 const TooltipContent: FC<TooltipContentProps> = ({
   children,
   side = 'top',
   align = 'center',
   sideOffset = 8,
   alignOffset = 0,
-  className = '',
-  arrowClassName = '',
+  style,
+  arrowStyle,
   hideArrow = false,
 }) => {
   const { open, triggerRef, contentRef } = useTooltip();
@@ -41,7 +73,7 @@ const TooltipContent: FC<TooltipContentProps> = ({
     triggerRect: DOMRect,
     contentWidth: number,
     contentHeight: number,
-    testSide: Side
+    testSide: Side,
   ) => {
     const viewport = {
       width: window.innerWidth,
@@ -67,7 +99,7 @@ const TooltipContent: FC<TooltipContentProps> = ({
     contentWidth: number,
     contentHeight: number,
     testSide: Side,
-    testAlign: 'start' | 'center' | 'end'
+    testAlign: 'start' | 'center' | 'end',
   ): { x: number; y: number } => {
     let x = 0;
     let y = 0;
@@ -128,7 +160,7 @@ const TooltipContent: FC<TooltipContentProps> = ({
   const calculateOptimalPosition = (
     triggerRect: DOMRect,
     contentWidth: number,
-    contentHeight: number
+    contentHeight: number,
   ): PositionResult => {
     const viewport = {
       width: window.innerWidth,
@@ -143,7 +175,7 @@ const TooltipContent: FC<TooltipContentProps> = ({
 
     // 添加其他方向作为备选
     const allSides: Side[] = ['top', 'bottom', 'left', 'right'];
-    allSides.forEach(s => {
+    allSides.forEach((s) => {
       if (s !== side) {
         sidePreference.push(s);
       }
@@ -152,7 +184,7 @@ const TooltipContent: FC<TooltipContentProps> = ({
     // 对齐方式优先级
     const allAligns = ['start', 'center', 'end'] as const;
     const alignOptions: ('start' | 'center' | 'end')[] = [align];
-    allAligns.forEach(a => {
+    allAligns.forEach((a) => {
       if (a !== align) {
         alignOptions.push(a);
       }
@@ -167,13 +199,7 @@ const TooltipContent: FC<TooltipContentProps> = ({
           continue;
         }
 
-        const pos = calculatePositionForSide(
-          triggerRect,
-          contentWidth,
-          contentHeight,
-          testSide,
-          testAlign
-        );
+        const pos = calculatePositionForSide(triggerRect, contentWidth, contentHeight, testSide, testAlign);
 
         // 检查是否在视口范围内
         const inViewport =
@@ -194,13 +220,7 @@ const TooltipContent: FC<TooltipContentProps> = ({
     }
 
     // 如果没有找到完全合适的位置，使用用户指定的方向并调整到视口内
-    const fallbackPos = calculatePositionForSide(
-      triggerRect,
-      contentWidth,
-      contentHeight,
-      side,
-      align
-    );
+    const fallbackPos = calculatePositionForSide(triggerRect, contentWidth, contentHeight, side, align);
 
     return {
       x: Math.max(padding, Math.min(fallbackPos.x, viewport.width - contentWidth - padding)),
@@ -310,11 +330,14 @@ const TooltipContent: FC<TooltipContentProps> = ({
     return arrowStyle;
   };
 
+  const contentStyleProps = stylex.props(styles.content, style);
+  const arrowStyleProps = stylex.props(styles.arrow, arrowStyle);
   const content = (
     <div
       ref={contentRef}
-      className={`fade-in-0 zoom-in-95 fixed z-50 animate-in rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-md ${className}`}
+      className={contentStyleProps.className}
       style={{
+        ...contentStyleProps.style,
         left: position.x,
         top: position.y,
       }}
@@ -322,8 +345,8 @@ const TooltipContent: FC<TooltipContentProps> = ({
       {children}
       {!hideArrow && (
         <div
-          className={`tooltip-arrow ${arrowClassName}`}
-          style={getArrowPosition(position.finalSide)}
+          className={arrowStyleProps.className}
+          style={{ ...arrowStyleProps.style, ...getArrowPosition(position.finalSide) }}
         />
       )}
     </div>

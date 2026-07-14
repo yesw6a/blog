@@ -1,8 +1,8 @@
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-import { FlatCompat } from '@eslint/eslintrc';
 import prettierConfig from 'eslint-config-prettier';
+import { FlatCompat } from '@eslint/eslintrc';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,9 +12,22 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  {
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      '.codegraph/**',
+      '.archives/**',
+      'out/**',
+      'build/**',
+      'next-env.d.ts',
+      '.prettierrc.js',
+      'postcss.config.js',
+      'stylelint.config.js',
+    ],
+  },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
-    ignores: ['node_modules/**', '.next/**', 'out/**', 'build/**', 'next-env.d.ts'],
     ...prettierConfig,
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
