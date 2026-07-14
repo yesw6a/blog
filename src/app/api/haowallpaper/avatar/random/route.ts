@@ -1,32 +1,78 @@
-export const runtime = 'edge';
-
-import { imgByWsrv } from '@/utils';
 import * as cheerio from 'cheerio';
 import qs from 'query-string';
 
-export async function GET(request: Request) {
-  const { query } = qs.parseUrl(request.url);
-  const page = Math.ceil(Math.random() * 665);
-  const fetchUrl = qs.stringifyUrl({
-    url: `https://haowallpaper.com/headImgView`,
-    query: { page, sortType: 4, isSel: false, rows: 12, typeId: '553dff627434cc5683a776216c6045d2' },
+export const runtime = 'edge';
+
+const responseHeaders = {
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
+};
+
+const badGateway = (message: string) =>
+  new Response(message, {
+    status: 502,
+    headers: {
+      ...responseHeaders,
+      'Content-Type': 'text/plain; charset=utf-8',
+    },
   });
-  const html = await fetch(fetchUrl).then((res) => res.text());
-  // 加载 html
-  const $ = cheerio.load(html);
-  // 选中所有 class 为 img-box 的 div
-  const divs = $('div.img-box');
-  const urls: string[] = [];
-  divs.each((index: number, element: any) => {
-    const style = $(element).attr('style') || '';
-    const match = style.match(/background-image:\s*url\(['"]?(.*?)['"]?\)/i);
-    if (match && match[1]) {
-      urls.push(match[1]);
+
+export async function GET() {
+  try {
+    const page = Math.floor(Math.random() * 665) + 1;
+    const fetchUrl = qs.stringifyUrl({
+      url: 'https://haowallpaper.com/headImgView',
+      query: { page, sortType: 4, isSel: false, rows: 12, typeId: '553dff627434cc5683a776216c6045d2' },
+    });
+    const pageResponse = await fetch(fetchUrl, { cache: 'no-store' });
+
+    if (!pageResponse.ok) {
+      return badGateway('头像来源页面请求失败');
     }
-  });
-  const randomAvatar = urls[Math.floor(Math.random() * urls.length)];
-  const response = await fetch(imgByWsrv(randomAvatar, query));
-  const contentType = response.headers.get('content-type');
-  const imageBuffer = await response.arrayBuffer();
-  return new Response(Buffer.from(imageBuffer), { headers: { 'Content-Type': contentType || 'image/jpeg' } });
+
+    const html = await pageResponse.text();
+    const $ = cheerio.load(html);
+    const urls = new Set<string>();
+
+    $('.img-box').each((_index, element) => {
+      const src = $(element).attr('src');
+      const style = $(element).attr('style') || '';
+      const match = style.match(/background-image:\s*url\(['"]?(.*?)['"]?\)/i);
+      const imageUrl = src || match?.[1];
+
+      if (imageUrl) {
+        try {
+          const normalizedUrl = new URL(imageUrl, fetchUrl);
+          if (normalizedUrl.protocol === 'http:' || normalizedUrl.protocol === 'https:') {
+            urls.add(normalizedUrl.toString());
+          }
+        } catch {
+          // 忽略来源页面中的无效图片地址
+        }
+      }
+    });
+
+    const avatarUrls = Array.from(urls);
+
+    if (avatarUrls.length === 0) {
+      return badGateway('头像来源页面没有可用图片');
+    }
+
+    const randomAvatar = avatarUrls[Math.floor(Math.random() * avatarUrls.length)];
+    const imageResponse = await fetch(randomAvatar, { cache: 'no-store' });
+    const contentType = imageResponse.headers.get('content-type');
+
+    if (!imageResponse.ok || !imageResponse.body || !contentType?.toLowerCase().startsWith('image/')) {
+      return badGateway('头像图片请求失败');
+    }
+
+    return new Response(imageResponse.body, {
+      headers: {
+        ...responseHeaders,
+        'Content-Type': contentType,
+      },
+    });
+  } catch {
+    return badGateway('头像加载失败');
+  }
 }

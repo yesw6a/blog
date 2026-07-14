@@ -1,10 +1,3 @@
-export {
-  default as DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './dropdown-menu';
 export { default as Icon } from './icon';
 export type { IconName } from './icon';
 export { default as NavigationItem } from './navigation-item';

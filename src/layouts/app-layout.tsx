@@ -17,7 +17,6 @@ type AppLayoutProps = {
 
 const ROUTES: ReadonlyArray<{ label: string; key: string; icon: IconName; path: string }> = [
   { label: '首页', key: 'home', icon: 'home', path: '/' },
-  { label: '博客组件', key: 'storybook', icon: 'components', path: '/storybook' },
 ];
 
 export default function AppLayout({ children }: AppLayoutProps) {

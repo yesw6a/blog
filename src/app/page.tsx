@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useRequest } from 'ahooks';
 import Image from 'next/image';
@@ -11,8 +11,11 @@ import { useElementSpin } from '@/hooks';
 import { colors } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
-import { getAvatar } from './api/haowallpaper';
 import { getSteamRecentlyGames } from './api/steam';
+
+const AVATAR_SIZE = 160;
+const AVATAR_SRC = '/api/haowallpaper/avatar/random';
+const EMPTY_STEAM_GAMES = { total_count: 0, games: [] };
 
 export default function Home() {
   const TECHNOLOGY_STACK = [
@@ -26,40 +29,12 @@ export default function Home() {
     { name: '英雄联盟', icon: IconLOL },
   ];
 
-  const AVATAR_SIZE = 160;
-
   const avatarRef = useRef<HTMLDivElement>(null);
   const { isHovered, animationDuration, eventHandlers } = useElementSpin();
 
   const steamRecentlyGames = useRequest(getSteamRecentlyGames);
-  const { data: avatarBuffer } = useRequest(getAvatar, {
-    defaultParams: [{ params: { w: AVATAR_SIZE.toString(), h: AVATAR_SIZE.toString(), fit: 'cover' } }],
-  });
-
-  const [avatarUrl, setAvatarUrl] = useState<string>('');
-
-  const recentlySteamGames = useMemo(() => {
-    const steamGames = steamRecentlyGames.data;
-    const games = {
-      total_count: steamGames?.total_count || 0,
-      games: steamGames?.games || [],
-    };
-    return games;
-  }, [steamRecentlyGames]);
-
-  useEffect(() => {
-    if (avatarBuffer) {
-      const blob = new Blob([avatarBuffer]);
-      const url = URL.createObjectURL(blob);
-      setAvatarUrl(url);
-    }
-
-    return () => {
-      if (avatarUrl) {
-        URL.revokeObjectURL(avatarUrl);
-      }
-    };
-  }, [avatarBuffer]);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const recentlySteamGames = steamRecentlyGames.data ?? EMPTY_STEAM_GAMES;
 
   const handleLink = (link: string) => {
     window.open(link, '_blank');
@@ -93,10 +68,19 @@ export default function Home() {
           }}
           {...eventHandlers}
         >
-          {avatarUrl ? (
-            <Image src={avatarUrl} alt="" width={AVATAR_SIZE} height={AVATAR_SIZE} />
+          {avatarFailed ? (
+            <div aria-hidden {...stylex.props(styles.avatarPlaceholder)} />
           ) : (
-            <div {...stylex.props(styles.avatarPlaceholder)} style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }} />
+            <Image
+              {...stylex.props(styles.avatarImage)}
+              src={AVATAR_SRC}
+              alt="兮兮的头像"
+              width={AVATAR_SIZE}
+              height={AVATAR_SIZE}
+              onError={() => setAvatarFailed(true)}
+              priority
+              unoptimized
+            />
           )}
         </div>
         <PageTitle>关于我</PageTitle>
@@ -143,16 +127,22 @@ export default function Home() {
             </a>
           </span>
         </div>
+        {GAMES_NOT_STEAM.map((game, index) => (
+          <div key={index} {...stylex.props(styles.gameItem)}>
+            <Image src={game.icon} {...stylex.props(styles.gameIcon)} width={32} height={32} alt={game.name} />
+            <div {...stylex.props(styles.gameName)}>{game.name}</div>
+          </div>
+        ))}
         {steamRecentlyGames.loading ? (
-          <div>loading</div>
+          <div role="status" aria-live="polite" {...stylex.props(styles.gameStatus)}>
+            Steam 数据加载中...
+          </div>
+        ) : steamRecentlyGames.error ? (
+          <div role="status" aria-live="polite" {...stylex.props(styles.gameStatus)}>
+            Steam 数据暂时不可用
+          </div>
         ) : (
           <>
-            {GAMES_NOT_STEAM.map((game, index) => (
-              <div key={index} {...stylex.props(styles.gameItem)}>
-                <Image src={game.icon} {...stylex.props(styles.gameIcon)} width={32} height={32} alt={game.name} />
-                <div {...stylex.props(styles.gameName)}>{game.name}</div>
-              </div>
-            ))}
             {recentlySteamGames.games.map((game) => (
               <div key={game.appid} {...stylex.props(styles.gameItem)}>
                 <SteamIcon appid={game.appid} hash={game.img_icon_url} style={styles.gameIcon} width={32} height={32} />
@@ -173,6 +163,7 @@ const styles = stylex.create({
     marginBottom: '2rem',
     overflow: 'hidden',
     borderRadius: '9999px',
+    backgroundColor: colors.avatarPlaceholder,
   },
   avatarHovered: {
     transitionDelay: '1000ms',
@@ -183,7 +174,15 @@ const styles = stylex.create({
     },
   },
   avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
     backgroundColor: colors.avatarPlaceholder,
+  },
+  avatarImage: {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
   },
   paragraph: {
     marginBlock: '0.5rem',
@@ -242,6 +241,15 @@ const styles = stylex.create({
       ':hover': colors.gameHover,
     },
     paddingInline: '0.5rem',
+  },
+  gameStatus: {
+    display: 'flex',
+    minHeight: '2.75rem',
+    marginBlock: '0.5rem',
+    alignItems: 'center',
+    paddingInline: '0.5rem',
+    fontSize: '0.875rem',
+    opacity: 0.7,
   },
   gameIcon: {
     borderRadius: '0.25rem',

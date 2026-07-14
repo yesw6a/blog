@@ -14,3 +14,23 @@ export interface SteamRecentlyPlayedGame {
   total_count: number;
   games: SteamGame[];
 }
+
+export interface SteamOwnedGame {
+  appid: number;
+  playtime_forever: number;
+  playtime_windows_forever: number;
+  playtime_mac_forever: number;
+  playtime_linux_forever: number;
+  playtime_deck_forever: number;
+  rtime_last_played: number;
+  playtime_disconnected: number;
+}
+
+export interface SteamOwnedGames {
+  game_count: number;
+  games: SteamOwnedGame[];
+}
+
+export type SteamApiError = {
+  error: string;
+};
