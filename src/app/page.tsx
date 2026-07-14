@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
 import Image from 'next/image';
@@ -29,8 +29,7 @@ export default function Home() {
     { name: '英雄联盟', icon: IconLOL },
   ];
 
-  const avatarRef = useRef<HTMLDivElement>(null);
-  const { isHovered, animationDuration, eventHandlers } = useElementSpin();
+  const { elementRef: avatarRef, eventHandlers } = useElementSpin<HTMLDivElement>();
 
   const steamRecentlyGames = useRequest(getSteamRecentlyGames);
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -52,7 +51,7 @@ export default function Home() {
     return `${hours} 小时 ${minutes} 分钟`;
   };
 
-  const avatarStyleProps = stylex.props(styles.avatar, isHovered && styles.avatarHovered);
+  const avatarStyleProps = stylex.props(styles.avatar);
 
   return (
     <div>
@@ -64,7 +63,6 @@ export default function Home() {
             ...avatarStyleProps.style,
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
-            animationDuration: `${animationDuration}ms`,
           }}
           {...eventHandlers}
         >
@@ -164,14 +162,6 @@ const styles = stylex.create({
     overflow: 'hidden',
     borderRadius: '9999px',
     backgroundColor: colors.avatarPlaceholder,
-  },
-  avatarHovered: {
-    transitionDelay: '1000ms',
-    transitionProperty: 'all',
-    transitionDuration: {
-      default: '6000ms',
-      '@media (prefers-reduced-motion: reduce)': '0ms',
-    },
   },
   avatarPlaceholder: {
     width: '100%',

@@ -11,6 +11,7 @@
 - 将 Tailwind CSS 样式体系完整迁移到 StyleX。
 - 接入 StyleX 浅色/深色主题，并支持 Turbopack 构建时 CSS 提取。
 - 使用本地 SVG 图标替换 Iconify Tailwind 图标，并为组件提供类型化 StyleX 样式接口。
+- 为首页头像增加掘金风格的悬停旋转，使用 `250ms` 意图延迟和 `cubic-bezier(.34, 0, .84, 1)`，在 `1800ms` 内从 `60deg/s` 加速到 `900deg/s`。
 
 ### 🐛 Fix
 
@@ -35,4 +36,5 @@
 - TypeScript、ESLint、Stylelint、Turbopack 生产构建与 CodeGraph 同步全部通过。
 - `package.json`、`pnpm-lock.yaml`、CHANGELOG 内容与全仓 `git diff --check` 检查通过。
 - 当前完整工作区通过 Turbopack 生产构建，生成路由仅保留首页、404 与三个 API 路由，已不再包含 `/about` 和 `/storybook`。
+- 头像贝塞尔加速与 Hermite 归正曲线数值采样通过，角速度保持在 `0-900deg/s`，无反转或速度超限。
 - 生产构建仍提示 Browserslist 数据已过期，以及 Edge Runtime 会禁用对应页面静态生成；均为非阻塞提示。
