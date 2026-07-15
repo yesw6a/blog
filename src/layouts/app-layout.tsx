@@ -4,9 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { IconName } from '@/components';
 
-import { useScroll } from 'ahooks';
 import { useTheme } from 'next-themes';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Icon, NavigationItem } from '@/components';
 import { colors, darkTheme } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -17,172 +16,83 @@ type AppLayoutProps = {
 
 const ROUTES: ReadonlyArray<{ label: string; key: string; icon: IconName; path: string }> = [
   { label: '首页', key: 'home', icon: 'home', path: '/' },
+  { label: '文章', key: 'articles', icon: 'sourceCode', path: '/articles' },
 ];
+
+const APP_THEME_ROOT_ID = 'app-theme-root';
+const darkThemeClassNames = stylex.props(darkTheme).className?.split(/\s+/).filter(Boolean);
+
+if (!darkThemeClassNames?.length) {
+  throw new Error('StyleX 深色主题未生成有效类名。');
+}
+
+const themeBootstrapScript = `
+  (function () {
+    try {
+      var root = document.getElementById(${JSON.stringify(APP_THEME_ROOT_ID)});
+      if (!root) return;
+      var isDark = document.documentElement.classList.contains('dark');
+      var classNames = ${JSON.stringify(darkThemeClassNames)};
+      classNames.forEach(function (className) {
+        root.classList.toggle(className, isDark);
+      });
+    } catch (error) {}
+  })();
+`;
+
+const isCurrentPath = (pathname: string, path: string) => {
+  if (path === '/') return pathname === '/';
+  return pathname === path || pathname.startsWith(`${path}/`);
+};
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { resolvedTheme, setTheme } = useTheme();
-  const router = useRouter();
   const pathname = usePathname();
-
-  // 滚动容器引用
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const navigationContainerRef = useRef<HTMLDivElement>(null);
-
+  const navigationRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const activeIndex = Math.max(
+    0,
+    ROUTES.findIndex((route) => isCurrentPath(pathname, route.path)),
+  );
 
-  // 更新useScroll监听正确的滚动容器
-  const pageScroll = useScroll(mounted && scrollContainerRef.current ? scrollContainerRef.current : () => null);
-
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [slidePosition, setSlidePosition] = useState(0);
-  const [slideWidth, setSlideWidth] = useState(0);
-  const [bottomIndicatorPosition, setBottomIndicatorPosition] = useState(0);
-  const [bottomIndicatorWidth, setBottomIndicatorWidth] = useState(0);
-  const [showMenuTop, setShowMenuTop] = useState(true);
-  const [lastScrollTop, setLastScrollTop] = useState(0);
-
-  // 使用防抖和阈值来稳定显示/隐藏逻辑
-  useEffect(() => {
-    if (!pageScroll) return;
-
-    const currentScrollTop = pageScroll.top;
-    const scrollThreshold = 10; // 滚动阈值，避免小幅滚动时频繁切换
-
-    // 如果滚动距离小于阈值，不做任何处理
-    if (Math.abs(currentScrollTop - lastScrollTop) < scrollThreshold) {
-      return;
-    }
-
-    // 在顶部时总是显示
-    if (currentScrollTop <= scrollThreshold) {
-      setShowMenuTop(true);
-    } else {
-      // 向上滚动时显示，向下滚动时隐藏
-      const isScrollingUp = currentScrollTop < lastScrollTop;
-      setShowMenuTop(isScrollingUp);
-    }
-
-    setLastScrollTop(currentScrollTop);
-  }, [pageScroll, lastScrollTop]);
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    // 根据路径变化更新当前页面索引
-    const currentIndex = ROUTES.findIndex((route) => route.path === pathname);
-    const newIndex = currentIndex >= 0 ? currentIndex : 0;
-    setActiveIndex(newIndex);
-  }, [pathname]);
+    const updateIndicator = () => {
+      const container = navigationRef.current;
+      const activeItem = container?.querySelector(`[data-nav-index="${activeIndex}"]`) as HTMLElement | null;
+      if (!container || !activeItem) return;
 
-  useEffect(() => {
-    // 计算滑动指示器的位置和宽度
-    const updateSlidePosition = () => {
-      const container = navigationContainerRef.current;
-      const button = container?.querySelector(`[data-nav-index="${activeIndex}"]`) as HTMLElement | null;
-
-      if (button && container) {
-        const buttonRect = button.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        // 计算背景滑动指示器位置
-        const leftPosition = buttonRect.left - containerRect.left;
-
-        // 确保位置值是有效的
-        if (buttonRect.width > 0) {
-          setSlidePosition(leftPosition);
-          setSlideWidth(buttonRect.width);
-
-          // 计算底部指示器位置
-          const buttonCenter = leftPosition + buttonRect.width / 2;
-          const indicatorWidth = 24;
-          setBottomIndicatorPosition(buttonCenter - indicatorWidth / 2);
-          setBottomIndicatorWidth(indicatorWidth);
-        }
-      }
+      const containerRect = container.getBoundingClientRect();
+      const itemRect = activeItem.getBoundingClientRect();
+      setIndicator({ left: itemRect.left - containerRect.left, width: itemRect.width });
     };
 
-    // 确保组件已挂载且activeIndex有效
-    if (mounted && activeIndex >= 0) {
-      // 多重重试机制，确保DOM元素存在
-      let retryCount = 0;
-      const maxRetries = 5;
-
-      const tryUpdate = () => {
-        const button = navigationContainerRef.current?.querySelector(`[data-nav-index="${activeIndex}"]`);
-        if (button) {
-          updateSlidePosition();
-        } else if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(tryUpdate, 50 * retryCount); // 递增延迟
-        }
-      };
-
-      // 立即尝试一次
-      requestAnimationFrame(tryUpdate);
-
-      // 监听窗口大小变化
-      window.addEventListener('resize', updateSlidePosition);
-      return () => {
-        window.removeEventListener('resize', updateSlidePosition);
-      };
-    }
-  }, [activeIndex, mounted]);
-
-  if (!mounted) {
-    // SSR 时渲染的内容，避免水合不一致
-    return <div {...stylex.props(styles.loading)}>主题加载中...</div>;
-  }
-
-  const goPage = (path: string, index: number) => {
-    // 清理所有可能的tooltip状态
-    const tooltips = document.querySelectorAll('[role="tooltip"]');
-    tooltips.forEach((tooltip) => {
-      if (tooltip.parentElement) {
-        tooltip.parentElement.removeChild(tooltip);
-      }
-    });
-
-    // 先更新activeIndex以触发动画
-    setActiveIndex(index);
-    // 然后进行路由跳转
-    router.push(path);
-  };
-
-  const checkCurrentPath = (path: string) => {
-    return path === pathname;
-  };
+    updateIndicator();
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [activeIndex]);
 
   const isDark = resolvedTheme === 'dark';
   const rootStyleProps = stylex.props(styles.root, isDark && darkTheme);
 
   return (
-    <div ref={scrollContainerRef} {...rootStyleProps}>
-      <div {...stylex.props(styles.layout)}>
-        {/* 顶部导航栏 */}
-        <div
-          data-visible={showMenuTop}
-          {...stylex.props(styles.menuTop, showMenuTop ? styles.menuVisible : styles.menuHidden)}
-        >
-          {/* 左侧导航 */}
-          <div ref={navigationContainerRef} {...stylex.props(styles.navigation)}>
-            {/* 滑动背景指示器 */}
+    <div id={APP_THEME_ROOT_ID} {...rootStyleProps}>
+      <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      <header {...stylex.props(styles.header)}>
+        <div {...stylex.props(styles.headerInner)}>
+          <div ref={navigationRef} {...stylex.props(styles.navigation)}>
             <div
-              {...stylex.props(styles.slideIndicator)}
+              aria-hidden
+              {...stylex.props(styles.activeIndicator)}
               style={{
-                left: `${slidePosition}px`,
-                width: `${slideWidth}px`,
-                opacity: slideWidth > 0 ? 1 : 0,
-              }}
-            />
-            {/* 统一的滑动底部指示器 */}
-            <div
-              {...stylex.props(styles.bottomIndicator)}
-              style={{
-                left: `${bottomIndicatorPosition}px`,
-                width: `${bottomIndicatorWidth}px`,
-                opacity: bottomIndicatorWidth > 0 ? 1 : 0,
+                left: `${indicator.left}px`,
+                width: `${indicator.width}px`,
+                opacity: indicator.width > 0 ? 1 : 0,
               }}
             />
             {ROUTES.map(({ label, key, icon, path }, index) => (
@@ -192,127 +102,89 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 icon={icon}
                 path={path}
                 index={index}
-                isActive={checkCurrentPath(path)}
-                onClick={goPage}
+                isActive={isCurrentPath(pathname, path)}
               />
             ))}
           </div>
-          {/* 右侧主题切换 */}
+
           <button
             type="button"
             {...stylex.props(styles.themeToggle)}
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            aria-label={isDark ? '切换到浅色主题' : '切换到深色主题'}
+            aria-label={mounted ? (isDark ? '切换到浅色主题' : '切换到深色主题') : '切换主题'}
           >
-            <Icon name={isDark ? 'sun' : 'moon'} />
+            {mounted ? (
+              <Icon name={isDark ? 'sun' : 'moon'} />
+            ) : (
+              <span aria-hidden {...stylex.props(styles.themeIconPlaceholder)} />
+            )}
           </button>
         </div>
+      </header>
 
-        {/* 主要内容区域 */}
-        <div {...stylex.props(styles.main)}>
-          <div {...stylex.props(styles.contentViewport)}>
-            <div
-              {...stylex.props(styles.content)}
-              style={{
-                transform: `translateX(${activeIndex * -2}px)`,
-                opacity: 1,
-              }}
-            >
-              {children}
-            </div>
-          </div>
-        </div>
-
-        {/* 底部导航栏 */}
-        <div {...stylex.props(styles.footer)}>兮兮 © {new Date().getFullYear()}</div>
-      </div>
+      <main {...stylex.props(styles.main)}>{children}</main>
+      <footer {...stylex.props(styles.footer)}>兮兮 © {new Date().getFullYear()}</footer>
     </div>
   );
 }
 
 const motionDuration = {
-  default: '500ms',
+  default: '220ms',
   '@media (prefers-reduced-motion: reduce)': '0ms',
 } as const;
 
 const styles = stylex.create({
-  loading: {
-    display: 'flex',
-    width: '100vw',
-    height: '100dvh',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   root: {
-    position: 'relative',
-    width: '100vw',
-    height: '100dvh',
-    overflowY: 'auto',
+    minHeight: '100dvh',
     backgroundColor: colors.canvas,
+    color: colors.textPrimary,
   },
-  layout: {
-    width: '50%',
-    height: '100%',
-    marginInline: 'auto',
-  },
-  menuTop: {
+  header: {
     position: 'fixed',
-    top: '1.25rem',
+    top: '1rem',
+    right: '1rem',
+    left: '1rem',
     zIndex: 50,
+    pointerEvents: 'none',
+  },
+  headerInner: {
     display: 'flex',
-    width: 'calc(50% - 10px)',
-    height: '3.5rem',
+    width: 'min(70rem, 100%)',
+    minHeight: '3.75rem',
+    marginInline: 'auto',
     alignItems: 'center',
     borderWidth: '1px',
     borderStyle: 'solid',
     borderColor: colors.navigationBorder,
     borderRadius: '9999px',
     backgroundColor: colors.navigationSurface,
-    paddingInline: '2rem',
-    boxShadow: '0 1px 3px 0 rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%)',
-    transitionProperty: 'transform',
-  },
-  menuVisible: {
-    transform: 'translateY(0)',
-    transitionDuration: {
-      default: '100ms',
-      '@media (prefers-reduced-motion: reduce)': '0ms',
+    paddingInline: {
+      default: '1rem',
+      '@media (max-width: 640px)': '0.625rem',
     },
-  },
-  menuHidden: {
-    transform: 'translateY(-7rem)',
-    transitionDuration: {
-      default: '300ms',
-      '@media (prefers-reduced-motion: reduce)': '0ms',
-    },
+    boxShadow: '0 8px 30px rgb(50 40 30 / 8%)',
+    pointerEvents: 'auto',
   },
   navigation: {
     position: 'relative',
     display: 'flex',
     flex: 1,
     alignItems: 'center',
-    gap: '1.5rem',
+    gap: {
+      default: '0.5rem',
+      '@media (max-width: 640px)': '0.125rem',
+    },
   },
-  slideIndicator: {
+  activeIndicator: {
     position: 'absolute',
     top: '50%',
     height: '3rem',
     borderRadius: '9999px',
     backgroundColor: colors.primaryTransparent10,
     transform: 'translateY(-50%)',
-    transitionProperty: 'all',
     transitionDuration: motionDuration,
-    transitionTimingFunction: 'ease-out',
-  },
-  bottomIndicator: {
-    position: 'absolute',
-    bottom: '-5px',
-    height: '1px',
-    borderRadius: '9999px',
-    backgroundImage: `linear-gradient(to right, ${colors.primaryTransparent}, ${colors.primary}, ${colors.primaryTransparent})`,
-    transitionProperty: 'all',
-    transitionDuration: motionDuration,
-    transitionTimingFunction: 'ease-out',
+    transitionProperty: 'left, width, opacity',
+    transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
   },
   themeToggle: {
     display: 'flex',
@@ -325,39 +197,36 @@ const styles = stylex.create({
     backgroundColor: 'transparent',
     color: {
       default: 'inherit',
-      ':hover': colors.primary,
+      ':hover': colors.primaryStrong,
     },
-    fontSize: '1.5rem',
+    fontSize: '1.4rem',
     outline: {
       default: 'none',
-      ':focus-visible': `2px solid ${colors.primary}`,
+      ':focus-visible': `2px solid ${colors.primaryStrong}`,
     },
-    outlineOffset: {
-      default: null,
-      ':focus-visible': '2px',
-    },
+    outlineOffset: '2px',
+  },
+  themeIconPlaceholder: {
+    display: 'block',
+    width: '1em',
+    height: '1em',
   },
   main: {
-    minHeight: '100%',
-    flexGrow: 1,
-    overflow: 'hidden',
-    paddingTop: '120px',
-  },
-  contentViewport: {
-    height: '100%',
-    overflow: 'auto',
-    transitionProperty: 'all',
-    transitionDuration: motionDuration,
-    transitionTimingFunction: 'ease-out',
-  },
-  content: {
-    transitionProperty: 'all',
-    transitionDuration: motionDuration,
-    transitionTimingFunction: 'ease-out',
+    width: 'min(70rem, calc(100% - 2rem))',
+    minHeight: 'calc(100dvh - 8rem)',
+    marginInline: 'auto',
+    paddingTop: {
+      default: '8.5rem',
+      '@media (max-width: 640px)': '7.5rem',
+    },
   },
   footer: {
-    paddingBlock: '2.5rem',
-    color: '#6b7280',
+    width: 'min(70rem, calc(100% - 2rem))',
+    marginInline: 'auto',
+    paddingBlock: '3rem',
+    color: colors.textMuted,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.875rem',
     textAlign: 'center',
   },
 });

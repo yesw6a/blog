@@ -1,9 +1,10 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo } from 'react';
 
 import type { IconName } from '@/components';
 
+import Link from 'next/link';
 import { Icon, Tooltip, TooltipContent, TooltipTrigger } from '@/components';
 import { colors } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -14,28 +15,22 @@ interface NavigationItemProps {
   path: string;
   index: number;
   isActive: boolean;
-  onClick: (path: string, index: number) => void;
 }
 
 const NavigationItem = memo(
-  ({ label, icon, path, index, isActive, onClick }: NavigationItemProps) => {
-    const handleClick = useCallback(() => {
-      onClick(path, index);
-    }, [path, index, onClick]);
-
+  ({ label, icon, path, index, isActive }: NavigationItemProps) => {
     return (
       <Tooltip key={`nav-${index}-${isActive ? 'active' : 'inactive'}`}>
         <TooltipTrigger asChild>
-          <button
-            type="button"
+          <Link
+            href={path}
             data-nav-index={index}
             {...stylex.props(styles.item, isActive && styles.itemActive)}
-            onClick={handleClick}
             aria-current={isActive ? 'page' : undefined}
             aria-label={label}
           >
             <Icon name={icon} style={[styles.icon, isActive && styles.iconActive]} />
-          </button>
+          </Link>
         </TooltipTrigger>
         <TooltipContent hideArrow>{label}</TooltipContent>
       </Tooltip>
@@ -73,6 +68,7 @@ const styles = stylex.create({
       ':hover': colors.primary,
     },
     fontSize: '1.5rem',
+    textDecorationLine: 'none',
     transform: {
       default: 'scale(1)',
       ':hover': 'scale(1.05)',

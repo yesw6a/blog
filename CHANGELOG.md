@@ -5,6 +5,7 @@
 ### 📦 Version
 
 - 项目版本从 0.1.0 升级到 0.2.0。
+- 本发布窗口新增文章系统仍属于 `0.2.0` 已覆盖的 Minor 级别，版本保持不变。
 
 ### 🎉 Feat
 
@@ -12,6 +13,15 @@
 - 接入 StyleX 浅色/深色主题，并支持 Turbopack 构建时 CSS 提取。
 - 使用本地 SVG 图标替换 Iconify Tailwind 图标，并为组件提供类型化 StyleX 样式接口。
 - 为首页头像增加掘金风格的悬停旋转，使用 `250ms` 意图延迟和 `cubic-bezier(.34, 0, .84, 1)`，在 `1800ms` 内从 `60deg/s` 加速到 `900deg/s`。
+- 新增 Git/MDX 文章系统，支持 frontmatter 校验、草稿预览、阅读时长、标题目录和相邻文章导航。
+- 新增 `/articles` 文章列表与详情路由，支持 URL 搜索、标签组合筛选和响应式长文阅读布局。
+- 新增文章 Metadata、`BlogPosting` JSON-LD、RSS 与 Sitemap，生产构建自动排除草稿文章。
+
+### 🔄 Changed
+
+- 将全局固定 `50%` 宽度和嵌套滚动改为响应式文档布局，保证文章锚点、粘性目录与浏览器滚动恢复正常工作。
+- 顶部导航新增文章入口，并使用路径前缀保持文章详情页导航激活状态。
+- 扩展 StyleX 浅色/深色语义令牌，统一文章正文、边框、代码块和弱化文本的主题表现。
 
 ### 🐛 Fix
 
@@ -22,6 +32,8 @@
 - 为 Steam 接口补充响应类型、JSON 与状态校验，配置缺失和上游异常时分别返回明确的 `503`、`502` 响应。
 - 强化随机头像接口的来源地址、内容类型和失败状态校验，使用流式响应并禁止缓存异常结果。
 - 首页增加头像加载失败占位以及 Steam 数据加载、错误状态，避免接口异常阻断非 Steam 游戏内容展示。
+- 修复 `next-themes` 与 StyleX 根据 `resolvedTheme` 生成不同首帧属性导致的 hydration mismatch。
+- 在 React 水合前同步 StyleX 深色主题类，并为主题按钮提供稳定的服务端占位，避免整页挂载门和主题闪烁。
 
 ### 🧰 Chore
 
@@ -30,11 +42,15 @@
 - 删除重复的 `/about` 页面及其独占样式，首页继续承担个人介绍与技术栈展示。
 - 删除仅用于组件演示的 `/storybook` 页面、DropdownMenu 组件及相关图标与导出。
 - 拆分 Steam 服务端请求模块，并清理未使用的头像客户端请求封装。
+- 增加 MDX、frontmatter 与 Markdown AST 处理依赖，并补充 `lint`、`typecheck` 脚本。
+- 更新 README，记录文章创建、草稿预览、Git 发布流程和 `NEXT_PUBLIC_SITE_URL` 配置。
 
 ### ✅ Verify
 
 - TypeScript、ESLint、Stylelint、Turbopack 生产构建与 CodeGraph 同步全部通过。
 - `package.json`、`pnpm-lock.yaml`、CHANGELOG 内容与全仓 `git diff --check` 检查通过。
-- 当前完整工作区通过 Turbopack 生产构建，生成路由仅保留首页、404 与三个 API 路由，已不再包含 `/about` 和 `/storybook`。
+- 当前完整工作区通过 Turbopack 生产构建，生成首页、404、三个 API、文章列表、已发布文章详情、RSS 与 Sitemap，且不包含 `/about`、`/storybook` 和草稿文章路由。
 - 头像贝塞尔加速与 Hermite 归正曲线数值采样通过，角速度保持在 `0-900deg/s`，无反转或速度超限。
+- ESLint、TypeScript、`git diff --check` 与 Turbopack 生产构建通过。
+- 构建产物确认主题按钮首帧使用稳定占位，水合前脚本逐个同步 StyleX 深色主题类。
 - 生产构建仍提示 Browserslist 数据已过期，以及 Edge Runtime 会禁用对应页面静态生成；均为非阻塞提示。

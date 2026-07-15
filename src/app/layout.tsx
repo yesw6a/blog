@@ -1,14 +1,22 @@
 import type { Metadata } from 'next';
 
 import { ThemeProvider } from 'next-themes';
+import { siteConfig } from '@/config/site';
 import AppLayout from '@/layouts/app-layout';
 import * as stylex from '@stylexjs/stylex';
 
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '我的博客',
-  description: '基于 Next.js 构建的现代化博客应用',
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.shortName}`,
+  },
+  description: siteConfig.description,
+  alternates: {
+    canonical: '/',
+  },
 };
 
 const styles = stylex.create({
@@ -23,9 +31,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html suppressHydrationWarning>
+    <html lang="zh-CN" suppressHydrationWarning>
       <body {...stylex.props(styles.body)}>
-        <ThemeProvider attribute="class">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AppLayout>{children}</AppLayout>
         </ThemeProvider>
       </body>

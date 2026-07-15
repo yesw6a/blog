@@ -6,6 +6,7 @@ import withStylexTurbopack from '@stylexswc/nextjs-plugin/turbopack';
 
 const nextConfig: NextConfig = {
   reactStrictMode: process.env.NODE_ENV === 'production',
+  transpilePackages: ['next-mdx-remote'],
   images: {
     domains: ['media.steampowered.com', 'wsrv.nl'],
   },
