@@ -5,8 +5,8 @@ const INITIAL_ANGULAR_VELOCITY = 60;
 const MAX_ANGULAR_VELOCITY = 900;
 const ACCELERATION_DURATION_MS = 1800;
 const HOVER_INTENT_DELAY_MS = 250;
-const MIN_SETTLE_DURATION_MS = 600;
-const SETTLE_DURATION_DISTANCE_FACTOR = 1.5;
+const MIN_SETTLE_DURATION_MS = 450;
+const MAX_SETTLE_DURATION_MS = 900;
 const MAX_FRAME_DELTA_MS = 50;
 const BEZIER_X1 = 0.34;
 const BEZIER_Y1 = 0;
@@ -46,7 +46,6 @@ const resolveAccelerationProgress = (progress: number) => {
 
 type SettleMotion = {
   startAngle: number;
-  startVelocity: number;
   targetAngle: number;
   startTime: number | null;
   durationMs: number;
@@ -168,27 +167,15 @@ const useElementSpin = <T extends HTMLElement = HTMLElement>() => {
       settleMotion.startTime = startTime;
 
       const progress = Math.min((timestamp - startTime) / settleMotion.durationMs, 1);
-      const progressSquared = progress * progress;
-      const progressCubed = progressSquared * progress;
+      const inverseProgress = 1 - progress;
+      const easedProgress = 1 - inverseProgress * inverseProgress * inverseProgress;
+      const distance = settleMotion.targetAngle - settleMotion.startAngle;
+      const angle = settleMotion.startAngle + distance * easedProgress;
       const durationSeconds = settleMotion.durationMs / 1000;
-      const initialTangent = settleMotion.startVelocity * durationSeconds;
-      const startBasis = 2 * progressCubed - 3 * progressSquared + 1;
-      const tangentBasis = progressCubed - 2 * progressSquared + progress;
-      const endBasis = -2 * progressCubed + 3 * progressSquared;
-      const angle =
-        startBasis * settleMotion.startAngle + tangentBasis * initialTangent + endBasis * settleMotion.targetAngle;
-
-      const startBasisDerivative = 6 * progressSquared - 6 * progress;
-      const tangentBasisDerivative = 3 * progressSquared - 4 * progress + 1;
-      const endBasisDerivative = -6 * progressSquared + 6 * progress;
-      const angularVelocity =
-        (startBasisDerivative * settleMotion.startAngle +
-          tangentBasisDerivative * initialTangent +
-          endBasisDerivative * settleMotion.targetAngle) /
-        durationSeconds;
+      const angularVelocity = (3 * distance * inverseProgress * inverseProgress) / durationSeconds;
 
       angleRef.current = angle;
-      angularVelocityRef.current = Math.max(angularVelocity, 0);
+      angularVelocityRef.current = angularVelocity;
       element.style.transform = `rotate(${angle}deg)`;
 
       if (progress < 1) {
@@ -256,32 +243,22 @@ const useElementSpin = <T extends HTMLElement = HTMLElement>() => {
     lastFrameTimeRef.current = null;
 
     const startAngle = angleRef.current;
-    const startVelocity = Math.max(angularVelocityRef.current, 0);
     const normalizedAngle = ((startAngle % FULL_ROTATION) + FULL_ROTATION) % FULL_ROTATION;
 
-    if (startVelocity < 1 && (normalizedAngle < 0.5 || FULL_ROTATION - normalizedAngle < 0.5)) {
+    if (normalizedAngle < 0.5 || FULL_ROTATION - normalizedAngle < 0.5) {
       resetMotion();
       return;
     }
 
-    let targetAngle = Math.ceil((startAngle + 0.001) / FULL_ROTATION) * FULL_ROTATION;
-    let durationMs = MIN_SETTLE_DURATION_MS;
-
-    while (true) {
-      const distance = targetAngle - startAngle;
-      durationMs = Math.max(
-        MIN_SETTLE_DURATION_MS,
-        (SETTLE_DURATION_DISTANCE_FACTOR * distance * 1000) / MAX_ANGULAR_VELOCITY,
-      );
-      const minimumDistance = (startVelocity * (durationMs / 1000)) / 3;
-
-      if (distance >= minimumDistance) break;
-      targetAngle += FULL_ROTATION;
-    }
+    const targetAngle = Math.floor(startAngle / FULL_ROTATION) * FULL_ROTATION;
+    const distance = startAngle - targetAngle;
+    const durationMs = Math.min(
+      MAX_SETTLE_DURATION_MS,
+      MIN_SETTLE_DURATION_MS + (distance / FULL_ROTATION) * (MAX_SETTLE_DURATION_MS - MIN_SETTLE_DURATION_MS),
+    );
 
     settleMotionRef.current = {
       startAngle,
-      startVelocity,
       targetAngle,
       startTime: null,
       durationMs,

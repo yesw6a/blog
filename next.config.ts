@@ -5,6 +5,7 @@ import type { NextConfig } from 'next';
 import withStylexTurbopack from '@stylexswc/nextjs-plugin/turbopack';
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NODE_ENV === 'development' ? '.next-dev' : '.next',
   reactStrictMode: process.env.NODE_ENV === 'production',
   transpilePackages: ['next-mdx-remote'],
   images: {

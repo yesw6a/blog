@@ -1,4 +1,4 @@
-import { colors } from '@/styles/tokens.stylex';
+import { colors, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
 const reducedMotionDuration = {
@@ -343,7 +343,7 @@ export const articleStyles = stylex.create({
   heading2: {
     marginTop: '3.5rem',
     marginBottom: '1.125rem',
-    scrollMarginTop: '7rem',
+    scrollMarginTop: `calc(${layout.headerSafeArea} + 1rem)`,
     color: colors.textPrimary,
     fontFamily: 'AlimamaFangYuan, system-ui, sans-serif',
     fontSize: 'clamp(1.65rem, 4vw, 2.2rem)',
@@ -354,7 +354,7 @@ export const articleStyles = stylex.create({
   heading3: {
     marginTop: '2.5rem',
     marginBottom: '0.875rem',
-    scrollMarginTop: '7rem',
+    scrollMarginTop: `calc(${layout.headerSafeArea} + 1rem)`,
     color: colors.textPrimary,
     fontFamily: 'AlimamaFangYuan, system-ui, sans-serif',
     fontSize: '1.35rem',
@@ -483,7 +483,7 @@ export const articleStyles = stylex.create({
   },
   toc: {
     position: 'sticky',
-    top: '6.5rem',
+    top: `calc(${layout.headerSafeArea} + 1rem)`,
     borderLeftWidth: '1px',
     borderLeftStyle: 'solid',
     borderLeftColor: colors.border,

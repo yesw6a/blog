@@ -24,6 +24,11 @@ export const colors = stylex.defineVars({
   gameHover: '#efebe3',
 });
 
+export const layout = stylex.defineVars({
+  headerSafeArea: '5rem',
+  headerInnerHeight: '3.5rem',
+});
+
 export const darkTheme = stylex.createTheme(colors, {
   primary: '#ff9b78',
   primaryStrong: '#ff9b78',

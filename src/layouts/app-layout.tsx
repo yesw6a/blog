@@ -7,7 +7,7 @@ import type { IconName } from '@/components';
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import { Icon, NavigationItem } from '@/components';
-import { colors, darkTheme } from '@/styles/tokens.stylex';
+import { colors, darkTheme, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
 type AppLayoutProps = {
@@ -16,7 +16,7 @@ type AppLayoutProps = {
 
 const ROUTES: ReadonlyArray<{ label: string; key: string; icon: IconName; path: string }> = [
   { label: '首页', key: 'home', icon: 'home', path: '/' },
-  { label: '文章', key: 'articles', icon: 'sourceCode', path: '/articles' },
+  { label: '文章', key: 'articles', icon: 'article', path: '/articles' },
 ];
 
 const APP_THEME_ROOT_ID = 'app-theme-root';
@@ -138,19 +138,30 @@ const styles = stylex.create({
     minHeight: '100dvh',
     backgroundColor: colors.canvas,
     color: colors.textPrimary,
+    [layout.headerSafeArea]: {
+      default: '5rem',
+      '@media (max-width: 640px)': '4.5rem',
+    },
+    [layout.headerInnerHeight]: {
+      default: '3.5rem',
+      '@media (max-width: 640px)': '3.25rem',
+    },
   },
   header: {
-    position: 'fixed',
-    top: '1rem',
-    right: '1rem',
-    left: '1rem',
+    position: 'sticky',
+    top: 0,
     zIndex: 50,
-    pointerEvents: 'none',
+    display: 'flex',
+    width: '100%',
+    height: layout.headerSafeArea,
+    alignItems: 'center',
+    backgroundColor: colors.canvas,
+    paddingInline: '1rem',
   },
   headerInner: {
     display: 'flex',
     width: 'min(70rem, 100%)',
-    minHeight: '3.75rem',
+    minHeight: layout.headerInnerHeight,
     marginInline: 'auto',
     alignItems: 'center',
     borderWidth: '1px',
@@ -163,7 +174,6 @@ const styles = stylex.create({
       '@media (max-width: 640px)': '0.625rem',
     },
     boxShadow: '0 8px 30px rgb(50 40 30 / 8%)',
-    pointerEvents: 'auto',
   },
   navigation: {
     position: 'relative',
@@ -213,11 +223,11 @@ const styles = stylex.create({
   },
   main: {
     width: 'min(70rem, calc(100% - 2rem))',
-    minHeight: 'calc(100dvh - 8rem)',
+    minHeight: `calc(100dvh - ${layout.headerSafeArea})`,
     marginInline: 'auto',
     paddingTop: {
-      default: '8.5rem',
-      '@media (max-width: 640px)': '7.5rem',
+      default: '3rem',
+      '@media (max-width: 640px)': '2rem',
     },
   },
   footer: {

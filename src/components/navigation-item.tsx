@@ -29,7 +29,7 @@ const NavigationItem = memo(
             aria-current={isActive ? 'page' : undefined}
             aria-label={label}
           >
-            <Icon name={icon} style={[styles.icon, isActive && styles.iconActive]} />
+            <Icon name={icon} />
           </Link>
         </TooltipTrigger>
         <TooltipContent hideArrow>{label}</TooltipContent>
@@ -69,11 +69,7 @@ const styles = stylex.create({
     },
     fontSize: '1.5rem',
     textDecorationLine: 'none',
-    transform: {
-      default: 'scale(1)',
-      ':hover': 'scale(1.05)',
-    },
-    transitionProperty: 'color, transform',
+    transitionProperty: 'color',
     transitionDuration: {
       default: '300ms',
       '@media (prefers-reduced-motion: reduce)': '0ms',
@@ -90,19 +86,6 @@ const styles = stylex.create({
   },
   itemActive: {
     color: colors.primary,
-    transform: 'scale(1.05)',
-  },
-  icon: {
-    transform: 'scale(1)',
-    transitionProperty: 'transform',
-    transitionDuration: {
-      default: '200ms',
-      '@media (prefers-reduced-motion: reduce)': '0ms',
-    },
-    transitionTimingFunction: 'ease-in-out',
-  },
-  iconActive: {
-    transform: 'scale(1.1)',
   },
 });
 
