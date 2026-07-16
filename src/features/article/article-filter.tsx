@@ -26,6 +26,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
         </label>
         <div {...stylex.props(articleStyles.searchRow)}>
           <input
+            key={query ?? ''}
             id="article-search"
             name="q"
             type="search"

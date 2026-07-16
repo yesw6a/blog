@@ -4,14 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { cache } from 'react';
 
-import type {
-  AdjacentArticles,
-  Article,
-  ArticleFilter,
-  ArticleFrontmatter,
-  ArticleHeading,
-  ArticleSummary,
-} from './article.types';
+import type { AdjacentArticles, Article, ArticleFrontmatter, ArticleHeading, ArticleSummary } from './article.types';
 
 import GithubSlugger from 'github-slugger';
 import matter from 'gray-matter';
@@ -81,13 +74,17 @@ const parseFrontmatter = (data: Record<string, unknown>, filename: string): Arti
   if (!Array.isArray(rawTags) || rawTags.length === 0 || rawTags.some((tag) => typeof tag !== 'string')) {
     throw new Error(`[文章元数据错误] ${filename}: tags 必须是非空字符串数组。`);
   }
+  const tags = [...new Set(rawTags.map((tag) => tag.trim()))];
+  if (tags.some((tag) => tag.length === 0)) {
+    throw new Error(`[文章元数据错误] ${filename}: tags 不能包含空字符串。`);
+  }
 
   return {
     title: requireString(data, 'title', filename),
     description: requireString(data, 'description', filename),
     publishedAt: requireDate(data, 'publishedAt', filename),
     updatedAt: optionalDate(data, 'updatedAt', filename),
-    tags: [...new Set(rawTags.map((tag) => tag.trim()).filter(Boolean))],
+    tags,
     series: optionalString(data, 'series', filename),
     featured: optionalBoolean(data, 'featured', filename),
     draft: optionalBoolean(data, 'draft', filename),
@@ -155,6 +152,17 @@ const loadArticles = cache(async (): Promise<Article[]> => {
     throw error;
   }
 
+  const unsupportedMarkdownFiles = entries
+    .filter((entry) => entry.isFile() && path.extname(entry.name).toLocaleLowerCase() === '.md')
+    .map((entry) => entry.name)
+    .toSorted();
+
+  if (unsupportedMarkdownFiles.length > 0) {
+    throw new Error(
+      `[文章文件格式错误] content/articles 仅支持 .mdx 文件。请将以下文件重命名为 ASCII kebab-case 的 .mdx 文件，并补齐 title、description、publishedAt、tags 和 draft frontmatter：${unsupportedMarkdownFiles.join(', ')}`,
+    );
+  }
+
   const filenames = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(ARTICLE_EXTENSION))
     .map((entry) => entry.name);
@@ -203,18 +211,6 @@ export const getAllTags = async (options?: { includeDrafts?: boolean }) => {
   return [...new Set(articles.flatMap((article) => article.tags))].toSorted((left, right) =>
     left.localeCompare(right, 'zh-CN'),
   );
-};
-
-export const filterArticles = (articles: ArticleSummary[], { query, tag }: ArticleFilter) => {
-  const normalizedQuery = query?.trim().toLocaleLowerCase('zh-CN');
-  return articles.filter((article) => {
-    const matchesTag = !tag || article.tags.some((articleTag) => articleTag === tag);
-    if (!matchesTag) return false;
-    if (!normalizedQuery) return true;
-
-    const searchable = [article.title, article.description, ...article.tags].join(' ').toLocaleLowerCase('zh-CN');
-    return searchable.includes(normalizedQuery);
-  });
 };
 
 export const getAdjacentArticles = async (

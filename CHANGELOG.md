@@ -7,6 +7,7 @@
 - 项目版本从 0.1.0 升级到 0.2.0。
 - 本发布窗口新增文章系统、导航与头像交互、每日头像和开发输出隔离均属于 `0.2.0` 已覆盖的 Minor 级别，版本保持不变。
 - 本次 Cloudflare 部署链由 Pages/`next-on-pages` 迁移至 Workers/OpenNext，属于当前发布窗口已覆盖的 Minor 级变更，项目版本继续保持 `0.2.0`。
+- 本次文章生产环境修复、静态筛选调整和内容契约校验均属于 Patch 级变更，未超过当前窗口已覆盖的 Minor 级别，版本继续保持 `0.2.0`。
 
 ### 🎉 Feat
 
@@ -32,6 +33,8 @@
 - Next.js 及配套 ESLint 包从 `15.5.2` 升级到 `15.5.18`，满足 OpenNext 的最低兼容版本要求。
 - 三个服务端 API Route 移除显式 Edge Runtime 声明，改由 OpenNext 在启用 `nodejs_compat` 的 Workers 运行时中适配执行。
 - 为《夏日杂感》补充 AIGC 标识信息和 AI 生成内容声明。
+- 将 `/articles` 改为构建期静态生成，搜索与标签筛选由客户端根据 `q`、`tag` URL 参数完成，避免 Cloudflare Worker 请求阶段读取本地文章目录。
+- 将《夏日杂感》和《剑气长城的夏日剑心》规范为 ASCII kebab-case 的 `.mdx` 文件，并补齐文章 frontmatter，同时保留正文与 AIGC 元数据。
 
 ### 🐛 Fix
 
@@ -46,6 +49,8 @@
 - 修复 `next-themes` 与 StyleX 根据 `resolvedTheme` 生成不同首帧属性导致的 hydration mismatch。
 - 在 React 水合前同步 StyleX 深色主题类，并为主题按钮提供稳定的服务端占位，避免整页挂载门和主题闪烁。
 - 修复开发服务运行期间执行生产构建后，热更新持续写入缺失的 `.next/static/development` 并触发 `_buildManifest.js.tmp.*` ENOENT 的问题。
+- 修复 `/articles` 在 OpenNext Cloudflare 生产环境动态渲染时访问 Node 文件系统并触发服务端异常的问题。
+- 修复客户端切换文章筛选参数后搜索输入框仍保留旧值的问题。
 
 ### 🧰 Chore
 
@@ -61,6 +66,8 @@
 - 新增 `open-next.config.ts` 与 `wrangler.jsonc`，配置 Worker 入口、静态资产绑定、Node.js 兼容标志和可观测性。
 - 固定项目包管理器为 `pnpm@10.15.1`，移除作为运行时依赖安装的 pnpm，并忽略 `.open-next/`、`.wrangler/` 构建产物。
 - 引入 `@opennextjs/cloudflare@1.20.1` 与 `wrangler@4.111.0`，由 pnpm 同步更新锁文件。
+- 为文章仓库增加不受支持的 `.md` 文件校验，构建时提示改用 ASCII kebab-case `.mdx` 并补齐必要 frontmatter。
+- 将 `.open-next/**` 与 `.wrangler/**` 加入 ESLint 全局忽略，避免生成产物干扰源代码检查。
 
 ### ✅ Verify
 
@@ -75,7 +82,9 @@
 - 构建产物确认主题按钮首帧使用稳定占位，水合前脚本逐个同步 StyleX 深色主题类。
 - 生产构建仍提示 Browserslist 数据已过期，以及 Edge Runtime 会禁用对应页面静态生成；均为非阻塞提示。
 - `pnpm.cmd typecheck`、`pnpm.cmd install --frozen-lockfile` 与 `git diff --check` 检查通过；排除 `.open-next/**`、`.wrangler/**` 生成目录后，项目源代码 ESLint 检查通过。
-- OpenNext 生产构建通过，成功生成 `.open-next/worker.js`、12 个静态页面和三个动态 API Route。
+- OpenNext 生产构建通过，成功生成 `.open-next/worker.js`、14 个静态页面和三个动态 API Route。
 - `wrangler deploy --dry-run` 通过，正确识别 41 个静态资产与 `ASSETS` binding，未执行真实上传或部署。
 - Cloudflare 使用旧提交 `7ccf0c7` 构建时未安装 OpenNext 依赖；发布前需提交并推送本窗口的迁移文件，再触发 Workers Builds。
-- 标准 `pnpm.cmd lint` 当前会扫描已生成的 `.open-next/` 代码并触发 ESLint 规则错误；该问题不影响 OpenNext 构建，但后续应将生成目录加入 ESLint 全局忽略。
+- 文章生产修复通过 `pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build`、`pnpm.cmd exec opennextjs-cloudflare build` 与 `git diff --check` 检查。
+- 构建产物确认 `/articles` 为静态页面，《夏日杂感》《剑气长城的夏日剑心》和既有公开文章均生成 SSG 路由，草稿文章未进入生产 prerender 清单。
+- OpenNext 在 Windows 上仍提示建议使用 WSL，Browserslist 数据也提示过期；两项均为非阻塞警告。
