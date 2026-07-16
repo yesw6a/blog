@@ -20,6 +20,8 @@
 
 # production
 /build
+/.open-next/
+/.wrangler/
 
 # local implementation plans
 .archives/

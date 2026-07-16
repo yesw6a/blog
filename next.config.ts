@@ -27,3 +27,5 @@ export default withStylexTurbopack({
   },
   stylexImports: ['@stylexjs/stylex'],
 })(nextConfig);
+
+import('@opennextjs/cloudflare').then((module) => module.initOpenNextCloudflareForDev());

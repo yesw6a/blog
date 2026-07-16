@@ -4,8 +4,6 @@ import { NextResponse } from 'next/server';
 
 import { fetchSteamApi, SteamConfigurationError } from '../steam.server';
 
-export const runtime = 'edge';
-
 const responseHeaders = { 'Cache-Control': 'no-store' };
 
 export async function GET() {

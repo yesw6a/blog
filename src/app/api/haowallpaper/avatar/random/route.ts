@@ -1,8 +1,6 @@
 import * as cheerio from 'cheerio';
 import qs from 'query-string';
 
-export const runtime = 'edge';
-
 const SOURCE_PAGE_COUNT = 665;
 const SHANGHAI_TIME_ZONE = 'Asia/Shanghai';
 const SHANGHAI_UTC_OFFSET_HOURS = 8;
