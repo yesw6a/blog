@@ -36,10 +36,6 @@ export const articleStyles = stylex.create({
   },
   filter: {
     marginBottom: '2.5rem',
-    paddingBottom: '1.5rem',
-    borderBottomWidth: '1px',
-    borderBottomStyle: 'solid',
-    borderBottomColor: colors.border,
   },
   filterLabel: {
     display: 'block',

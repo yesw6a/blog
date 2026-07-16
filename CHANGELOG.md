@@ -30,6 +30,7 @@
 
 ### 🐛 Fix
 
+- 移除文章筛选区域重复的底部分隔线，保留文章列表统一的行间边框与既有筛选间距。
 - 导航定位解除对可读 Tailwind 类名的依赖。
 - 下拉菜单动态间距改为可计算样式，保持运行时布局正确。
 - 移除无效的远程 Geist 字体依赖，避免字体加载影响页面渲染。
@@ -55,6 +56,7 @@
 
 ### ✅ Verify
 
+- 文章列表分隔线修复通过 `pnpm.cmd typecheck`、`pnpm.cmd lint` 与 `git diff --check` 检查。
 - TypeScript、ESLint、Stylelint、Turbopack 生产构建与 CodeGraph 同步全部通过。
 - `package.json`、`pnpm-lock.yaml`、CHANGELOG 内容与全仓 `git diff --check` 检查通过。
 - 当前完整工作区通过 Turbopack 生产构建，生成首页、404、三个 API、文章列表、已发布文章详情、RSS 与 Sitemap，且不包含 `/about`、`/storybook` 和草稿文章路由。
