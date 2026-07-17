@@ -8,6 +8,7 @@
 - 本发布窗口新增文章系统、导航与头像交互、每日头像和开发输出隔离均属于 `0.2.0` 已覆盖的 Minor 级别，版本保持不变。
 - 本次 Cloudflare 部署链由 Pages/`next-on-pages` 迁移至 Workers/OpenNext，属于当前发布窗口已覆盖的 Minor 级变更，项目版本继续保持 `0.2.0`。
 - 本次文章生产环境修复、静态筛选调整和内容契约校验均属于 Patch 级变更，未超过当前窗口已覆盖的 Minor 级别，版本继续保持 `0.2.0`。
+- 本次 OpenNext 静态增量缓存修复属于 Patch 级变更，未超过当前窗口已覆盖的 Minor 级别，项目版本继续保持 `0.2.0`。
 
 ### 🎉 Feat
 
@@ -50,6 +51,7 @@
 - 在 React 水合前同步 StyleX 深色主题类，并为主题按钮提供稳定的服务端占位，避免整页挂载门和主题闪烁。
 - 修复开发服务运行期间执行生产构建后，热更新持续写入缺失的 `.next/static/development` 并触发 `_buildManifest.js.tmp.*` ENOENT 的问题。
 - 修复 `/articles` 在 OpenNext Cloudflare 生产环境动态渲染时访问 Node 文件系统并触发服务端异常的问题。
+- 为 OpenNext Cloudflare 启用静态资产增量缓存，并限制文章详情仅接受构建期生成的 slug，避免部署后 Worker 回退读取本地文件系统导致文章相关静态路由返回 `500`。
 - 修复客户端切换文章筛选参数后搜索输入框仍保留旧值的问题。
 
 ### 🧰 Chore
@@ -87,4 +89,5 @@
 - Cloudflare 使用旧提交 `7ccf0c7` 构建时未安装 OpenNext 依赖；发布前需提交并推送本窗口的迁移文件，再触发 Workers Builds。
 - 文章生产修复通过 `pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build`、`pnpm.cmd exec opennextjs-cloudflare build` 与 `git diff --check` 检查。
 - 构建产物确认 `/articles` 为静态页面，《夏日杂感》《剑气长城的夏日剑心》和既有公开文章均生成 SSG 路由，草稿文章未进入生产 prerender 清单。
+- 隔离 OpenNext 构建确认已生成静态增量缓存文件，编译后的配置使用 `cf-static-assets-incremental-cache`。
 - OpenNext 在 Windows 上仍提示建议使用 WSL，Browserslist 数据也提示过期；两项均为非阻塞警告。
