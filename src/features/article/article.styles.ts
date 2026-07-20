@@ -43,7 +43,7 @@ export const articleStyles = stylex.create({
     color: colors.textPrimary,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
-    fontWeight: 650,
+    fontWeight: 600,
   },
   searchRow: {
     display: 'flex',
@@ -77,13 +77,13 @@ export const articleStyles = stylex.create({
     cursor: 'pointer',
     borderRadius: '0.625rem',
     backgroundColor: {
-      default: colors.primaryStrong,
-      ':hover': colors.primaryStrongHover,
+      default: colors.primaryAction,
+      ':hover': colors.primaryActionHover,
     },
     paddingInline: '1rem',
     color: colors.onPrimary,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    fontWeight: 650,
+    fontWeight: 600,
     transitionDuration: reducedMotionDuration,
     transitionProperty: 'background-color',
     outline: {
@@ -105,7 +105,7 @@ export const articleStyles = stylex.create({
     color: colors.primaryStrong,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
-    fontWeight: 650,
+    fontWeight: 600,
     textDecorationLine: {
       default: 'none',
       ':hover': 'underline',
@@ -155,7 +155,7 @@ export const articleStyles = stylex.create({
     borderColor: colors.primaryStrong,
     backgroundColor: colors.primaryTransparent10,
     color: colors.primaryStrong,
-    fontWeight: 650,
+    fontWeight: 600,
   },
   articleList: {
     listStyle: 'none',
@@ -236,7 +236,7 @@ export const articleStyles = stylex.create({
     backgroundColor: colors.surfaceStrong,
     paddingInline: '0.625rem',
     color: colors.textSecondary,
-    fontWeight: 650,
+    fontWeight: 600,
   },
   emptyState: {
     borderTopWidth: '1px',
@@ -258,7 +258,7 @@ export const articleStyles = stylex.create({
     color: colors.primaryStrong,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
-    fontWeight: 650,
+    fontWeight: 600,
     textDecorationLine: 'none',
     outline: {
       default: 'none',
@@ -308,7 +308,7 @@ export const articleStyles = stylex.create({
     color: colors.textSecondary,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.8125rem',
-    fontWeight: 650,
+    fontWeight: 600,
     textDecorationLine: 'none',
     outline: {
       default: 'none',
@@ -539,7 +539,6 @@ export const articleStyles = stylex.create({
     display: 'flex',
     minHeight: '7.5rem',
     flexDirection: 'column',
-    justifyContent: 'space-between',
     borderWidth: '1px',
     borderStyle: 'solid',
     borderColor: {

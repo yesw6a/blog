@@ -125,7 +125,9 @@ const calculateReadingTime = (source: string) => {
 const readArticle = async (filename: string): Promise<Article> => {
   const slug = filename.slice(0, -ARTICLE_EXTENSION.length);
   if (!SLUG_PATTERN.test(slug)) {
-    throw new Error(`[文章文件名错误] ${filename}: 文件名必须使用 kebab-case。`);
+    throw new Error(
+      `[文章文件名错误] ${filename}: 文件名必须使用 ASCII kebab-case；公开文章推荐使用 YYYY-MM-DD-short-topic.mdx。`,
+    );
   }
 
   const raw = await fs.readFile(path.join(ARTICLES_DIRECTORY, filename), 'utf8');
@@ -159,7 +161,7 @@ const loadArticles = cache(async (): Promise<Article[]> => {
 
   if (unsupportedMarkdownFiles.length > 0) {
     throw new Error(
-      `[文章文件格式错误] content/articles 仅支持 .mdx 文件。请将以下文件重命名为 ASCII kebab-case 的 .mdx 文件，并补齐 title、description、publishedAt、tags 和 draft frontmatter：${unsupportedMarkdownFiles.join(', ')}`,
+      `[文章文件格式错误] content/articles 仅支持 .mdx 文件。请将以下文件重命名为 ASCII kebab-case 的 .mdx 文件；公开文章推荐使用 YYYY-MM-DD-short-topic.mdx，并补齐 title、description、publishedAt、tags 和 draft frontmatter：${unsupportedMarkdownFiles.join(', ')}`,
     );
   }
 

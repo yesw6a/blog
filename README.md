@@ -11,20 +11,20 @@
 
 ## 文章发布
 
-文章存放在 `content/articles/`，文件名会直接成为文章地址，因此必须使用 kebab-case：
+文章存放在 `content/articles/`，文件名会直接成为文章地址。完整写作、命名、发布和 AIGC 规则见 [文章写作规则](docs/article-writing-rules.md)。
 
 ```text
-content/articles/building-a-git-mdx-blog.mdx
-→ /articles/building-a-git-mdx-blog
+content/articles/2026-07-17-article-writing-rules.mdx
+→ /articles/2026-07-17-article-writing-rules
 ```
 
-每篇文章需要以下 frontmatter：
+公开文章推荐使用 `YYYY-MM-DD-short-topic.mdx`，并填写必要 frontmatter：
 
 ```mdx
 ---
 title: 文章标题
 description: 用于文章列表和 SEO 的摘要
-publishedAt: 2026-07-14
+publishedAt: 2026-07-17
 tags:
   - Next.js
   - MDX

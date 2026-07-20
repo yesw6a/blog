@@ -173,7 +173,7 @@ const styles = stylex.create({
       default: '1rem',
       '@media (max-width: 640px)': '0.625rem',
     },
-    boxShadow: '0 8px 30px rgb(50 40 30 / 8%)',
+    boxShadow: '0 8px 30px rgb(0 0 0 / 10%)',
   },
   navigation: {
     position: 'relative',
