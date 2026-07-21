@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import type { IconName } from '@/components';
+import type { IconName } from '@/components/icon';
 
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
-import { Icon, NavigationItem } from '@/components';
+import Icon from '@/components/icon';
+import NavigationItem from '@/components/navigation-item';
 import { colors, darkTheme, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
@@ -48,34 +49,12 @@ const isCurrentPath = (pathname: string, path: string) => {
 export default function AppLayout({ children }: AppLayoutProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const pathname = usePathname();
-  const navigationRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
-  const activeIndex = Math.max(
-    0,
-    ROUTES.findIndex((route) => isCurrentPath(pathname, route.path)),
-  );
-
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+  const isArticlesRoute = isCurrentPath(pathname, '/articles');
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    const updateIndicator = () => {
-      const container = navigationRef.current;
-      const activeItem = container?.querySelector(`[data-nav-index="${activeIndex}"]`) as HTMLElement | null;
-      if (!container || !activeItem) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const itemRect = activeItem.getBoundingClientRect();
-      setIndicator({ left: itemRect.left - containerRect.left, width: itemRect.width });
-    };
-
-    updateIndicator();
-    window.addEventListener('resize', updateIndicator);
-    return () => window.removeEventListener('resize', updateIndicator);
-  }, [activeIndex]);
 
   const isDark = resolvedTheme === 'dark';
   const rootStyleProps = stylex.props(styles.root, isDark && darkTheme);
@@ -85,23 +64,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       <header {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.headerInner)}>
-          <div ref={navigationRef} {...stylex.props(styles.navigation)}>
-            <div
-              aria-hidden
-              {...stylex.props(styles.activeIndicator)}
-              style={{
-                left: `${indicator.left}px`,
-                width: `${indicator.width}px`,
-                opacity: indicator.width > 0 ? 1 : 0,
-              }}
-            />
-            {ROUTES.map(({ label, key, icon, path }, index) => (
+          <div {...stylex.props(styles.navigation)}>
+            {isArticlesRoute ? (
+              <div aria-hidden {...stylex.props(styles.activeIndicator, styles.activeIndicatorArticles)} />
+            ) : (
+              <div aria-hidden {...stylex.props(styles.activeIndicator)} />
+            )}
+            {ROUTES.map(({ label, key, icon, path }) => (
               <NavigationItem
                 key={key}
                 label={label}
                 icon={icon}
                 path={path}
-                index={index}
                 isActive={isCurrentPath(pathname, path)}
               />
             ))}
@@ -187,14 +161,22 @@ const styles = stylex.create({
   },
   activeIndicator: {
     position: 'absolute',
+    left: 0,
     top: '50%',
+    width: '3rem',
     height: '3rem',
     borderRadius: '9999px',
     backgroundColor: colors.primaryTransparent10,
-    transform: 'translateY(-50%)',
+    transform: 'translate3d(0, -50%, 0)',
     transitionDuration: motionDuration,
-    transitionProperty: 'left, width, opacity',
+    transitionProperty: 'transform',
     transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  },
+  activeIndicatorArticles: {
+    transform: {
+      default: 'translate3d(3.5rem, -50%, 0)',
+      '@media (max-width: 640px)': 'translate3d(3.125rem, -50%, 0)',
+    },
   },
   themeToggle: {
     display: 'flex',

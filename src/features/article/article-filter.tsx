@@ -1,3 +1,7 @@
+'use client';
+
+import { type FormEvent, type MouseEvent, useTransition } from 'react';
+
 import Link from 'next/link';
 import * as stylex from '@stylexjs/stylex';
 
@@ -18,9 +22,44 @@ const filterHref = (query?: string, tag?: string) => {
 };
 
 export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilterProps) {
+  const [isPending, startTransition] = useTransition();
+
+  const navigateToFilter = (href: string) => {
+    const currentHref = `${window.location.pathname}${window.location.search}`;
+    if (currentHref === href) return;
+
+    startTransition(() => {
+      window.history.pushState(null, '', href);
+    });
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const nextQuery = String(formData.get('q') ?? '').trim() || undefined;
+    navigateToFilter(filterHref(nextQuery, selectedTag));
+  };
+
+  const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.currentTarget.target === '_blank' ||
+      event.currentTarget.hasAttribute('download')
+    ) {
+      return;
+    }
+    event.preventDefault();
+    navigateToFilter(href);
+  };
+
   return (
-    <section aria-label="文章筛选" {...stylex.props(articleStyles.filter)}>
-      <form action="/articles" method="get">
+    <section aria-label="文章筛选" aria-busy={isPending} {...stylex.props(articleStyles.filter)}>
+      <form action="/articles" method="get" onSubmit={handleSubmit}>
         <label htmlFor="article-search" {...stylex.props(articleStyles.filterLabel)}>
           搜索文章
         </label>
@@ -43,8 +82,14 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
 
       {query || selectedTag ? (
         <div {...stylex.props(articleStyles.filterActions)}>
-          <span {...stylex.props(articleStyles.articleCount)}>当前筛选已生效</span>
-          <Link href="/articles" {...stylex.props(articleStyles.clearLink)}>
+          <span aria-live="polite" {...stylex.props(articleStyles.filterStatus)}>
+            {isPending ? '正在更新筛选…' : '当前筛选已生效'}
+          </span>
+          <Link
+            href="/articles"
+            onClick={(event) => handleLinkClick(event, '/articles')}
+            {...stylex.props(articleStyles.clearLink)}
+          >
             清除筛选
           </Link>
         </div>
@@ -53,6 +98,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
       <nav aria-label="按标签筛选" {...stylex.props(articleStyles.tagList)}>
         <Link
           href={filterHref(query)}
+          onClick={(event) => handleLinkClick(event, filterHref(query))}
           aria-current={!selectedTag ? 'page' : undefined}
           {...stylex.props(articleStyles.tagLink, !selectedTag && articleStyles.tagLinkActive)}
         >
@@ -64,6 +110,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
             <Link
               key={tag}
               href={filterHref(query, tag)}
+              onClick={(event) => handleLinkClick(event, filterHref(query, tag))}
               aria-current={active ? 'page' : undefined}
               {...stylex.props(articleStyles.tagLink, active && articleStyles.tagLinkActive)}
             >

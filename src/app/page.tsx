@@ -218,6 +218,7 @@ const styles = stylex.create({
     fontStyle: 'italic',
   },
   sourceLink: {
+    color: colors.primary,
     textDecorationLine: 'underline',
   },
   gameItem: {

@@ -32,14 +32,14 @@ export const layout = stylex.defineVars({
 });
 
 export const darkTheme = stylex.createTheme(colors, {
-  primary: '#60a5fa',
-  primaryStrong: '#60a5fa',
-  primaryStrongHover: '#93c5fd',
-  primaryAction: '#2563eb',
-  primaryActionHover: '#1d4ed8',
-  primaryTransparent: 'color-mix(in srgb, #60a5fa, transparent 100%)',
-  primaryTransparent10: 'color-mix(in srgb, #60a5fa, transparent 90%)',
-  primaryTransparent20: 'color-mix(in srgb, #60a5fa, transparent 80%)',
+  primary: '#c084fc',
+  primaryStrong: '#c084fc',
+  primaryStrongHover: '#d8b4fe',
+  primaryAction: '#7c3aed',
+  primaryActionHover: '#6d28d9',
+  primaryTransparent: 'color-mix(in srgb, #c084fc, transparent 100%)',
+  primaryTransparent10: 'color-mix(in srgb, #c084fc, transparent 90%)',
+  primaryTransparent20: 'color-mix(in srgb, #c084fc, transparent 80%)',
   canvas: '#111827',
   surface: '#1f2937',
   surfaceStrong: '#2f3542',

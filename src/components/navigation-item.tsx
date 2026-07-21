@@ -2,10 +2,11 @@
 
 import { memo } from 'react';
 
-import type { IconName } from '@/components';
+import type { IconName } from '@/components/icon';
 
-import Link from 'next/link';
-import { Icon, Tooltip, TooltipContent, TooltipTrigger } from '@/components';
+import Link, { useLinkStatus } from 'next/link';
+import Icon from '@/components/icon';
+import Tooltip, { TooltipContent, TooltipTrigger } from '@/components/tooltip';
 import { colors } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
@@ -13,23 +14,33 @@ interface NavigationItemProps {
   label: string;
   icon: IconName;
   path: string;
-  index: number;
   isActive: boolean;
 }
 
+function NavigationPendingStatus() {
+  const { pending } = useLinkStatus();
+
+  return pending ? (
+    <span role="status" {...stylex.props(styles.pendingLabel)}>
+      页面加载中
+    </span>
+  ) : null;
+}
+
 const NavigationItem = memo(
-  ({ label, icon, path, index, isActive }: NavigationItemProps) => {
+  ({ label, icon, path, isActive }: NavigationItemProps) => {
     return (
-      <Tooltip key={`nav-${index}-${isActive ? 'active' : 'inactive'}`}>
+      <Tooltip>
         <TooltipTrigger asChild>
           <Link
             href={path}
-            data-nav-index={index}
+            prefetch={path === '/articles' ? true : undefined}
             {...stylex.props(styles.item, isActive && styles.itemActive)}
             aria-current={isActive ? 'page' : undefined}
             aria-label={label}
           >
             <Icon name={icon} />
+            <NavigationPendingStatus />
           </Link>
         </TooltipTrigger>
         <TooltipContent hideArrow>{label}</TooltipContent>
@@ -42,7 +53,6 @@ const NavigationItem = memo(
       prevProps.label === nextProps.label &&
       prevProps.icon === nextProps.icon &&
       prevProps.path === nextProps.path &&
-      prevProps.index === nextProps.index &&
       prevProps.isActive === nextProps.isActive
     );
   },
@@ -86,6 +96,15 @@ const styles = stylex.create({
   },
   itemActive: {
     color: colors.primary,
+  },
+  pendingLabel: {
+    position: 'absolute',
+    width: '1px',
+    height: '1px',
+    overflow: 'hidden',
+    clip: 'rect(0 0 0 0)',
+    clipPath: 'inset(50%)',
+    whiteSpace: 'nowrap',
   },
 });
 

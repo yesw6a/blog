@@ -34,6 +34,11 @@ export const articleStyles = stylex.create({
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
   },
+  filterStatus: {
+    color: colors.textMuted,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.875rem',
+  },
   filter: {
     marginBottom: '2.5rem',
   },
@@ -472,14 +477,18 @@ export const articleStyles = stylex.create({
     marginTop: '0.5rem',
   },
   tocAside: {
+    position: 'sticky',
+    top: `calc(${layout.headerSafeArea} + 1rem)`,
     display: {
       default: 'block',
       '@media (max-width: 980px)': 'none',
     },
+    maxHeight: `calc(100dvh - ${layout.headerSafeArea} - 2rem)`,
+    alignSelf: 'start',
+    overflowY: 'auto',
+    overscrollBehaviorY: 'contain',
   },
   toc: {
-    position: 'sticky',
-    top: `calc(${layout.headerSafeArea} + 1rem)`,
     borderLeftWidth: '1px',
     borderLeftStyle: 'solid',
     borderLeftColor: colors.border,
