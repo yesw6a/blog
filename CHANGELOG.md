@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v.0.2.2 (2026-07-27 ~ 2026-07-31)
+
+### 📦 Version
+
+- 项目版本从 `0.2.1` 升级到 `0.2.2`。
+- 本发布窗口包含新增文章内容、MDX 预渲染修复和构建前内容校验，均属于向后兼容的 Patch 级改进。
+
+### 🎉 Added
+
+- 发布 8 篇新文章，涵盖智能成本、开源模型、多智能体协作、模型密集发布、AI 安全与 Agent 落地等主题。
+- 新增无依赖的 MDX 内容校验器，扫描文章中的字符串形式 `style` 属性，并在失败时输出文件路径与行号。
+
+### 🔄 Changed
+
+- 生产构建在执行 Next.js Turbopack 编译前先运行 `content:check`，让不受支持的 MDX 样式写法更早失败。
+- 补充文章写作规则与发布检查清单，优先推荐 Markdown 语义或已注册的 MDX 组件，并要求检查主题适配、文字对比度与可访问性。
+
+### 🐛 Fixed
+
+- 将《Agent无处不在的那一天》中 8 处 HTML 字符串样式改为语义化 Markdown 强调，修复 React 在静态预渲染时因 `style` 属性类型错误导致的生产构建失败。
+
+### ✅ Verify
+
+- `pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint` 与 `pnpm.cmd build` 检查通过。
+- 目标文章已成功完成静态预渲染；生产构建仍提示 Browserslist 数据已过期，该提示不阻塞构建。
+
 ## v.0.2.1 (2026-07-20 ~ 2026-07-24)
 
 ### 📦 Version
