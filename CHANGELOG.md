@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v.0.2.3 (2026-08-03 ~ 2026-08-07)
+
+### 📦 Version
+
+- 项目版本从 `0.2.2` 升级到 `0.2.3`。
+- 本发布窗口包含 3 篇新增文章、MDX 构建错误修复和发布前内容校验加固，均属于向后兼容的 Patch 级改进。
+
+### 🎉 Added
+
+- 发布 3 篇 AI 资料整理与感悟文章，主题涵盖多智能体协作、AI 数学证明与开源模型产业链，以及 OpenRouter 模型调用趋势。
+
+### 🔄 Changed
+
+- 将 `content:check` 扩展为逐篇使用项目同款 Markdown、MDX 与 GFM 解析器校验文章语法，同时保留字符串形式 `style` 属性检查，并在失败时报告文件、行号和列号。
+- 补充自动写作的 MDX 安全规则，优先使用纯 Markdown 或语义化 `<strong>`，并明确任何检查失败时禁止 commit 和 push。
+
+### 🐛 Fixed
+
+- 将 8 月 2 日和 8 月 3 日文章中脆弱的 `<span>` 与 Markdown 粗体混写统一改为合法的语义化 `<strong>`，修复 Cloudflare 在收集 `/articles/[slug]` 页面数据时因 JSX 标签缺少 `>` 而构建失败的问题。
+
+### ✅ Verify
+
+- `pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check` 检查通过。
+- `pnpm.cmd exec opennextjs-cloudflare build` 通过，并成功生成 `.open-next/worker.js`。
+- OpenNext 在 Windows 上仍提示推荐使用 WSL，Browserslist 数据仍提示过期；两项均为非阻塞警告。
+
 ## v.0.2.2 (2026-07-27 ~ 2026-07-31)
 
 ### 📦 Version
