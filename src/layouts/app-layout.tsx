@@ -97,7 +97,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </header>
 
       <main {...stylex.props(styles.main)}>{children}</main>
-      <footer {...stylex.props(styles.footer)}>兮兮 © {new Date().getFullYear()}</footer>
+      <footer {...stylex.props(styles.footer)}>
+        <span>兮兮 © {new Date().getFullYear()}</span>
+        <a
+          href="https://icp.gov.moe/?keyword=20268082"
+          target="_blank"
+          rel="noopener noreferrer"
+          {...stylex.props(styles.footerLink)}
+        >
+          萌ICP备20268082号
+        </a>
+      </footer>
     </div>
   );
 }
@@ -213,12 +223,39 @@ const styles = stylex.create({
     },
   },
   footer: {
+    display: 'flex',
     width: 'min(70rem, calc(100% - 2rem))',
     marginInline: 'auto',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.25rem 1rem',
     paddingBlock: '3rem',
     color: colors.textMuted,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
     textAlign: 'center',
+  },
+  footerLink: {
+    display: 'inline-flex',
+    minHeight: '44px',
+    alignItems: 'center',
+    color: {
+      default: colors.textMuted,
+      ':hover': colors.primaryStrong,
+    },
+    textDecoration: {
+      default: 'none',
+      ':hover': 'underline',
+    },
+    textUnderlineOffset: '0.2em',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primaryStrong}`,
+    },
+    outlineOffset: '3px',
+    transitionDuration: motionDuration,
+    transitionProperty: 'color',
+    transitionTimingFunction: 'ease',
   },
 });
