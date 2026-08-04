@@ -1,6 +1,8 @@
 'use client';
 
-import { type FormEvent, type MouseEvent, useTransition } from 'react';
+import { useState, useTransition } from 'react';
+
+import type { FormEvent, MouseEvent } from 'react';
 
 import Link from 'next/link';
 import * as stylex from '@stylexjs/stylex';
@@ -13,6 +15,10 @@ type ArticleFilterProps = {
   selectedTag?: string;
 };
 
+const MOBILE_VISIBLE_TAG_COUNT = 6;
+const DESKTOP_VISIBLE_TAG_COUNT = 10;
+const TAG_LIST_ID = 'article-tag-filter-list';
+
 const filterHref = (query?: string, tag?: string) => {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
@@ -22,7 +28,10 @@ const filterHref = (query?: string, tag?: string) => {
 };
 
 export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilterProps) {
+  const [showAllTags, setShowAllTags] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const hasMobileOverflow = tags.length > MOBILE_VISIBLE_TAG_COUNT;
+  const hasDesktopOverflow = tags.length > DESKTOP_VISIBLE_TAG_COUNT;
 
   const navigateToFilter = (href: string) => {
     const currentHref = `${window.location.pathname}${window.location.search}`;
@@ -95,7 +104,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
         </div>
       ) : null}
 
-      <nav aria-label="按标签筛选" {...stylex.props(articleStyles.tagList)}>
+      <nav id={TAG_LIST_ID} aria-label="按标签筛选" {...stylex.props(articleStyles.tagList)}>
         <Link
           href={filterHref(query)}
           onClick={(event) => handleLinkClick(event, filterHref(query))}
@@ -104,20 +113,40 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
         >
           全部
         </Link>
-        {tags.map((tag) => {
+        {tags.map((tag, index) => {
           const active = selectedTag === tag;
+          const collapsedOnMobile = !showAllTags && index >= MOBILE_VISIBLE_TAG_COUNT;
+          const collapsedOnDesktop = !showAllTags && index >= DESKTOP_VISIBLE_TAG_COUNT;
+
           return (
             <Link
               key={tag}
               href={filterHref(query, tag)}
               onClick={(event) => handleLinkClick(event, filterHref(query, tag))}
               aria-current={active ? 'page' : undefined}
-              {...stylex.props(articleStyles.tagLink, active && articleStyles.tagLinkActive)}
+              {...stylex.props(
+                articleStyles.tagLink,
+                collapsedOnMobile && articleStyles.tagLinkCollapsedMobile,
+                collapsedOnDesktop && articleStyles.tagLinkCollapsedDesktop,
+                active && articleStyles.tagLinkActive,
+                active && articleStyles.tagLinkForcedVisible,
+              )}
             >
               {tag}
             </Link>
           );
         })}
+        {hasMobileOverflow ? (
+          <button
+            type="button"
+            aria-controls={TAG_LIST_ID}
+            aria-expanded={showAllTags}
+            onClick={() => setShowAllTags((expanded) => !expanded)}
+            {...stylex.props(articleStyles.tagToggle, !hasDesktopOverflow && articleStyles.tagToggleMobileOnly)}
+          >
+            {showAllTags ? '收起标签' : '更多标签'}
+          </button>
+        ) : null}
       </nav>
     </section>
   );

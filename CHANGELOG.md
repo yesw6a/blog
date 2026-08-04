@@ -7,12 +7,14 @@
 - 项目版本从 `0.2.3` 升级到 `0.3.0`。
 - 本发布窗口在新增文章、MDX 构建错误修复和发布前内容校验加固之外，新增可配置的网站访问统计能力，整体属于向后兼容的 Minor 级功能更新。
 - 后续补充的网站图标设计与生成流程属于向后兼容的 Patch 级视觉改进，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
+- 本次文章标签折叠属于向后兼容的功能增强，文章阅读样式优化属于 Patch 级视觉改进，均未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 
 ### 🎉 Added
 
 - 发布 3 篇 AI 资料整理与感悟文章，主题涵盖多智能体协作、AI 数学证明与开源模型产业链，以及 OpenRouter 模型调用趋势。
 - 新增 Cloudflare Web Analytics 全站统计组件，在生产环境且配置 Site Token 时延迟加载 Beacon，开发环境或缺少配置时自动禁用。
 - 新增由 `C` 与真实“兮”字轮廓组成的站点图标，并同步提供 SVG、Apple Touch Icon 与多尺寸 favicon。
+- 文章标签较多时新增“更多标签 / 收起标签”交互，移动端默认显示 6 个、桌面端显示 10 个，并保证当前筛选标签始终可见及键盘状态可识别。
 
 ### 🔄 Changed
 
@@ -21,6 +23,8 @@
 - 在根布局统一挂载统计组件，并在 README 中补充 `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` 的构建期配置、部署方式和客户端路由验证步骤。
 - 将站点图标调整为低饱和珍珠灰与银蓝 Liquid Glass 近似风格，保留玻璃 `C` 元素，并从项目内置中文字体提取准确的“兮”字路径。
 - 新增无第三方图像依赖的图标生成脚本，通过 4 倍超采样输出 180px PNG 以及包含 16/32/48px 图像帧的 ICO。
+- 文章标签改为按使用频率降序排列，同频时按中文 locale 排序，使折叠状态优先展示更常用的主题。
+- 收敛长文章标题字号并调整摘要、元信息和详情标签节奏，同时统一 MDX 强调文本、章节分隔线、引用与图片的 StyleX 阅读样式。
 
 ### 🐛 Fixed
 
@@ -31,6 +35,7 @@
 - `pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check` 检查通过。
 - `pnpm.cmd exec opennextjs-cloudflare build` 通过，并成功生成 `.open-next/worker.js`。
 - 图标生成脚本通过 ESLint；Apple Touch Icon 尺寸确认为 `180×180`，ICO 确认包含 `16×16`、`32×32` 与 `48×48` 三帧，Next.js 生产构建正确生成 `/icon.svg` 与 `/apple-icon.png`。
+- 文章阅读与标签折叠改动通过目标文件 Prettier、`pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 36 个静态页面。
 - OpenNext 在 Windows 上仍提示推荐使用 WSL，Browserslist 数据仍提示过期；两项均为非阻塞警告。
 
 ## v.0.2.2 (2026-07-27 ~ 2026-07-31)

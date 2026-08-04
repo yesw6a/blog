@@ -210,9 +210,20 @@ export const getArticleBySlug = async (slug: string, options?: { includeDrafts?:
 
 export const getAllTags = async (options?: { includeDrafts?: boolean }) => {
   const articles = await getArticleSummaries(options);
-  return [...new Set(articles.flatMap((article) => article.tags))].toSorted((left, right) =>
-    left.localeCompare(right, 'zh-CN'),
-  );
+  const tagCounts = new Map<string, number>();
+
+  for (const article of articles) {
+    for (const tag of article.tags) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    }
+  }
+
+  return [...tagCounts.entries()]
+    .toSorted(([leftTag, leftCount], [rightTag, rightCount]) => {
+      const countDifference = rightCount - leftCount;
+      return countDifference || leftTag.localeCompare(rightTag, 'zh-CN');
+    })
+    .map(([tag]) => tag);
 };
 
 export const getAdjacentArticles = async (

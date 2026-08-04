@@ -64,6 +64,13 @@ const ArticleImage = ({ src, alt = '', title }: ComponentPropsWithoutRef<'img'>)
   );
 };
 
+const ArticleStrong = ({ className, style, ...props }: ComponentPropsWithoutRef<'strong'>) => {
+  const styles = stylex.props(articleStyles.strong);
+  const mergedClassName = [styles.className, className].filter(Boolean).join(' ');
+
+  return <strong {...props} className={mergedClassName} style={{ ...styles.style, ...style }} />;
+};
+
 const articleComponents = {
   h2: (props: ComponentPropsWithoutRef<'h2'>) => <h2 {...props} {...stylex.props(articleStyles.heading2)} />,
   h3: (props: ComponentPropsWithoutRef<'h3'>) => <h3 {...props} {...stylex.props(articleStyles.heading3)} />,
@@ -72,9 +79,11 @@ const articleComponents = {
   ul: (props: ComponentPropsWithoutRef<'ul'>) => <ul {...props} {...stylex.props(articleStyles.list)} />,
   ol: (props: ComponentPropsWithoutRef<'ol'>) => <ol {...props} {...stylex.props(articleStyles.list)} />,
   li: (props: ComponentPropsWithoutRef<'li'>) => <li {...props} {...stylex.props(articleStyles.listItem)} />,
+  strong: ArticleStrong,
   blockquote: (props: ComponentPropsWithoutRef<'blockquote'>) => (
     <blockquote {...props} {...stylex.props(articleStyles.blockquote)} />
   ),
+  hr: (props: ComponentPropsWithoutRef<'hr'>) => <hr {...props} {...stylex.props(articleStyles.divider)} />,
   pre: (props: ComponentPropsWithoutRef<'pre'>) => <pre {...props} {...stylex.props(articleStyles.codeBlock)} />,
   code: ({ className, ...props }: ComponentPropsWithoutRef<'code'>) => (
     <code
