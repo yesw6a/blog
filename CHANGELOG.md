@@ -4,19 +4,23 @@
 
 ### 📦 Version
 
-- 项目版本从 `0.2.2` 升级到 `0.3.0`。
+- 项目版本从 `0.2.3` 升级到 `0.3.0`。
 - 本发布窗口在新增文章、MDX 构建错误修复和发布前内容校验加固之外，新增可配置的网站访问统计能力，整体属于向后兼容的 Minor 级功能更新。
+- 后续补充的网站图标设计与生成流程属于向后兼容的 Patch 级视觉改进，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 
 ### 🎉 Added
 
 - 发布 3 篇 AI 资料整理与感悟文章，主题涵盖多智能体协作、AI 数学证明与开源模型产业链，以及 OpenRouter 模型调用趋势。
 - 新增 Cloudflare Web Analytics 全站统计组件，在生产环境且配置 Site Token 时延迟加载 Beacon，开发环境或缺少配置时自动禁用。
+- 新增由 `C` 与真实“兮”字轮廓组成的站点图标，并同步提供 SVG、Apple Touch Icon 与多尺寸 favicon。
 
 ### 🔄 Changed
 
 - 将 `content:check` 扩展为逐篇使用项目同款 Markdown、MDX 与 GFM 解析器校验文章语法，同时保留字符串形式 `style` 属性检查，并在失败时报告文件、行号和列号。
 - 补充自动写作的 MDX 安全规则，优先使用纯 Markdown 或语义化 `<strong>`，并明确任何检查失败时禁止 commit 和 push。
 - 在根布局统一挂载统计组件，并在 README 中补充 `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` 的构建期配置、部署方式和客户端路由验证步骤。
+- 将站点图标调整为低饱和珍珠灰与银蓝 Liquid Glass 近似风格，保留玻璃 `C` 元素，并从项目内置中文字体提取准确的“兮”字路径。
+- 新增无第三方图像依赖的图标生成脚本，通过 4 倍超采样输出 180px PNG 以及包含 16/32/48px 图像帧的 ICO。
 
 ### 🐛 Fixed
 
@@ -26,6 +30,7 @@
 
 - `pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check` 检查通过。
 - `pnpm.cmd exec opennextjs-cloudflare build` 通过，并成功生成 `.open-next/worker.js`。
+- 图标生成脚本通过 ESLint；Apple Touch Icon 尺寸确认为 `180×180`，ICO 确认包含 `16×16`、`32×32` 与 `48×48` 三帧，Next.js 生产构建正确生成 `/icon.svg` 与 `/apple-icon.png`。
 - OpenNext 在 Windows 上仍提示推荐使用 WSL，Browserslist 数据仍提示过期；两项均为非阻塞警告。
 
 ## v.0.2.2 (2026-07-27 ~ 2026-07-31)
