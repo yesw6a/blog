@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { ThemeProvider } from 'next-themes';
+import CloudflareWebAnalytics from '@/components/cloudflare-web-analytics';
 import { siteConfig } from '@/config/site';
 import AppLayout from '@/layouts/app-layout';
 import * as stylex from '@stylexjs/stylex';
@@ -36,6 +37,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AppLayout>{children}</AppLayout>
         </ThemeProvider>
+        <CloudflareWebAnalytics />
       </body>
     </html>
   );

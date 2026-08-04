@@ -43,6 +43,18 @@ draft: true
 NEXT_PUBLIC_SITE_URL=https://example.com
 ```
 
+## 网站统计
+
+生产环境使用 Cloudflare Web Analytics 统计页面访问。先在 Cloudflare 控制台为站点启用 Web Analytics 并获取 Site Token，然后在执行生产构建或部署命令前设置：
+
+```env
+NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN=your-site-token
+```
+
+`NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` 是浏览器端公开配置，必须在 Next.js 构建阶段可用。未配置 Token 或在开发环境运行时，统计脚本不会加载。
+
+部署后可在浏览器网络面板中检查 `beacon.min.js` 和 `/cdn-cgi/rum` 请求，并分别访问首页、文章列表和文章详情页，确认 Cloudflare Web Analytics 面板能够记录页面浏览。还应通过站内链接进行一次客户端路由跳转，确认跳转后的页面也会被统计。
+
 ## 检查命令
 
 ```bash
