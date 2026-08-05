@@ -595,10 +595,23 @@ export const articleStyles = stylex.create({
     padding: 0,
   },
   tocItem: {
+    position: 'relative',
     marginBlock: '0.4rem',
   },
   tocItemNested: {
     paddingLeft: '0.875rem',
+  },
+  tocItemActive: {
+    '::before': {
+      content: '""',
+      position: 'absolute',
+      top: '0.15rem',
+      bottom: '0.15rem',
+      left: '-1.3125rem',
+      width: '2px',
+      borderRadius: '9999px',
+      backgroundColor: colors.primaryStrong,
+    },
   },
   tocLink: {
     display: 'inline-block',
@@ -610,11 +623,17 @@ export const articleStyles = stylex.create({
     fontSize: '0.8125rem',
     lineHeight: 1.55,
     textDecorationLine: 'none',
+    transitionDuration: reducedMotionDuration,
+    transitionProperty: 'color',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,
     },
     outlineOffset: '2px',
+  },
+  tocLinkActive: {
+    color: colors.primaryStrong,
+    fontWeight: 700,
   },
   adjacentSection: {
     maxWidth: '70ch',
