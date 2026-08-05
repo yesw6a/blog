@@ -575,6 +575,10 @@ export const articleStyles = stylex.create({
     alignSelf: 'start',
     overflowY: 'auto',
     overscrollBehaviorY: 'contain',
+    scrollBehavior: {
+      default: 'smooth',
+      '@media (prefers-reduced-motion: reduce)': 'auto',
+    },
   },
   toc: {
     borderLeftWidth: '1px',
@@ -590,9 +594,23 @@ export const articleStyles = stylex.create({
     fontWeight: 700,
   },
   tocList: {
+    position: 'relative',
     listStyle: 'none',
     margin: '0.75rem 0 0',
     padding: 0,
+  },
+  tocIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: '-1.3125rem',
+    width: '2px',
+    pointerEvents: 'none',
+    borderRadius: '9999px',
+    backgroundColor: colors.primaryStrong,
+    transitionDuration: reducedMotionDuration,
+    transitionProperty: 'transform, opacity',
+    transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    willChange: 'transform',
   },
   tocItem: {
     position: 'relative',
@@ -600,18 +618,6 @@ export const articleStyles = stylex.create({
   },
   tocItemNested: {
     paddingLeft: '0.875rem',
-  },
-  tocItemActive: {
-    '::before': {
-      content: '""',
-      position: 'absolute',
-      top: '0.15rem',
-      bottom: '0.15rem',
-      left: '-1.3125rem',
-      width: '2px',
-      borderRadius: '9999px',
-      backgroundColor: colors.primaryStrong,
-    },
   },
   tocLink: {
     display: 'inline-block',
