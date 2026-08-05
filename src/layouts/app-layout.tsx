@@ -8,6 +8,8 @@ import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/icon';
 import NavigationItem from '@/components/navigation-item';
+import SiteStatsFooter from '@/features/site-stats/site-stats-footer';
+import SiteStatsTracker from '@/features/site-stats/site-stats-tracker';
 import { colors, darkTheme, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
@@ -62,6 +64,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div id={APP_THEME_ROOT_ID} {...rootStyleProps}>
       <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      <SiteStatsTracker />
       <header {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.headerInner)}>
           <div {...stylex.props(styles.navigation)}>
@@ -98,15 +101,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       <main {...stylex.props(styles.main)}>{children}</main>
       <footer {...stylex.props(styles.footer)}>
-        <span>兮兮 © {new Date().getFullYear()}</span>
-        <a
-          href="https://icp.gov.moe/?keyword=20268082"
-          target="_blank"
-          rel="noopener noreferrer"
-          {...stylex.props(styles.footerLink)}
-        >
-          萌ICP备20268082号
-        </a>
+        <SiteStatsFooter />
+        <div {...stylex.props(styles.footerMeta)}>
+          <span>兮兮 © {new Date().getFullYear()}</span>
+          <a
+            href="https://icp.gov.moe/?keyword=20268082"
+            target="_blank"
+            rel="noopener noreferrer"
+            {...stylex.props(styles.footerLink)}
+          >
+            萌ICP备20268082号
+          </a>
+        </div>
       </footer>
     </div>
   );
@@ -226,15 +232,22 @@ const styles = stylex.create({
     display: 'flex',
     width: 'min(70rem, calc(100% - 2rem))',
     marginInline: 'auto',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '0.25rem 1rem',
+    gap: '0.25rem',
     paddingBlock: '3rem',
     color: colors.textMuted,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
     textAlign: 'center',
+  },
+  footerMeta: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.25rem 1rem',
   },
   footerLink: {
     display: 'inline-flex',

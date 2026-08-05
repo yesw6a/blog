@@ -9,6 +9,7 @@
 - 后续补充的网站图标设计与生成流程属于向后兼容的 Patch 级视觉改进，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次文章标签折叠属于向后兼容的功能增强，文章阅读样式优化属于 Patch 级视觉改进，均未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次全局页脚备案链接属于向后兼容的 Patch 级站点信息增强，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
+- 本次 Cloudflare D1 公开访客统计属于向后兼容的 Minor 级功能更新，未超过本窗口从 `0.2.3` 升至 `0.3.0` 已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 
 ### 🎉 Added
 
@@ -17,6 +18,9 @@
 - 新增由 `C` 与真实“兮”字轮廓组成的站点图标，并同步提供 SVG、Apple Touch Icon 与多尺寸 favicon。
 - 文章标签较多时新增“更多标签 / 收起标签”交互，移动端默认显示 6 个、桌面端显示 10 个，并保证当前筛选标签始终可见及键盘状态可识别。
 - 全局页脚新增“萌ICP备20268082号”外部备案链接，支持移动端自然换行、44px 触控高度、悬停反馈与键盘焦点状态，并补充新窗口链接安全属性。
+- 新增 Cloudflare D1 站点统计，通过匿名浏览器 UUID 的 SHA-256 哈希累计独立访客，并按 UTC 日期原子累计页面访问量。
+- 新增 `/api/site-stats` 读取接口、`/api/site-stats/view` 上报接口及客户端路由追踪，包含同源校验、请求体限制、常见机器人过滤和短时重复上报保护。
+- 全局页脚新增“独立访客 / 累计访问”公开数据行，使用制表数字、中文数字格式和稳定占位降低异步加载造成的布局偏移。
 
 ### 🔄 Changed
 
@@ -27,6 +31,8 @@
 - 新增无第三方图像依赖的图标生成脚本，通过 4 倍超采样输出 180px PNG 以及包含 16/32/48px 图像帧的 ICO。
 - 文章标签改为按使用频率降序排列，同频时按中文 locale 排序，使折叠状态优先展示更常用的主题。
 - 收敛长文章标题字号并调整摘要、元信息和详情标签节奏，同时统一 MDX 强调文本、章节分隔线、引用与图片的 StyleX 阅读样式。
+- 为 Wrangler 增加 `DB` D1 binding 和幂等 migration，由 Wrangler 根据实际绑定生成 `CloudflareEnv` 类型，并在 README 中补充新账号初始化、迁移和上线核验流程。
+- D1 接口失败时返回不泄漏内部细节的通用响应，同时向 Workers Observability 写入结构化错误日志；统计不可用不会阻断页面渲染或站内导航。
 
 ### 🐛 Fixed
 
@@ -39,6 +45,9 @@
 - 图标生成脚本通过 ESLint；Apple Touch Icon 尺寸确认为 `180×180`，ICO 确认包含 `16×16`、`32×32` 与 `48×48` 三帧，Next.js 生产构建正确生成 `/icon.svg` 与 `/apple-icon.png`。
 - 文章阅读与标签折叠改动通过目标文件 Prettier、`pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 36 个静态页面。
 - 页脚备案链接改动通过目标文件 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 36 个静态页面。
+- D1 统计改动通过 `pnpm.cmd cf-typegen`、目标文件 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 38 个静态页面和两个动态统计 API Route。
+- Cloudflare 远程 `blog-stats` D1 已在 APAC 创建并验证，`site_visitors` 与 `site_daily_stats` 两张表可查询，初始化计数均为 0。
+- 本次未重新完成 OpenNext 专用打包：Windows 上既有进程占用 `.open-next` 目录，构建在清理旧产物阶段因 `EPERM` 中止；项目发布继续由 GitHub CI/CD 触发。
 - OpenNext 在 Windows 上仍提示推荐使用 WSL，Browserslist 数据仍提示过期；两项均为非阻塞警告。
 
 ## v.0.2.2 (2026-07-27 ~ 2026-07-31)

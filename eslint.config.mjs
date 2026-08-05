@@ -24,6 +24,7 @@ const eslintConfig = [
       'out/**',
       'build/**',
       'next-env.d.ts',
+      'cloudflare-env.d.ts',
       '.prettierrc.js',
       'postcss.config.js',
       'stylelint.config.js',
