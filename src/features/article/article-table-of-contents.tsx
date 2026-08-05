@@ -163,7 +163,7 @@ export default function ArticleTableOfContents({ headings }: ArticleTableOfConte
   if (headings.length === 0) return null;
 
   return (
-    <aside ref={tocAsideRef} {...stylex.props(articleStyles.tocAside)}>
+    <aside data-toc-scroll-container="" ref={tocAsideRef} {...stylex.props(articleStyles.tocAside)}>
       <nav aria-label="文章目录" {...stylex.props(articleStyles.toc)}>
         <p {...stylex.props(articleStyles.tocTitle)}>本文目录</p>
         <ol ref={tocListRef} {...stylex.props(articleStyles.tocList)}>
