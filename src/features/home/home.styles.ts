@@ -13,17 +13,33 @@ export const homeStyles = stylex.create({
   hero: {
     display: 'grid',
     gridTemplateColumns: {
-      default: '11rem minmax(0, 1fr)',
+      default: '10rem minmax(0, 1fr)',
       '@media (max-width: 700px)': 'minmax(0, 1fr)',
     },
-    alignItems: 'center',
+    alignItems: 'start',
     gap: {
-      default: 'clamp(2rem, 6vw, 5rem)',
+      default: 'clamp(2rem, 4vw, 4rem)',
       '@media (max-width: 700px)': '1.75rem',
     },
     paddingBlock: {
       default: '1.5rem 4.5rem',
       '@media (max-width: 700px)': '0.75rem 3.5rem',
+    },
+  },
+  profileRail: {
+    display: 'flex',
+    width: {
+      default: '10rem',
+      '@media (max-width: 700px)': 'auto',
+    },
+    marginTop: {
+      default: '2rem',
+      '@media (max-width: 700px)': 0,
+    },
+    flexDirection: 'column',
+    alignItems: {
+      default: 'center',
+      '@media (max-width: 700px)': 'flex-start',
     },
   },
   avatar: {
@@ -116,48 +132,6 @@ export const homeStyles = stylex.create({
       ':focus-visible': `2px solid ${colors.primaryStrong}`,
     },
     outlineOffset: '3px',
-  },
-  aboutActions: {
-    display: 'flex',
-    marginTop: '1.25rem',
-    flexWrap: 'wrap',
-    gap: '0.5rem',
-  },
-  aboutActionLink: {
-    display: 'inline-flex',
-    minWidth: '44px',
-    minHeight: '44px',
-    touchAction: 'manipulation',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    borderColor: {
-      default: colors.border,
-      ':hover': colors.primaryTransparent20,
-      ':focus-visible': colors.primaryStrong,
-    },
-    borderRadius: '0.5rem',
-    backgroundColor: {
-      default: 'transparent',
-      ':hover': colors.primaryTransparent10,
-      ':active': colors.primaryTransparent20,
-    },
-    color: {
-      default: colors.textMuted,
-      ':hover': colors.primaryStrong,
-      ':focus-visible': colors.primaryStrong,
-    },
-    fontSize: '1.25rem',
-    textDecorationLine: 'none',
-    outline: {
-      default: 'none',
-      ':focus-visible': `2px solid ${colors.primaryStrong}`,
-    },
-    outlineOffset: '2px',
-    transitionDuration: motionDuration,
-    transitionProperty: 'background-color, border-color, color',
-    transitionTimingFunction: 'ease',
   },
   contentGrid: {
     display: 'grid',

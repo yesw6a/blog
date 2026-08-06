@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Icon, TextKeyword } from '@/components';
 import { getPublishedArticleSummaries } from '@/features/article/article.repository';
-import HomeActionLinks from '@/features/home/home-action-links';
 import HomeAvatar from '@/features/home/home-avatar';
 import { homeStyles } from '@/features/home/home.styles';
 import * as stylex from '@stylexjs/stylex';
@@ -60,7 +59,9 @@ export default async function Home() {
   return (
     <div {...stylex.props(homeStyles.page)}>
       <section aria-labelledby="about-title" {...stylex.props(homeStyles.hero)}>
-        <HomeAvatar />
+        <div {...stylex.props(homeStyles.profileRail)}>
+          <HomeAvatar />
+        </div>
         <div>
           <p {...stylex.props(homeStyles.eyebrow)}>About</p>
           <h1 id="about-title" {...stylex.props(homeStyles.heroTitle)}>
@@ -87,7 +88,6 @@ export default async function Home() {
               </span>
             </div>
           </div>
-          <HomeActionLinks />
         </div>
       </section>
 

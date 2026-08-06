@@ -8,6 +8,7 @@ import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/icon';
 import NavigationItem from '@/components/navigation-item';
+import Tooltip, { TooltipContent, TooltipTrigger } from '@/components/tooltip';
 import BusuanziStatsFooter from '@/features/busuanzi/busuanzi-stats-footer';
 import { colors, darkTheme, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -82,18 +83,34 @@ export default function AppLayout({ children }: AppLayoutProps) {
             ))}
           </div>
 
-          <button
-            type="button"
-            {...stylex.props(styles.themeToggle)}
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            aria-label={mounted ? (isDark ? '切换到浅色主题' : '切换到深色主题') : '切换主题'}
-          >
-            {mounted ? (
-              <Icon name={isDark ? 'sun' : 'moon'} />
-            ) : (
-              <span aria-hidden {...stylex.props(styles.themeIconPlaceholder)} />
-            )}
-          </button>
+          <div {...stylex.props(styles.headerActions)}>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <a
+                  href="/rss.xml"
+                  type="application/rss+xml"
+                  aria-label="通过 RSS 订阅文章"
+                  {...stylex.props(styles.headerAction)}
+                >
+                  <Icon name="rss" style={styles.rssActionIcon} />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent hideArrow>RSS 订阅</TooltipContent>
+            </Tooltip>
+
+            <button
+              type="button"
+              {...stylex.props(styles.headerAction)}
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              aria-label={mounted ? (isDark ? '切换到浅色主题' : '切换到深色主题') : '切换主题'}
+            >
+              {mounted ? (
+                <Icon name={isDark ? 'sun' : 'moon'} />
+              ) : (
+                <span aria-hidden {...stylex.props(styles.themeIconPlaceholder)} />
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -173,6 +190,15 @@ const styles = stylex.create({
       '@media (max-width: 640px)': '0.125rem',
     },
   },
+  headerActions: {
+    display: 'flex',
+    flex: '0 0 auto',
+    alignItems: 'center',
+    gap: {
+      default: '0.125rem',
+      '@media (max-width: 640px)': 0,
+    },
+  },
   activeIndicator: {
     position: 'absolute',
     left: 0,
@@ -192,13 +218,16 @@ const styles = stylex.create({
       '@media (max-width: 640px)': 'translate3d(3.125rem, -50%, 0)',
     },
   },
-  themeToggle: {
-    display: 'flex',
+  headerAction: {
+    display: 'inline-flex',
     minWidth: '44px',
     minHeight: '44px',
+    flex: '0 0 auto',
     cursor: 'pointer',
+    touchAction: 'manipulation',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 0,
     borderRadius: '9999px',
     backgroundColor: 'transparent',
     color: {
@@ -206,11 +235,19 @@ const styles = stylex.create({
       ':hover': colors.primaryStrong,
     },
     fontSize: '1.4rem',
+    textDecorationLine: 'none',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,
     },
     outlineOffset: '2px',
+    padding: 0,
+    transitionDuration: motionDuration,
+    transitionProperty: 'color',
+    transitionTimingFunction: 'ease',
+  },
+  rssActionIcon: {
+    fontSize: '1.125rem',
   },
   themeIconPlaceholder: {
     display: 'block',
