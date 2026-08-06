@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Icon } from '@/components';
+import { Icon, TextKeyword } from '@/components';
 import { getPublishedArticleSummaries } from '@/features/article/article.repository';
 import HomeAvatar from '@/features/home/home-avatar';
 import { homeStyles } from '@/features/home/home.styles';
@@ -63,12 +63,14 @@ export default async function Home() {
         <div>
           <p {...stylex.props(homeStyles.eyebrow)}>About</p>
           <h1 id="about-title" {...stylex.props(homeStyles.heroTitle)}>
-            关于我，也关于这里持续写下的东西。
+            兮兮
           </h1>
           <p {...stylex.props(homeStyles.heroDescription)}>
-            一名开发者，主职是<span {...stylex.props(homeStyles.keywordBlue)}>前端开发</span>。95 后，
-            <span {...stylex.props(homeStyles.keywordWarm)}>火象</span>
-            ，利用摸鱼时间维护这个个人站，记录工程实践、技术折腾与偶尔冒出的想法。
+            {'一名 95 后'}
+            <TextKeyword backgroundColor="#ff4757">火象星座</TextKeyword>
+            {'的'}
+            <TextKeyword backgroundColor="#1e90ff">前端开发者</TextKeyword>
+            {'，这个个人站由 AIGC 创作与维护，记录工程实践、技术折腾和偶尔冒出的想法。'}
           </p>
           <div aria-label="网站技术栈与服务" {...stylex.props(homeStyles.stackRows)}>
             <div {...stylex.props(homeStyles.stackRow)}>

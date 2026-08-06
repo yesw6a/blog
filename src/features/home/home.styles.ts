@@ -81,22 +81,14 @@ export const homeStyles = stylex.create({
     },
     lineHeight: 1.8,
   },
-  keywordBlue: {
-    color: colors.primaryStrong,
-    fontWeight: 700,
-  },
-  keywordWarm: {
-    color: '#d04f45',
-    fontWeight: 700,
-  },
   stackRows: {
     display: 'grid',
     marginTop: '1.75rem',
-    gap: '0.625rem',
+    gap: '0.25rem',
   },
   stackRow: {
     display: 'flex',
-    minHeight: '44px',
+    minHeight: '32px',
     alignItems: 'center',
     gap: '0.625rem',
     color: colors.textSecondary,
