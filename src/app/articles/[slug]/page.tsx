@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { absoluteUrl, siteConfig } from '@/config/site';
+import { absoluteUrl, rssFeedAlternates, siteConfig } from '@/config/site';
 import ArticleContent from '@/features/article/article-content';
 import ArticleTableOfContents from '@/features/article/article-table-of-contents';
 import { getArticleTagHref } from '@/features/article/article.constants';
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   return {
     title: article.title,
     description: article.description,
-    alternates: { canonical },
+    alternates: { canonical, types: rssFeedAlternates },
     authors: [{ name: siteConfig.author }],
     keywords: article.tags,
     robots: article.draft ? { index: false, follow: false } : undefined,

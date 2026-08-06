@@ -1,5 +1,5 @@
 import { absoluteUrl, siteConfig } from '@/config/site';
-import { getPublishedArticleSummaries } from '@/features/article/article.repository';
+import { getRssArticleSummaries } from '@/features/article/article.repository';
 
 export const dynamic = 'force-static';
 
@@ -16,7 +16,7 @@ const escapeXml = (value: string) =>
   });
 
 export async function GET() {
-  const articles = await getPublishedArticleSummaries();
+  const articles = await getRssArticleSummaries();
   const items = articles
     .slice(0, 50)
     .map(
@@ -33,10 +33,11 @@ export async function GET() {
     .join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${escapeXml(siteConfig.name)}</title>
     <link>${siteConfig.url}</link>
+    <atom:link href="${escapeXml(absoluteUrl('/rss.xml'))}" rel="self" type="application/rss+xml" />
     <description>${escapeXml(siteConfig.description)}</description>
     <language>zh-CN</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>${items}

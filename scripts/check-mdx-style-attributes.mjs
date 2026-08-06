@@ -49,6 +49,7 @@ const seenSlugs = new Map();
 const tagNames = new Set();
 let publishedCount = 0;
 let draftCount = 0;
+let rssCount = 0;
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
 
 for (const file of unsupportedMarkdownFiles) {
@@ -122,6 +123,9 @@ for (const file of files) {
   if (data.featured !== undefined && typeof data.featured !== 'boolean') {
     addViolation(violations, relativeFile, 'featured 必须是布尔值。');
   }
+  if (typeof data.rss !== 'boolean') {
+    addViolation(violations, relativeFile, 'rss 必须显式填写布尔值。');
+  }
 
   if (!articleCategories.has(data.category)) {
     addViolation(violations, relativeFile, 'category 不在允许的分类集合中。');
@@ -166,6 +170,9 @@ for (const file of files) {
   if (data.draft === false && publishedDate && publishedDate > today) {
     addViolation(violations, relativeFile, '未来发布日期文章必须保持 draft: true。');
   }
+  if (data.draft === false && data.rss === true && publishedDate && publishedDate <= today) {
+    rssCount += 1;
+  }
 
   const hasAigcTag = Array.isArray(tags) && tags.some((tag) => tag === 'AIGC');
   const hasAigcMetadata = data.AIGC !== undefined;
@@ -209,6 +216,6 @@ if (violations.length > 0) {
   const pageCount = Math.max(1, Math.ceil(publishedCount / articlePageSize));
   console.log(`Content check passed: ${files.length} article MDX files parsed and validated.`);
   console.log(
-    `Content stats: ${publishedCount} published, ${draftCount} drafts, ${pageCount} archive pages, ${tagNames.size} tags.`,
+    `Content stats: ${publishedCount} published, ${draftCount} drafts, ${rssCount} RSS entries, ${pageCount} archive pages, ${tagNames.size} tags.`,
   );
 }

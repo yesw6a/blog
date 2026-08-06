@@ -62,6 +62,7 @@ tags:
   - Next.js
   - MDX
 draft: true
+rss: true
 ---
 ```
 
@@ -76,6 +77,7 @@ draft: true
 - `series`：可选，文章系列名称。
 - `featured`：可选布尔值，用于精选展示。
 - `draft`：必填布尔值；`true` 不进入生产静态页面，`false` 才允许发布。
+- `rss`：必填布尔值；公开文章为 `true` 时进入 RSS，为 `false` 时仍公开但不进入 RSS。
 
 ### 3.1 分类值
 
@@ -93,10 +95,11 @@ draft: true
 ## 4. 草稿、日期与发布
 
 - 创建文章时先使用 `draft: true`。
-- 发布前人工确认日期、分类、摘要、来源和正文，再改为 `draft: false`。
+- 发布前人工确认日期、分类、摘要、来源、正文和 `rss` 收录意图，再改为 `draft: false`。
 - `draft: false` 的未来日期文章会被内容检查拒绝。
 - 静态部署不会在日期到达时自动让文章上线；需要在发布日重新构建和部署。
 - 多篇文章可使用同一发布日期，但静态排序会用 slug 作为第二排序键。
+- `rss: false` 只控制订阅源收录，不是访问控制，也无法撤回阅读器已经缓存的内容。
 
 ## 5. AIGC 规则
 
@@ -114,6 +117,7 @@ tags:
 - 工程实践
 - AIGC
   draft: false
+  rss: true
   AIGC:
   Label: '1'
   ContentProducer: 001191440300708461136T1XGW3
@@ -159,11 +163,12 @@ AI 不得伪造个人经历、事实来源、日期、引语、产品表现或�
 
 - [ ] 文件路径位于与 `publishedAt` 一致的 `content/articles/YYYY/MM/`，扩展名为 `.mdx`。
 - [ ] basename 符合 ASCII kebab-case，且没有使用保留 slug。
-- [ ] `title`、`description`、`publishedAt`、`category`、`tags`、`draft` 已正确填写。
+- [ ] `title`、`description`、`publishedAt`、`category`、`tags`、`draft`、`rss` 已正确填写。
 - [ ] 文件名日期与 `publishedAt` 一致。
 - [ ] 正文从 `##` 开始，没有重复页面 H1。
 - [ ] 链接、图片、表格和代码块已检查。
 - [ ] AIGC 文章的标签、元数据和正文声明完整一致。
 - [ ] 事实、数据和引语已人工核验。
 - [ ] 发布时 `draft: false`，且发布日期不晚于当前日期。
+- [ ] 已确认该文章是否应通过 `rss` 进入订阅源。
 - [ ] 已按 `content/sop.md` 完成全部自动检查、构建和发布报告。

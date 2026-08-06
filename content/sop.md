@@ -104,6 +104,7 @@ pnpm.cmd content:plan -- --date=YYYY-MM-DD
 2. 按写作规则填写完整 Frontmatter，其中：
    - `category` 使用本次计划结果。
    - `draft: true`。
+   - `rss: true`；如果文章明确不进入订阅源则填写 `false`。
    - AIGC 文章同时填写标签和元数据，正文末尾预留可见声明。
 
 3. 正文从 `##` 开始，不重复页面标题。
@@ -140,9 +141,10 @@ pnpm.cmd dev
 人工复核通过后：
 
 1. 将文章改为 `draft: false`。
-2. 确认 `publishedAt` 不晚于当天。
-3. 再次运行 `pnpm.cmd content:check`。
-4. 任一检查失败时恢复修复流程，不得提交失败状态。
+2. 确认 `rss` 与本次发布的订阅策略一致。
+3. 确认 `publishedAt` 不晚于当天。
+4. 再次运行 `pnpm.cmd content:check`。
+5. 任一检查失败时恢复修复流程，不得提交失败状态。
 
 ### 4.7 全量质量门禁
 
@@ -169,6 +171,7 @@ git diff --check
 - 每跨越 10 篇边界时生成新的 `/articles/page/N`。
 - 对应静态标签页存在。
 - 静态搜索索引、RSS 和 sitemap 构建成功。
+- `rss: true` 的新文章进入 RSS，`rss: false` 的新文章不进入 RSS。
 - 相邻文章导航没有指向草稿或未来文章。
 
 ### 4.8 变更范围与提交
@@ -196,7 +199,7 @@ git diff --check
 - `/articles` 及受影响的分页页面。
 - 文章涉及的标签页。
 - 搜索能找到标题、摘要和标签。
-- `/rss.xml` 包含新文章。
+- `rss: true` 时 `/rss.xml` 包含新文章，`rss: false` 时不包含。
 - `/sitemap.xml` 包含新文章详情 URL。
 
 发现错误时优先追加修复提交。已公开 slug 不应直接删除或重命名；确需更改时必须提供重定向。
@@ -206,7 +209,7 @@ git diff --check
 最终报告必须包括：
 
 - 文章路径和公开 URL。
-- category、主题推荐结果，以及是否人工覆盖。
+- category、主题推荐结果、`rss` 值，以及是否人工覆盖。
 - 使用的主要资料来源。
 - 文章总数、归档总页数和相关标签页。
 - `content:check`、typecheck、lint、build、`git diff --check` 结果。
@@ -222,6 +225,7 @@ git diff --check
 | 当日素材不足                | 在其他合规分类中选择素材充分的主题，并记录原因 |
 | 事实无法核验                | 删除该陈述、改为明确观点或更换主题             |
 | Frontmatter / AIGC 校验失败 | 修复元数据和正文后重新执行全部门禁             |
+| RSS 收录结果与 `rss` 不一致 | 停止发布，检查专用查询、静态构建和缓存状态     |
 | MDX 构建失败                | 优先移除可疑 JSX，改用纯 Markdown，再定位错误  |
 | 未来文章意外设为公开        | 立即改回 `draft: true`，不得依赖运行时定时发布 |
 | 静态分页或标签页缺失        | 停止发布，检查索引、页数和静态参数生成         |

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { notFound } from 'next/navigation';
+import { rssFeedAlternates } from '@/config/site';
 import ArticleArchive from '@/features/article/article-archive';
 import { getArticlePageHref, getArticleTagHref } from '@/features/article/article.constants';
 import { getAllTags, getPublishedTagPageParams, getTagArticlePage } from '@/features/article/article.repository';
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: ArticleTagPaginationPageProps
   return {
     title: `#${tag} · 第 ${page} 页`,
     description: `标记为「${tag}」的文章归档第 ${page} 页。`,
-    alternates: { canonical: getArticlePageHref(page, basePath) },
+    alternates: { canonical: getArticlePageHref(page, basePath), types: rssFeedAlternates },
   };
 }
 

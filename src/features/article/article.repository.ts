@@ -58,6 +58,14 @@ const optionalBoolean = (data: Record<string, unknown>, key: string, filename: s
   return value;
 };
 
+const requireBoolean = (data: Record<string, unknown>, key: string, filename: string) => {
+  const value = data[key];
+  if (typeof value !== 'boolean') {
+    throw new Error(`[文章元数据错误] ${filename}: ${key} 必须显式填写布尔值。`);
+  }
+  return value;
+};
+
 const normalizeDate = (value: string | Date, key: string, filename: string) => {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -107,6 +115,7 @@ const parseFrontmatter = (data: Record<string, unknown>, filename: string): Arti
     series: optionalString(data, 'series', filename),
     featured: optionalBoolean(data, 'featured', filename),
     draft: optionalBoolean(data, 'draft', filename),
+    rss: requireBoolean(data, 'rss', filename),
   };
 };
 
@@ -242,6 +251,11 @@ export const getArticleSummaries = async (options?: { includeDrafts?: boolean })
 };
 
 export const getPublishedArticleSummaries = async () => getArticleSummaries({ includeDrafts: false });
+
+export const getRssArticleSummaries = async () => {
+  const articles = await getPublishedArticleSummaries();
+  return articles.filter((article) => article.rss);
+};
 
 export const getArticlePage = async (page: number, options?: { includeDrafts?: boolean; pageSize?: number }) => {
   const articles = await getArticleSummaries(options);

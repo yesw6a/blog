@@ -31,7 +31,7 @@ content/articles/**/*.mdx
 - description
 - publishedAt / updatedAt
 - category
-- tags / series / featured / draft
+- tags / series / featured / draft / rss
 - readingTime
 - 构建期内部 sourcePath
 
@@ -100,7 +100,10 @@ content/articles/**/*.mdx
 ## 9. RSS 与 sitemap
 
 - sitemap 保持详情页为主要索引目标，归档页面通过站内真实链接被发现，避免随着标签组合无意义膨胀。
-- RSS 只输出最新 50 篇文章，防止长期增长后响应无限扩大。
+- RSS 只处理已公开且 `rss === true` 的文章；`rss === false` 不影响详情、归档、搜索或 sitemap。
+- RSS 在资格过滤后只输出最新 50 篇文章，防止长期增长后响应无限扩大。
+- 根 Metadata 声明 `application/rss+xml` alternate，首页 About 区域提供可见订阅入口。
+- `rss: false` 不是访问控制，已公开内容仍可被直接访问或抓取。
 
 ## 10. 内容检查
 
@@ -109,7 +112,7 @@ content/articles/**/*.mdx
 - 递归目录中的 `.mdx` 文件格式。
 - 物理 `YYYY/MM` 目录与 `publishedAt` 年月一致。
 - slug 语法、唯一性和保留路径。
-- Frontmatter 必填字段和分类枚举。
+- Frontmatter 必填字段、`rss` 显式布尔值和分类枚举。
 - 日期、草稿和未来发布约束。
 - tags 空值和重复值。
 - AIGC 标签、元数据和正文声明一致性。

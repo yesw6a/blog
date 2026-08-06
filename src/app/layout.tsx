@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { ThemeProvider } from 'next-themes';
-import { siteConfig } from '@/config/site';
+import { rssFeedAlternates, siteConfig } from '@/config/site';
 import AppLayout from '@/layouts/app-layout';
 import * as stylex from '@stylexjs/stylex';
 
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   alternates: {
     canonical: '/',
+    types: rssFeedAlternates,
   },
 };
 

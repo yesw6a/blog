@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { notFound } from 'next/navigation';
+import { rssFeedAlternates } from '@/config/site';
 import ArticleArchive from '@/features/article/article-archive';
 import { getArticleTagHref } from '@/features/article/article.constants';
 import { getAllTags, getTagArticlePage } from '@/features/article/article.repository';
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: ArticleTagPageProps): Promise
   return {
     title: `#${tag} 相关文章`,
     description: `浏览标记为「${tag}」的文章。`,
-    alternates: { canonical: getArticleTagHref(tag) },
+    alternates: { canonical: getArticleTagHref(tag), types: rssFeedAlternates },
   };
 }
 

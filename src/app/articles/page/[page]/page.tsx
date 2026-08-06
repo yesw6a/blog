@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { notFound } from 'next/navigation';
+import { rssFeedAlternates } from '@/config/site';
 import ArticleArchive from '@/features/article/article-archive';
 import { getArticlePageHref } from '@/features/article/article.constants';
 import { getAllTags, getArticlePage, getPublishedArticlePageParams } from '@/features/article/article.repository';
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: ArticlePaginationPageProps): 
   return {
     title: `文章 · 第 ${page} 页`,
     description: `文章归档第 ${page} 页，记录前端开发、工程实践与个人思考。`,
-    alternates: { canonical },
+    alternates: { canonical, types: rssFeedAlternates },
   };
 }
 

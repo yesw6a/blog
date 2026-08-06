@@ -10,6 +10,7 @@ export interface ArticleFrontmatter {
   series?: string;
   featured: boolean;
   draft: boolean;
+  rss: boolean;
 }
 
 export interface ArticleHeading {

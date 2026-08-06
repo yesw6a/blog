@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { rssFeedAlternates } from '@/config/site';
 import ArticleArchive from '@/features/article/article-archive';
 import { getAllTags, getArticlePage } from '@/features/article/article.repository';
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
   description: '记录前端开发、工程实践与个人思考。',
   alternates: {
     canonical: '/articles',
+    types: rssFeedAlternates,
   },
 };
 

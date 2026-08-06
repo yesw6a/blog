@@ -10,6 +10,10 @@ export const siteConfig = {
   url: (configuredSiteUrl || fallbackSiteUrl).replace(/\/$/, ''),
 } as const;
 
+export const rssFeedAlternates = {
+  'application/rss+xml': [{ url: '/rss.xml', title: `${siteConfig.name} RSS` }],
+};
+
 export const absoluteUrl = (pathname = '/') => {
   const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
   return `${siteConfig.url}${normalizedPath}`;

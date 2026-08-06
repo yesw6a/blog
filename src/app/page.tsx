@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Icon, TextKeyword } from '@/components';
 import { getPublishedArticleSummaries } from '@/features/article/article.repository';
+import HomeActionLinks from '@/features/home/home-action-links';
 import HomeAvatar from '@/features/home/home-avatar';
 import { homeStyles } from '@/features/home/home.styles';
 import * as stylex from '@stylexjs/stylex';
@@ -86,6 +87,7 @@ export default async function Home() {
               </span>
             </div>
           </div>
+          <HomeActionLinks />
         </div>
       </section>
 

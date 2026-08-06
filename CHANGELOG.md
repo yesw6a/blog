@@ -15,6 +15,7 @@
 - 本次首页内容化重构、R2 每日头像缓存和 bsz 访问统计迁移均属于向后兼容的 Minor 级功能调整，未超过本窗口从 `0.2.3` 升至 `0.3.0` 已覆盖的级别，版本继续保持 `0.3.0`。
 - 本次首页 About 身份文案、关键词标记与技术栈垂直节奏调整属于向后兼容的 Patch 级内容和视觉优化，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次文章静态分页、标签路由、按需搜索索引和内容创作工作流重构属于向后兼容的 Minor 级能力增强，未超过本窗口从 `0.2.3` 升至 `0.3.0` 已覆盖的级别，版本继续保持 `0.3.0`。
+- 本次逐篇 RSS 收录控制、全站订阅自动发现和首页 About 图标操作栏属于向后兼容的 Minor 级功能增强，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 
 ### 🎉 Added
 
@@ -32,6 +33,8 @@
 - 新增静态标签首页及标签分页路由，文章详情与筛选区域统一链接到可索引的 `/articles/tag/[tag]` 路径。
 - 新增按需加载的 `/article-search-index.json`，仅在搜索或兼容旧标签查询时向客户端提供公开文章摘要。
 - 新增语义化文章分类、日更主题计划命令 `pnpm.cmd content:plan -- --date=YYYY-MM-DD`，以及覆盖选题、草稿、质量门禁和发布报告的创作 SOP。
+- 文章 Frontmatter 新增必填 `rss` 布尔字段和 RSS 专用摘要查询，支持公开文章逐篇决定是否进入订阅源，并将现有 25 篇文章显式迁移为 `rss: true`。
+- 首页 About 区域新增可扩展的站点图标操作栏，首个入口为带 Tooltip、44px 触控目标、键盘焦点和减少动画适配的 RSS 订阅链接。
 
 ### 🔄 Changed
 
@@ -53,6 +56,8 @@
 - 将 25 篇文章从扁平目录迁移到与 `publishedAt` 一致的 `content/articles/YYYY/MM/`，文件 basename 与公开 URL 保持不变，编号分页继续作为构建产物而不进入源文件目录。
 - 扩展 `content:check`，统一校验 Frontmatter Schema、分类、全局唯一 slug、年月目录、未来发布日期、AIGC 三项一致性和重复正文 H1，并输出文章、草稿、分页与标签统计。
 - 重构文章写作规则、内容架构文档和日更 SOP，明确 MDX 唯一内容源、静态生成边界、年月目录约束和发布质量门禁。
+- RSS 改为只处理公开且 `rss: true` 的文章，并在资格过滤后截取最新 50 篇；订阅 XML 同时新增 Atom self link。
+- 全站 Metadata 显式合并 `application/rss+xml` alternate，内容检查新增 `rss` 类型校验与收录统计，并同步更新 README、写作规则、内容架构和发布 SOP。
 
 ### 🐛 Fixed
 
@@ -77,6 +82,8 @@
 - 文章目录滚动条修复通过目标文件 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint` 与 `git diff --check`；未重新运行生产构建或浏览器视觉验证，部署后需使用长目录确认滚动条不可见且目录仍可滚动。
 - 首页 About 文案与技术栈垂直间距调整通过目标文件 ESLint 和 `pnpm.cmd typecheck`；未重新运行生产构建，需在现有本地开发服务中刷新页面完成最终视觉复验。
 - 文章静态架构与年月目录迁移通过目标文件 Prettier、`pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 70 个静态页面，包括 25 个文章详情页、3 个归档页、26 个标签首页及必要的标签分页。
+- RSS 功能通过 `pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；内容门禁确认 25 篇公开文章和 25 个 RSS 收录项，生产构建继续生成 70 个静态页面。
+- 生产 RSS XML 已解析确认 25 个完整条目与唯一 Atom self link，首页、文章列表、分页、文章详情和标签页构建产物均包含 RSS 自动发现；构建仅保留 Browserslist 数据过期的非阻塞提示。
 
 ## v.0.2.2 (2026-07-27 ~ 2026-07-31)
 

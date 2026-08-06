@@ -117,6 +117,48 @@ export const homeStyles = stylex.create({
     },
     outlineOffset: '3px',
   },
+  aboutActions: {
+    display: 'flex',
+    marginTop: '1.25rem',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+  },
+  aboutActionLink: {
+    display: 'inline-flex',
+    minWidth: '44px',
+    minHeight: '44px',
+    touchAction: 'manipulation',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: {
+      default: colors.border,
+      ':hover': colors.primaryTransparent20,
+      ':focus-visible': colors.primaryStrong,
+    },
+    borderRadius: '0.5rem',
+    backgroundColor: {
+      default: 'transparent',
+      ':hover': colors.primaryTransparent10,
+      ':active': colors.primaryTransparent20,
+    },
+    color: {
+      default: colors.textMuted,
+      ':hover': colors.primaryStrong,
+      ':focus-visible': colors.primaryStrong,
+    },
+    fontSize: '1.25rem',
+    textDecorationLine: 'none',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primaryStrong}`,
+    },
+    outlineOffset: '2px',
+    transitionDuration: motionDuration,
+    transitionProperty: 'background-color, border-color, color',
+    transitionTimingFunction: 'ease',
+  },
   contentGrid: {
     display: 'grid',
     gridTemplateColumns: {
