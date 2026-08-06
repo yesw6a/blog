@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { absoluteUrl, siteConfig } from '@/config/site';
 import ArticleContent from '@/features/article/article-content';
 import ArticleTableOfContents from '@/features/article/article-table-of-contents';
+import { getArticleTagHref } from '@/features/article/article.constants';
 import {
   getAdjacentArticles,
   getArticleBySlug,
@@ -108,11 +109,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </div>
         <div aria-label="文章标签" {...stylex.props(articleStyles.detailTags)}>
           {article.tags.map((tag) => (
-            <Link
-              key={tag}
-              href={`/articles?tag=${encodeURIComponent(tag)}`}
-              {...stylex.props(articleStyles.detailTag)}
-            >
+            <Link key={tag} href={getArticleTagHref(tag)} {...stylex.props(articleStyles.detailTag)}>
               {tag}
             </Link>
           ))}

@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "content:check": "node scripts/check-mdx-style-attributes.mjs",
+    "content:plan": "node scripts/plan-daily-article.mjs",
     "format": "prettier --write .",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",

@@ -18,6 +18,7 @@ const escapeXml = (value: string) =>
 export async function GET() {
   const articles = await getPublishedArticleSummaries();
   const items = articles
+    .slice(0, 50)
     .map(
       (article) => `
     <item>

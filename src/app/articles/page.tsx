@@ -1,10 +1,7 @@
-import { Suspense } from 'react';
-
 import type { Metadata } from 'next';
 
-import ArticleBrowser from '@/features/article/article-browser';
-import ArticleBrowserView from '@/features/article/article-browser-view';
-import { getAllTags, getArticleSummaries } from '@/features/article/article.repository';
+import ArticleArchive from '@/features/article/article-archive';
+import { getAllTags, getArticlePage } from '@/features/article/article.repository';
 
 export const dynamic = 'force-static';
 
@@ -17,11 +14,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ArticlesPage() {
-  const [articles, tags] = await Promise.all([getArticleSummaries(), getAllTags()]);
+  const [page, tags] = await Promise.all([getArticlePage(1), getAllTags()]);
+  if (!page) return null;
 
-  return (
-    <Suspense fallback={<ArticleBrowserView articles={articles} filteredArticles={articles} tags={tags} />}>
-      <ArticleBrowser articles={articles} tags={tags} />
-    </Suspense>
-  );
+  return <ArticleArchive basePath="/articles" page={page} tags={tags} />;
 }

@@ -1,36 +1,83 @@
-import type { ArticleSummary } from './article.types';
+import type { ArticlePageResult } from './article.types';
 
 import * as stylex from '@stylexjs/stylex';
 
 import ArticleFilter from './article-filter';
 import ArticleList from './article-list';
+import ArticlePagination from './article-pagination';
 import { articleStyles } from './article.styles';
 
 type ArticleBrowserViewProps = {
-  articles: ArticleSummary[];
-  filteredArticles: ArticleSummary[];
-  tags: string[];
+  basePath: string;
+  page: ArticlePageResult;
   query?: string;
-  tag?: string;
+  searchError?: boolean;
+  searchLoading?: boolean;
+  selectedTag?: string;
+  selectedTagInPath?: boolean;
+  tags: string[];
 };
 
-export default function ArticleBrowserView({ articles, filteredArticles, tags, query, tag }: ArticleBrowserViewProps) {
+export default function ArticleBrowserView({
+  basePath,
+  page,
+  query,
+  searchError,
+  searchLoading,
+  selectedTag,
+  selectedTagInPath,
+  tags,
+}: ArticleBrowserViewProps) {
+  const filtering = Boolean(query || selectedTag);
+  const countText = searchLoading
+    ? '正在加载文章索引…'
+    : searchError
+      ? '文章索引加载失败'
+      : filtering
+        ? `找到 ${page.totalArticles} 篇文章`
+        : `共 ${page.totalArticles} 篇文章 · 第 ${page.currentPage} / ${page.totalPages} 页`;
+
   return (
     <div>
       <header {...stylex.props(articleStyles.pageHeader)}>
-        <h1 {...stylex.props(articleStyles.pageTitle)}>文章</h1>
+        <h1 {...stylex.props(articleStyles.pageTitle)}>{selectedTag ? `#${selectedTag}` : '文章'}</h1>
         <p {...stylex.props(articleStyles.pageDescription)}>
-          记录前端开发、工程实践，以及那些值得在写代码之外继续想一想的问题。
+          {selectedTag
+            ? `收录标记为「${selectedTag}」的文章。`
+            : '记录前端开发、工程实践，以及那些值得在写代码之外继续想一想的问题。'}
         </p>
         <span {...stylex.props(articleStyles.articleCount)} aria-live="polite">
-          {filteredArticles.length === articles.length
-            ? `共 ${articles.length} 篇文章`
-            : `找到 ${filteredArticles.length} 篇文章`}
+          {countText}
         </span>
       </header>
 
-      <ArticleFilter tags={tags} query={query} selectedTag={tag} />
-      <ArticleList articles={filteredArticles} />
+      <ArticleFilter
+        basePath={basePath}
+        tags={tags}
+        query={query}
+        selectedTag={selectedTag}
+        selectedTagInPath={selectedTagInPath}
+      />
+      {searchLoading ? (
+        <div role="status" {...stylex.props(articleStyles.emptyState)}>
+          正在加载静态搜索索引…
+        </div>
+      ) : searchError ? (
+        <div role="alert" {...stylex.props(articleStyles.emptyState)}>
+          搜索索引暂时无法加载，请稍后重试或清除筛选。
+        </div>
+      ) : (
+        <>
+          <ArticleList articles={page.articles} />
+          <ArticlePagination
+            basePath={basePath}
+            currentPage={page.currentPage}
+            totalPages={page.totalPages}
+            mode={query || (selectedTag && !selectedTagInPath) ? 'query' : 'path'}
+            queryParams={{ q: query, tag: selectedTagInPath ? undefined : selectedTag }}
+          />
+        </>
+      )}
     </div>
   );
 }

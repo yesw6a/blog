@@ -2,73 +2,56 @@
 
 import { useState, useTransition } from 'react';
 
-import type { FormEvent, MouseEvent } from 'react';
+import type { FormEvent } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import * as stylex from '@stylexjs/stylex';
 
+import { getArticleTagHref } from './article.constants';
 import { articleStyles } from './article.styles';
 
 type ArticleFilterProps = {
+  basePath: string;
   tags: string[];
   query?: string;
   selectedTag?: string;
+  selectedTagInPath?: boolean;
 };
 
 const MOBILE_VISIBLE_TAG_COUNT = 6;
 const DESKTOP_VISIBLE_TAG_COUNT = 10;
 const TAG_LIST_ID = 'article-tag-filter-list';
 
-const filterHref = (query?: string, tag?: string) => {
+const withQuery = (path: string, query?: string, tag?: string) => {
   const params = new URLSearchParams();
   if (query) params.set('q', query);
   if (tag) params.set('tag', tag);
   const search = params.toString();
-  return search ? `/articles?${search}` : '/articles';
+  return search ? `${path}?${search}` : path;
 };
 
-export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilterProps) {
+export default function ArticleFilter({ basePath, tags, query, selectedTag, selectedTagInPath }: ArticleFilterProps) {
+  const router = useRouter();
   const [showAllTags, setShowAllTags] = useState(false);
   const [isPending, startTransition] = useTransition();
   const hasMobileOverflow = tags.length > MOBILE_VISIBLE_TAG_COUNT;
   const hasDesktopOverflow = tags.length > DESKTOP_VISIBLE_TAG_COUNT;
 
-  const navigateToFilter = (href: string) => {
-    const currentHref = `${window.location.pathname}${window.location.search}`;
-    if (currentHref === href) return;
-
-    startTransition(() => {
-      window.history.pushState(null, '', href);
-    });
-  };
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const nextQuery = String(formData.get('q') ?? '').trim() || undefined;
-    navigateToFilter(filterHref(nextQuery, selectedTag));
-  };
+    const tagQuery = selectedTagInPath ? undefined : selectedTag;
 
-  const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey ||
-      event.currentTarget.target === '_blank' ||
-      event.currentTarget.hasAttribute('download')
-    ) {
-      return;
-    }
-    event.preventDefault();
-    navigateToFilter(href);
+    startTransition(() => {
+      router.push(withQuery(basePath, nextQuery, tagQuery), { scroll: false });
+    });
   };
 
   return (
     <section aria-label="文章筛选" aria-busy={isPending} {...stylex.props(articleStyles.filter)}>
-      <form action="/articles" method="get" onSubmit={handleSubmit}>
+      <form action={basePath} method="get" onSubmit={handleSubmit}>
         <label htmlFor="article-search" {...stylex.props(articleStyles.filterLabel)}>
           搜索文章
         </label>
@@ -82,7 +65,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
             placeholder="搜索标题、摘要或标签"
             {...stylex.props(articleStyles.searchInput)}
           />
-          {selectedTag ? <input name="tag" type="hidden" value={selectedTag} /> : null}
+          {!selectedTagInPath && selectedTag ? <input name="tag" type="hidden" value={selectedTag} /> : null}
           <button type="submit" {...stylex.props(articleStyles.searchButton)}>
             搜索
           </button>
@@ -94,11 +77,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
           <span aria-live="polite" {...stylex.props(articleStyles.filterStatus)}>
             {isPending ? '正在更新筛选…' : '当前筛选已生效'}
           </span>
-          <Link
-            href="/articles"
-            onClick={(event) => handleLinkClick(event, '/articles')}
-            {...stylex.props(articleStyles.clearLink)}
-          >
+          <Link href="/articles" {...stylex.props(articleStyles.clearLink)}>
             清除筛选
           </Link>
         </div>
@@ -106,8 +85,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
 
       <nav id={TAG_LIST_ID} aria-label="按标签筛选" {...stylex.props(articleStyles.tagList)}>
         <Link
-          href={filterHref(query)}
-          onClick={(event) => handleLinkClick(event, filterHref(query))}
+          href={withQuery('/articles', query)}
           aria-current={!selectedTag ? 'page' : undefined}
           {...stylex.props(articleStyles.tagLink, !selectedTag && articleStyles.tagLinkActive)}
         >
@@ -121,8 +99,7 @@ export default function ArticleFilter({ tags, query, selectedTag }: ArticleFilte
           return (
             <Link
               key={tag}
-              href={filterHref(query, tag)}
-              onClick={(event) => handleLinkClick(event, filterHref(query, tag))}
+              href={withQuery(getArticleTagHref(tag), query)}
               aria-current={active ? 'page' : undefined}
               {...stylex.props(
                 articleStyles.tagLink,

@@ -279,7 +279,20 @@ export const articleStyles = stylex.create({
     fontSize: '0.8125rem',
   },
   inlineTag: {
+    display: 'inline-flex',
+    minHeight: '44px',
+    alignItems: 'center',
     color: colors.primaryStrong,
+    textDecorationLine: {
+      default: 'none',
+      ':hover': 'underline',
+    },
+    textUnderlineOffset: '3px',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primaryStrong}`,
+    },
+    outlineOffset: '2px',
   },
   draftBadge: {
     display: 'inline-flex',

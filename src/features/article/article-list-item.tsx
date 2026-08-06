@@ -3,6 +3,7 @@ import type { ArticleSummary } from './article.types';
 import Link from 'next/link';
 import * as stylex from '@stylexjs/stylex';
 
+import { getArticleTagHref } from './article.constants';
 import { articleStyles } from './article.styles';
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
@@ -30,9 +31,9 @@ export default function ArticleListItem({ article }: ArticleListItemProps) {
           <span>{article.readingTime} 分钟阅读</span>
           {article.draft ? <span {...stylex.props(articleStyles.draftBadge)}>草稿</span> : null}
           {article.tags.map((tag) => (
-            <span key={tag} {...stylex.props(articleStyles.inlineTag)}>
+            <Link key={tag} href={getArticleTagHref(tag)} {...stylex.props(articleStyles.inlineTag)}>
               #{tag}
-            </span>
+            </Link>
           ))}
         </div>
       </article>

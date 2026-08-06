@@ -1,8 +1,11 @@
+import type { ArticleCategory } from './article.constants';
+
 export interface ArticleFrontmatter {
   title: string;
   description: string;
   publishedAt: string;
   updatedAt?: string;
+  category: ArticleCategory;
   tags: string[];
   series?: string;
   featured: boolean;
@@ -28,6 +31,18 @@ export interface Article extends ArticleSummary {
 export interface ArticleFilter {
   query?: string;
   tag?: string;
+}
+
+export interface ArticlePageResult {
+  articles: ArticleSummary[];
+  currentPage: number;
+  pageSize: number;
+  totalArticles: number;
+  totalPages: number;
+}
+
+export interface ArticleSearchIndexResponse {
+  articles: ArticleSummary[];
 }
 
 export interface AdjacentArticles {
