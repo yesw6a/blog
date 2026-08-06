@@ -8,8 +8,7 @@ import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/icon';
 import NavigationItem from '@/components/navigation-item';
-import SiteStatsFooter from '@/features/site-stats/site-stats-footer';
-import SiteStatsTracker from '@/features/site-stats/site-stats-tracker';
+import BusuanziStatsFooter from '@/features/busuanzi/busuanzi-stats-footer';
 import { colors, darkTheme, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
@@ -64,7 +63,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div id={APP_THEME_ROOT_ID} {...rootStyleProps}>
       <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
-      <SiteStatsTracker />
       <header {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.headerInner)}>
           <div {...stylex.props(styles.navigation)}>
@@ -101,7 +99,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       <main {...stylex.props(styles.main)}>{children}</main>
       <footer {...stylex.props(styles.footer)}>
-        <SiteStatsFooter />
+        <BusuanziStatsFooter />
         <div {...stylex.props(styles.footerMeta)}>
           <span>兮兮 © {new Date().getFullYear()}</span>
           <a

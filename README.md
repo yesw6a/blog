@@ -45,57 +45,30 @@ NEXT_PUBLIC_SITE_URL=https://example.com
 
 ## 网站统计
 
-生产环境同时使用 Cloudflare Web Analytics 和 Cloudflare D1：
+生产环境使用 [BSZ 不蒜子统计平台](https://bsz.dusays.com/) 记录并在页脚展示独立访客和累计访问量。
 
-- Web Analytics 用于站长查看访问来源、趋势和 Web Vitals。
-- D1 用于在页脚公开展示独立访客和累计访问量。
+- 本地 `next dev` 不会上报访问数据。
+- 客户端路由变化时只会上报当前站点来源和 pathname，不会发送查询参数或 URL hash。
+- 浏览器会在本地保存 bsz 返回的匿名身份令牌，用于计算 UV；清理站点存储后可能被识别为新的访客。
+- 数据由 bsz 公共服务维护，统计口径和可用性以该服务为准。
 
-### Cloudflare Web Analytics
+部署后分别访问首页、文章列表和文章详情页，并进行一次站内路由跳转。浏览器网络面板中应出现发往 `https://bsz.dusays.com:9001/api` 的 `POST` 请求，页脚随后显示非负的 UV/PV 数据。
 
-先在 Cloudflare 控制台为站点启用 Web Analytics 并获取 Site Token，然后在执行生产构建或部署命令前设置：
+## 每日头像缓存
 
-```env
-NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN=your-site-token
-```
-
-`NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` 是浏览器端公开配置，必须在 Next.js 构建阶段可用。未配置 Token 或在开发环境运行时，统计脚本不会加载。
-
-部署后可在浏览器网络面板中检查 `beacon.min.js` 和 `/cdn-cgi/rum` 请求，并分别访问首页、文章列表和文章详情页，确认 Cloudflare Web Analytics 面板能够记录页面浏览。还应通过站内链接进行一次客户端路由跳转，确认跳转后的页面也会被统计。
-
-### Cloudflare D1 公开统计
-
-首次将项目部署到新的 Cloudflare 账号前，创建 D1 数据库：
+每日头像使用 Cloudflare R2 保存，不依赖数据库。首次部署前创建并绑定 `blog-avatars` bucket：
 
 ```bash
-pnpm exec wrangler d1 create blog-stats --location apac
+pnpm exec wrangler r2 bucket create blog-avatars
 ```
 
-将命令返回的 `database_id` 填入 `wrangler.jsonc` 的 `DB` binding：
-
-```jsonc
-{
-  "binding": "DB",
-  "database_name": "blog-stats",
-  "database_id": "your-database-id",
-  "migrations_dir": "migrations",
-}
-```
-
-应用远程 migration：
+应用仓库内的 30 天自动清理规则：
 
 ```bash
-pnpm exec wrangler d1 migrations apply blog-stats --remote
+pnpm exec wrangler r2 bucket lifecycle set blog-avatars --file cloudflare/r2-avatar-lifecycle.json
 ```
 
-如需准备本地 Wrangler D1 数据，可执行：
-
-```bash
-pnpm exec wrangler d1 migrations apply blog-stats --local
-```
-
-D1 统计只在生产构建中由页面自动上报。本地 `next dev` 不会产生访问数据。独立访客按浏览器中生成的匿名 UUID 计算，服务端只保存 UUID 的 SHA-256 哈希，不保存 IP、查询参数、完整 User-Agent 或浏览器指纹。清理浏览器存储或更换设备后会被视为新的独立访客。
-
-部署后分别访问首页、文章列表和文章详情页，并进行一次站内路由跳转。检查 `/api/site-stats` 返回非负的 `visitors` 与 `pageViews`，确认页脚显示对应数据；还可以在 Cloudflare 控制台查询 `site_visitors` 和 `site_daily_stats` 表核对写入结果。
+应用会优先读取当天的 R2 对象；当天对象不存在时下载并写入，失败时回退到最近可用的历史头像。旧版带扩展名的 `daily/YYYY-MM-DD.*` 对象仍可继续读取。
 
 ## 检查命令
 

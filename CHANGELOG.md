@@ -9,21 +9,21 @@
 - 后续补充的网站图标设计与生成流程属于向后兼容的 Patch 级视觉改进，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次文章标签折叠属于向后兼容的功能增强，文章阅读样式优化属于 Patch 级视觉改进，均未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次全局页脚备案链接属于向后兼容的 Patch 级站点信息增强，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
-- 本次 Cloudflare D1 公开访客统计属于向后兼容的 Minor 级功能更新，未超过本窗口从 `0.2.3` 升至 `0.3.0` 已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次文章目录当前位置提示属于向后兼容的 Minor 级阅读功能增强，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次目录锚点平滑滚动、活动指示器位移动画和长目录跟随可见属于向后兼容的阅读体验增强，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
 - 本次隐藏文章目录原生滚动条属于向后兼容的 Patch 级视觉修复，未超过本窗口已覆盖的 Minor 级别，版本继续保持 `0.3.0`。
+- 本次首页内容化重构、R2 每日头像缓存和 bsz 访问统计迁移均属于向后兼容的 Minor 级功能调整，未超过本窗口从 `0.2.3` 升至 `0.3.0` 已覆盖的级别，版本继续保持 `0.3.0`。
 
 ### 🎉 Added
 
 - 发布 3 篇 AI 资料整理与感悟文章，主题涵盖多智能体协作、AI 数学证明与开源模型产业链，以及 OpenRouter 模型调用趋势。
-- 新增 Cloudflare Web Analytics 全站统计组件，在生产环境且配置 Site Token 时延迟加载 Beacon，开发环境或缺少配置时自动禁用。
+- 新增 bsz 全站 UV/PV 统计组件，在生产环境随客户端路由变化上报 pathname，并在页脚展示中文格式的独立访客与累计访问量。
 - 新增由 `C` 与真实“兮”字轮廓组成的站点图标，并同步提供 SVG、Apple Touch Icon 与多尺寸 favicon。
 - 文章标签较多时新增“更多标签 / 收起标签”交互，移动端默认显示 6 个、桌面端显示 10 个，并保证当前筛选标签始终可见及键盘状态可识别。
 - 全局页脚新增“萌ICP备20268082号”外部备案链接，支持移动端自然换行、44px 触控高度、悬停反馈与键盘焦点状态，并补充新窗口链接安全属性。
-- 新增 Cloudflare D1 站点统计，通过匿名浏览器 UUID 的 SHA-256 哈希累计独立访客，并按 UTC 日期原子累计页面访问量。
-- 新增 `/api/site-stats` 读取接口、`/api/site-stats/view` 上报接口及客户端路由追踪，包含同源校验、请求体限制、常见机器人过滤和短时重复上报保护。
-- 全局页脚新增“独立访客 / 累计访问”公开数据行，使用制表数字、中文数字格式和稳定占位降低异步加载造成的布局偏移。
+- 全局页脚新增“独立访客 / 累计访问”公开数据行，使用制表数字、中文数字格式和稳定占位降低 bsz 异步加载造成的布局偏移。
+- 首页新增内容优先的个人介绍、最近文章与主要写作主题区域，主题数量由已发布文章标签自动统计，并为移动端、键盘焦点和减少动画偏好提供适配。
+- 每日头像新增 Cloudflare R2 持久化缓存、条件写入、ETag/304 响应、最近可用对象回退和 30 天生命周期清理。
 - 文章详情页目录新增 Scrollspy 当前位置提示，随 H2/H3 阅读进度更新活动项，并通过强调色、字重、左侧指示线与 `aria-current="location"` 提供可见且可访问的状态反馈。
 - 文章目录锚点新增原生平滑滚动，长目录会在当前章节离开可视范围时仅滚动目录容器，并在减少动画偏好下回退为即时滚动。
 
@@ -31,13 +31,14 @@
 
 - 将 `content:check` 扩展为逐篇使用项目同款 Markdown、MDX 与 GFM 解析器校验文章语法，同时保留字符串形式 `style` 属性检查，并在失败时报告文件、行号和列号。
 - 补充自动写作的 MDX 安全规则，优先使用纯 Markdown 或语义化 `<strong>`，并明确任何检查失败时禁止 commit 和 push。
-- 在根布局统一挂载统计组件，并在 README 中补充 `NEXT_PUBLIC_CF_WEB_ANALYTICS_TOKEN` 的构建期配置、部署方式和客户端路由验证步骤。
+- 在全局页脚统一挂载 bsz 统计组件，只发送站点来源与 pathname，并通过本地匿名身份令牌保持 UV 统计连续性。
 - 将站点图标调整为低饱和珍珠灰与银蓝 Liquid Glass 近似风格，保留玻璃 `C` 元素，并从项目内置中文字体提取准确的“兮”字路径。
 - 新增无第三方图像依赖的图标生成脚本，通过 4 倍超采样输出 180px PNG 以及包含 16/32/48px 图像帧的 ICO。
 - 文章标签改为按使用频率降序排列，同频时按中文 locale 排序，使折叠状态优先展示更常用的主题。
 - 收敛长文章标题字号并调整摘要、元信息和详情标签节奏，同时统一 MDX 强调文本、章节分隔线、引用与图片的 StyleX 阅读样式。
-- 为 Wrangler 增加 `DB` D1 binding 和幂等 migration，由 Wrangler 根据实际绑定生成 `CloudflareEnv` 类型，并在 README 中补充新账号初始化、迁移和上线核验流程。
-- D1 接口失败时返回不泄漏内部细节的通用响应，同时向 Workers Observability 写入结构化错误日志；统计不可用不会阻断页面渲染或站内导航。
+- 首页由依赖客户端 Steam 请求的交互页面改为构建期静态内容页，直接展示最新文章与高频主题，减少首屏客户端状态和外部数据依赖。
+- 每日头像从 D1 元数据与 R2 对象的双存储改为纯 R2，实现对既有 `daily/YYYY-MM-DD.*` 对象的兼容读取，并移除项目全部 D1 binding、migration 与统计 API。
+- 网站统计从 Cloudflare Web Analytics 与自建 D1 全面迁移到 bsz，删除已不再使用的构建期 Token、服务端统计逻辑和远端 `blog-stats` 数据库。
 - 将文章目录活动线从每项独立伪元素改为单一可移动指示器，通过可中断的 `transform` 与透明度过渡平滑表达章节切换，同时保留活动颜色、字重和 `aria-current` 语义。
 
 ### 🐛 Fixed
@@ -52,8 +53,9 @@
 - 图标生成脚本通过 ESLint；Apple Touch Icon 尺寸确认为 `180×180`，ICO 确认包含 `16×16`、`32×32` 与 `48×48` 三帧，Next.js 生产构建正确生成 `/icon.svg` 与 `/apple-icon.png`。
 - 文章阅读与标签折叠改动通过目标文件 Prettier、`pnpm.cmd content:check`、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 36 个静态页面。
 - 页脚备案链接改动通过目标文件 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 36 个静态页面。
-- D1 统计改动通过 `pnpm.cmd cf-typegen`、目标文件 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 38 个静态页面和两个动态统计 API Route。
-- Cloudflare 远程 `blog-stats` D1 已在 APAC 创建并验证，`site_visitors` 与 `site_daily_stats` 两张表可查询，初始化计数均为 0。
+- 首页、bsz 统计与纯 R2 头像改动通过 `pnpm.cmd cf-typegen`、目标文件 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`；生产构建成功生成 36 个静态页面，路由清单中不再包含旧统计 API。
+- Cloudflare R2 `blog-avatars` bucket 已验证可用，`daily/` 前缀的 30 天对象生命周期规则已启用。
+- Cloudflare 远程 `blog-stats` D1 数据库 `42eb95d7-1b28-4bb7-9b10-408aaaedb349` 已永久删除，并通过远端 D1 列表确认不存在。
 - 本次未重新完成 OpenNext 专用打包：Windows 上既有进程占用 `.open-next` 目录，构建在清理旧产物阶段因 `EPERM` 中止；项目发布继续由 GitHub CI/CD 触发。
 - OpenNext 在 Windows 上仍提示推荐使用 WSL，Browserslist 数据仍提示过期；两项均为非阻塞警告。
 - 文章目录当前位置提示通过目标文件 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint` 与 `git diff --check`；本地 3000 端口仍由 `next start` 提供修改前的旧 `.next` 产物，需重新执行生产构建并重启后才能进行浏览器视觉复验。

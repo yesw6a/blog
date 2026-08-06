@@ -8,12 +8,10 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS",
   },
-  "d1_databases": [
+  "r2_buckets": [
     {
-      "binding": "DB",
-      "database_name": "blog-stats",
-      "database_id": "42eb95d7-1b28-4bb7-9b10-408aaaedb349",
-      "migrations_dir": "migrations",
+      "binding": "AVATAR_BUCKET",
+      "bucket_name": "blog-avatars",
     },
   ],
   "observability": {
