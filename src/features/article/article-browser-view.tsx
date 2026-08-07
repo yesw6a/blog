@@ -1,4 +1,4 @@
-import type { ArticlePageResult } from './article.types';
+import type { ArticlePageResult, ArticleSearchMatch } from './article.types';
 
 import * as stylex from '@stylexjs/stylex';
 
@@ -13,6 +13,7 @@ type ArticleBrowserViewProps = {
   query?: string;
   searchError?: boolean;
   searchLoading?: boolean;
+  searchMatches?: Record<string, ArticleSearchMatch>;
   selectedTag?: string;
   selectedTagInPath?: boolean;
   tags: string[];
@@ -24,6 +25,7 @@ export default function ArticleBrowserView({
   query,
   searchError,
   searchLoading,
+  searchMatches,
   selectedTag,
   selectedTagInPath,
   tags,
@@ -68,7 +70,7 @@ export default function ArticleBrowserView({
         </div>
       ) : (
         <>
-          <ArticleList articles={page.articles} />
+          <ArticleList articles={page.articles} searchMatches={searchMatches} />
           <ArticlePagination
             basePath={basePath}
             currentPage={page.currentPage}

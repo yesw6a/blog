@@ -59,6 +59,7 @@ export const articleStyles = stylex.create({
   searchInput: {
     minWidth: 0,
     minHeight: '46px',
+    scrollMarginTop: `calc(${layout.headerSafeArea} + 1rem)`,
     flex: 1,
     borderWidth: '1px',
     borderStyle: 'solid',
@@ -267,6 +268,21 @@ export const articleStyles = stylex.create({
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.975rem',
     lineHeight: 1.75,
+  },
+  searchMatchSection: {
+    display: 'block',
+    marginTop: '0.75rem',
+    color: colors.primaryStrong,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.8125rem',
+    fontWeight: 600,
+  },
+  searchMatchMetadata: {
+    marginTop: '0.625rem',
+    color: colors.textMuted,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.8125rem',
+    lineHeight: 1.6,
   },
   articleMeta: {
     display: 'flex',

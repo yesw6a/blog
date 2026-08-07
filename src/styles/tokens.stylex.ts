@@ -24,6 +24,8 @@ export const colors = stylex.defineVars({
   navigationSurface: '#fffdf9',
   navigationBorder: '#e2ddd4',
   gameHover: '#efebe3',
+  searchHighlightText: '#991b1b',
+  searchHighlightSurface: '#fee2e2',
 });
 
 export const layout = stylex.defineVars({
@@ -55,4 +57,6 @@ export const darkTheme = stylex.createTheme(colors, {
   navigationSurface: '#1f2937',
   navigationBorder: 'rgb(255 255 255 / 10%)',
   gameHover: 'rgb(255 255 255 / 10%)',
+  searchHighlightText: '#fecaca',
+  searchHighlightSurface: 'rgb(127 29 29 / 55%)',
 });

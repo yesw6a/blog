@@ -1,4 +1,4 @@
-import type { ArticleSummary } from './article.types';
+import type { ArticleSearchMatch, ArticleSummary } from './article.types';
 
 import * as stylex from '@stylexjs/stylex';
 
@@ -7,9 +7,10 @@ import { articleStyles } from './article.styles';
 
 type ArticleListProps = {
   articles: ArticleSummary[];
+  searchMatches?: Record<string, ArticleSearchMatch>;
 };
 
-export default function ArticleList({ articles }: ArticleListProps) {
+export default function ArticleList({ articles, searchMatches }: ArticleListProps) {
   if (articles.length === 0) {
     return (
       <div role="status" {...stylex.props(articleStyles.emptyState)}>
@@ -21,7 +22,7 @@ export default function ArticleList({ articles }: ArticleListProps) {
   return (
     <ol {...stylex.props(articleStyles.articleList)}>
       {articles.map((article) => (
-        <ArticleListItem key={article.slug} article={article} />
+        <ArticleListItem key={article.slug} article={article} searchMatch={searchMatches?.[article.slug]} />
       ))}
     </ol>
   );

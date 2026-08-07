@@ -70,6 +70,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.site-search-dialog::backdrop {
+  background: rgb(15 23 42 / 52%);
+}
+
 [data-toc-scroll-container] {
   scrollbar-width: none;
 }

@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import type { ArticlePageResult, ArticleSearchIndexResponse, ArticleSummary } from './article.types';
+import type { ArticlePageResult, ArticleSearchResult } from './article.types';
 
 import { useSearchParams } from 'next/navigation';
 
 import ArticleBrowserView from './article-browser-view';
-import { filterArticles, paginateArticles, parseArticlePage } from './article-filtering';
+import { paginateArticles, parseArticlePage } from './article-filtering';
+import { searchArticles } from './article-search';
 
 type ArticleBrowserProps = {
   basePath: string;
@@ -23,33 +24,37 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
   const effectiveTag = selectedTag ?? legacyTag;
   const requestedPage = parseArticlePage(searchParams.get('page'));
   const needsSearchIndex = Boolean(query || legacyTag);
-  const [searchArticles, setSearchArticles] = useState<ArticleSummary[]>();
+  const [searchResult, setSearchResult] = useState<ArticleSearchResult>();
   const [searchError, setSearchError] = useState(false);
 
   useEffect(() => {
-    if (!needsSearchIndex || searchArticles) return;
+    if (!needsSearchIndex) {
+      setSearchResult(undefined);
+      setSearchError(false);
+      return;
+    }
 
-    const controller = new AbortController();
+    let cancelled = false;
+    setSearchResult(undefined);
     setSearchError(false);
 
-    fetch('/article-search-index.json', { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`Search index request failed: ${response.status}`);
-        return response.json() as Promise<ArticleSearchIndexResponse>;
+    searchArticles(query, effectiveTag)
+      .then((result) => {
+        if (!cancelled) setSearchResult(result);
       })
-      .then((response) => setSearchArticles(response.articles))
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        setSearchError(true);
+      .catch(() => {
+        if (!cancelled) setSearchError(true);
       });
 
-    return () => controller.abort();
-  }, [effectiveTag, needsSearchIndex, query, searchArticles]);
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveTag, needsSearchIndex, query]);
 
   const filteredPage = useMemo(() => {
-    if (!needsSearchIndex || !searchArticles) return initialPage;
-    return paginateArticles(filterArticles(searchArticles, { query, tag: effectiveTag }), requestedPage);
-  }, [effectiveTag, initialPage, needsSearchIndex, query, requestedPage, searchArticles]);
+    if (!needsSearchIndex || !searchResult) return initialPage;
+    return paginateArticles(searchResult.articles, requestedPage);
+  }, [initialPage, needsSearchIndex, requestedPage, searchResult]);
 
   return (
     <ArticleBrowserView
@@ -59,8 +64,9 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
       query={query}
       selectedTag={effectiveTag}
       selectedTagInPath={Boolean(selectedTag)}
-      searchLoading={needsSearchIndex && !searchArticles && !searchError}
+      searchLoading={needsSearchIndex && !searchResult && !searchError}
       searchError={needsSearchIndex && searchError}
+      searchMatches={query ? searchResult?.matches : undefined}
     />
   );
 }

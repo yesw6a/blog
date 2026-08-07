@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { IconName } from '@/components/icon';
 
 import { useTheme } from 'next-themes';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/icon';
 import NavigationItem from '@/components/navigation-item';
@@ -16,6 +17,8 @@ import * as stylex from '@stylexjs/stylex';
 type AppLayoutProps = {
   children: React.ReactNode;
 };
+
+const SiteSearchDialog = dynamic(() => import('@/features/search/site-search-dialog'), { ssr: false });
 
 const ROUTES: ReadonlyArray<{ label: string; key: string; icon: IconName; path: string }> = [
   { label: '首页', key: 'home', icon: 'home', path: '/' },
@@ -52,11 +55,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchReturnFocusRef = useRef<HTMLElement | null>(null);
   const isArticlesRoute = isCurrentPath(pathname, '/articles');
+
+  const openSearch = useCallback(() => {
+    searchReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSearchOpen(true);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    window.requestAnimationFrame(() => searchReturnFocusRef.current?.focus());
+  }, []);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLocaleLowerCase('en-US') !== 'k') return;
+      event.preventDefault();
+      if (searchOpen) closeSearch();
+      else openSearch();
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [closeSearch, openSearch, searchOpen]);
 
   const isDark = resolvedTheme === 'dark';
   const rootStyleProps = stylex.props(styles.root, isDark && darkTheme);
@@ -86,6 +113,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <div {...stylex.props(styles.headerActions)}>
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
+                <button type="button" aria-label="搜索全站" onClick={openSearch} {...stylex.props(styles.headerAction)}>
+                  <Icon name="search" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent hideArrow>搜索全站 · Ctrl/⌘ K</TooltipContent>
+            </Tooltip>
+
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
                 <a
                   href="/rss.xml"
                   type="application/rss+xml"
@@ -113,6 +149,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
       </header>
+
+      {searchOpen ? <SiteSearchDialog onClose={closeSearch} /> : null}
 
       <main {...stylex.props(styles.main)}>{children}</main>
       <footer {...stylex.props(styles.footer)}>

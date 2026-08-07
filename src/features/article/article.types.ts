@@ -1,3 +1,4 @@
+import type { SearchTextMatch } from '@/features/search/search.types';
 import type { ArticleCategory } from './article.constants';
 
 export interface ArticleFrontmatter {
@@ -29,11 +30,6 @@ export interface Article extends ArticleSummary {
   headings: ArticleHeading[];
 }
 
-export interface ArticleFilter {
-  query?: string;
-  tag?: string;
-}
-
 export interface ArticlePageResult {
   articles: ArticleSummary[];
   currentPage: number;
@@ -42,8 +38,17 @@ export interface ArticlePageResult {
   totalPages: number;
 }
 
-export interface ArticleSearchIndexResponse {
+export interface ArticleSearchMatch {
+  url: string;
+  title: SearchTextMatch;
+  sectionTitle?: SearchTextMatch;
+  excerpt?: SearchTextMatch;
+  metadataMatches: SearchTextMatch[];
+}
+
+export interface ArticleSearchResult {
   articles: ArticleSummary[];
+  matches: Record<string, ArticleSearchMatch>;
 }
 
 export interface AdjacentArticles {

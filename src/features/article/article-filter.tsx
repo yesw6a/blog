@@ -62,7 +62,8 @@ export default function ArticleFilter({ basePath, tags, query, selectedTag, sele
             name="q"
             type="search"
             defaultValue={query}
-            placeholder="搜索标题、摘要或标签"
+            enterKeyHint="search"
+            placeholder="搜索标题、正文或标签"
             {...stylex.props(articleStyles.searchInput)}
           />
           {!selectedTagInPath && selectedTag ? <input name="tag" type="hidden" value={selectedTag} /> : null}

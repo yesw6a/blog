@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { cache } from 'react';
 
+import type { SearchDocument } from '@/features/search/search.types';
 import type {
   AdjacentArticles,
   Article,
@@ -140,6 +141,74 @@ const extractHeadings = (source: string): ArticleHeading[] => {
   return headings;
 };
 
+const SEARCHABLE_NODE_TYPES = new Set(['blockquote', 'heading', 'list', 'paragraph', 'table']);
+
+const extractSearchDocuments = (source: string, article: ArticleSummary): SearchDocument[] => {
+  const tree = unified().use(remarkParse).use(remarkMdx).use(remarkGfm).parse(source) as any;
+  const slugger = new GithubSlugger();
+  const rootDocument: SearchDocument = {
+    id: `article:${article.slug}`,
+    type: 'article',
+    scope: 'article',
+    articleSlug: article.slug,
+    url: `/articles/${article.slug}`,
+    title: article.title,
+    searchTitle: article.title,
+    description: article.description,
+    content: article.description,
+    keywords: [article.category, article.series, ...article.tags].filter((value): value is string => Boolean(value)),
+    tags: article.tags,
+    publishedAt: article.publishedAt,
+  };
+  const documents: SearchDocument[] = [rootDocument];
+  let sectionTitle: string | undefined;
+  let sectionId: string | undefined;
+  let contentParts: string[] = [];
+
+  const flushSection = () => {
+    const content = contentParts.join(' ').replace(/\s+/g, ' ').trim();
+    if (!sectionTitle) {
+      if (content) rootDocument.content = `${rootDocument.content} ${content}`;
+      return;
+    }
+
+    const anchor = sectionId ? `#${sectionId}` : '';
+    documents.push({
+      id: `article:${article.slug}${anchor}`,
+      type: 'section',
+      scope: 'article',
+      articleSlug: article.slug,
+      url: `/articles/${article.slug}${anchor}`,
+      title: article.title,
+      searchTitle: sectionTitle,
+      sectionTitle,
+      description: '',
+      content: content || article.description,
+      keywords: [],
+      tags: article.tags,
+      publishedAt: article.publishedAt,
+    });
+  };
+
+  for (const node of tree.children ?? []) {
+    if (node.type === 'heading' && (node.depth === 2 || node.depth === 3)) {
+      flushSection();
+      sectionTitle = nodeText(node).trim() || undefined;
+      sectionId = sectionTitle ? slugger.slug(sectionTitle) : undefined;
+      contentParts = [];
+      continue;
+    }
+
+    if (!SEARCHABLE_NODE_TYPES.has(node.type) || node.type === 'code') continue;
+    const text = nodeText(node).trim();
+    if (text) contentParts.push(text);
+  }
+
+  flushSection();
+
+  return documents;
+};
+
 const calculateReadingTime = (source: string) => {
   const readableText = source
     .replace(/```[\s\S]*?```/g, ' ')
@@ -251,6 +320,24 @@ export const getArticleSummaries = async (options?: { includeDrafts?: boolean })
 };
 
 export const getPublishedArticleSummaries = async () => getArticleSummaries({ includeDrafts: false });
+
+const loadPublishedArticleSearchData = cache(async () => {
+  const records = await getIndexRecords({ includeDrafts: false });
+  const articleDocuments = await Promise.all(
+    records.map(async (record) => {
+      const raw = await fs.readFile(record.sourcePath, 'utf8');
+      const parsed = matter(raw);
+      return extractSearchDocuments(parsed.content, record.summary);
+    }),
+  );
+
+  return {
+    articles: records.map((record) => record.summary),
+    documents: articleDocuments.flat(),
+  };
+});
+
+export const getPublishedArticleSearchData = async () => loadPublishedArticleSearchData();
 
 export const getRssArticleSummaries = async () => {
   const articles = await getPublishedArticleSummaries();

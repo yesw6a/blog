@@ -1,7 +1,10 @@
+import type { HomeExternalLink } from '@/features/home/home.content';
+
 import Link from 'next/link';
 import { Icon, TextKeyword } from '@/components';
 import { getPublishedArticleSummaries } from '@/features/article/article.repository';
 import HomeAvatar from '@/features/home/home-avatar';
+import { HOME_CONTENT, SITE_SERVICES, TECHNOLOGY_STACK } from '@/features/home/home.content';
 import { homeStyles } from '@/features/home/home.styles';
 import * as stylex from '@stylexjs/stylex';
 
@@ -12,13 +15,6 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   month: '2-digit',
   day: '2-digit',
 });
-
-const technologyStack = [
-  { name: 'Next.js', link: 'https://nextjs.org/' },
-  { name: 'StyleX', link: 'https://stylexjs.com/' },
-];
-
-const services = [{ name: 'Cloudflare', link: 'https://www.cloudflare.com/' }];
 
 const getTopTopics = (articles: Awaited<ReturnType<typeof getPublishedArticleSummaries>>) => {
   const counts = new Map<string, number>();
@@ -38,7 +34,7 @@ const getTopTopics = (articles: Awaited<ReturnType<typeof getPublishedArticleSum
     .map(([name, count]) => ({ name, count }));
 };
 
-const ExternalLinks = ({ items }: { items: typeof technologyStack }) => (
+const ExternalLinks = ({ items }: { items: HomeExternalLink[] }) => (
   <>
     {items.map((item, index) => (
       <span key={item.name}>
@@ -64,27 +60,27 @@ export default async function Home() {
         </div>
         <div>
           <p {...stylex.props(homeStyles.eyebrow)}>About</p>
-          <h1 id="about-title" {...stylex.props(homeStyles.heroTitle)}>
-            兮兮
+          <h1 id={HOME_CONTENT.aboutAnchorId} {...stylex.props(homeStyles.heroTitle)}>
+            {HOME_CONTENT.name}
           </h1>
           <p {...stylex.props(homeStyles.heroDescription)}>
-            {'一名 95 后'}
-            <TextKeyword backgroundColor="#ff4757">火象星座</TextKeyword>
-            {'的'}
-            <TextKeyword backgroundColor="#1e90ff">前端开发者</TextKeyword>
-            {'，这个个人站由 AIGC 创作与维护，记录工程实践、技术折腾和偶尔冒出的想法。'}
+            {HOME_CONTENT.description.lead}
+            <TextKeyword backgroundColor="#ff4757">{HOME_CONTENT.description.firstKeyword}</TextKeyword>
+            {HOME_CONTENT.description.middle}
+            <TextKeyword backgroundColor="#1e90ff">{HOME_CONTENT.description.secondKeyword}</TextKeyword>
+            {HOME_CONTENT.description.tail}
           </p>
           <div aria-label="网站技术栈与服务" {...stylex.props(homeStyles.stackRows)}>
             <div {...stylex.props(homeStyles.stackRow)}>
               <Icon name="sourceCode" style={homeStyles.inlineIcon} />
               <span>
-                构建于 <ExternalLinks items={technologyStack} />
+                构建于 <ExternalLinks items={TECHNOLOGY_STACK} />
               </span>
             </div>
             <div {...stylex.props(homeStyles.stackRow)}>
               <Icon name="cloudServer" style={homeStyles.inlineIcon} />
               <span>
-                运行于 <ExternalLinks items={services} />
+                运行于 <ExternalLinks items={SITE_SERVICES} />
               </span>
             </div>
           </div>
