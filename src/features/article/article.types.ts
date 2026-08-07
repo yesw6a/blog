@@ -51,6 +51,11 @@ export interface ArticleSearchResult {
   matches: Record<string, ArticleSearchMatch>;
 }
 
+export interface ArticleIndexResponse {
+  articles: ArticleSummary[];
+  pageSize: number;
+}
+
 export interface AdjacentArticles {
   previous?: ArticleSummary;
   next?: ArticleSummary;

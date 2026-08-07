@@ -1,0 +1,192 @@
+import { colors } from '@/styles/tokens.stylex';
+import * as stylex from '@stylexjs/stylex';
+
+const reducedMotionDuration = {
+  default: '180ms',
+  '@media (prefers-reduced-motion: reduce)': '0ms',
+} as const;
+
+export const articleBrowseControlStyles = stylex.create({
+  toolbar: {
+    display: 'flex',
+    minHeight: '4.5rem',
+    alignItems: {
+      default: 'center',
+      '@media (max-width: 640px)': 'stretch',
+    },
+    justifyContent: {
+      default: 'space-between',
+      '@media (max-width: 640px)': 'center',
+    },
+    borderTopWidth: '1px',
+    borderTopStyle: 'solid',
+    borderTopColor: colors.border,
+    paddingBlock: '0.75rem',
+    flexDirection: {
+      default: 'row',
+      '@media (max-width: 640px)': 'column',
+    },
+    gap: {
+      default: '1rem',
+      '@media (max-width: 640px)': '0.25rem',
+    },
+  },
+  resultCount: {
+    color: colors.textMuted,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.875rem',
+    lineHeight: 1.5,
+  },
+  switchGroup: {
+    display: 'inline-flex',
+    minHeight: '44px',
+    alignItems: 'center',
+    gap: '0.625rem',
+    color: colors.textSecondary,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.875rem',
+    whiteSpace: 'nowrap',
+  },
+  switchGroupPending: {
+    opacity: 0.72,
+  },
+  switchTextActive: {
+    color: colors.textPrimary,
+    fontWeight: 600,
+  },
+  switchHitArea: {
+    position: 'relative',
+    display: 'inline-flex',
+    width: '3rem',
+    minHeight: '44px',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchInput: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 1,
+    width: '100%',
+    height: '100%',
+    cursor: 'pointer',
+    margin: 0,
+    opacity: 0,
+    borderRadius: '9999px',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primaryStrong}`,
+    },
+    outlineOffset: '2px',
+  },
+  switchTrack: {
+    position: 'relative',
+    width: '2.75rem',
+    height: '1.5rem',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors.border,
+    borderRadius: '9999px',
+    backgroundColor: colors.surfaceStrong,
+    transitionDuration: reducedMotionDuration,
+    transitionProperty: 'border-color, background-color',
+  },
+  switchTrackActive: {
+    borderColor: colors.primaryStrong,
+    backgroundColor: colors.primaryAction,
+  },
+  switchThumb: {
+    position: 'absolute',
+    top: '2px',
+    left: '2px',
+    width: '1.125rem',
+    height: '1.125rem',
+    borderRadius: '50%',
+    backgroundColor: colors.surface,
+    transitionDuration: reducedMotionDuration,
+    transitionProperty: 'transform',
+  },
+  switchThumbActive: {
+    transform: 'translateX(1.25rem)',
+  },
+  loader: {
+    display: 'flex',
+    minHeight: '5.5rem',
+    alignItems: {
+      default: 'center',
+      '@media (max-width: 520px)': 'stretch',
+    },
+    justifyContent: 'center',
+    borderTopWidth: '1px',
+    borderTopStyle: 'solid',
+    borderTopColor: colors.border,
+    paddingBlock: '1.25rem',
+    gap: '0.75rem',
+    flexDirection: {
+      default: 'row',
+      '@media (max-width: 520px)': 'column',
+    },
+    textAlign: {
+      default: 'left',
+      '@media (max-width: 520px)': 'center',
+    },
+  },
+  loaderMessage: {
+    color: colors.textMuted,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.875rem',
+    lineHeight: 1.6,
+  },
+  loaderError: {
+    color: colors.textSecondary,
+  },
+  actionButton: {
+    display: 'inline-flex',
+    minWidth: '6.5rem',
+    minHeight: '44px',
+    cursor: 'pointer',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: {
+      default: colors.primaryStrong,
+      ':hover': colors.primaryStrongHover,
+    },
+    borderRadius: '9999px',
+    backgroundColor: {
+      default: colors.primaryAction,
+      ':hover': colors.primaryActionHover,
+    },
+    paddingInline: '1rem',
+    color: colors.onPrimary,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    transitionDuration: reducedMotionDuration,
+    transitionProperty: 'border-color, background-color',
+    outline: {
+      default: 'none',
+      ':focus-visible': `3px solid ${colors.primaryTransparent20}`,
+    },
+    outlineOffset: '2px',
+  },
+  fallbackLink: {
+    display: 'inline-flex',
+    minHeight: '44px',
+    alignItems: 'center',
+    color: colors.primaryStrong,
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    textDecorationLine: {
+      default: 'none',
+      ':hover': 'underline',
+    },
+    textUnderlineOffset: '4px',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primaryStrong}`,
+    },
+    outlineOffset: '2px',
+  },
+});

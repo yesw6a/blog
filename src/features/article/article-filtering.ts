@@ -22,3 +22,21 @@ export const paginateArticles = (articles: ArticleSummary[], requestedPage: numb
     totalPages,
   };
 };
+
+export const accumulateArticlePages = (
+  articles: ArticleSummary[],
+  requestedPage: number,
+  pageSize = ARTICLE_PAGE_SIZE,
+) => {
+  const totalArticles = articles.length;
+  const totalPages = Math.max(1, Math.ceil(totalArticles / pageSize));
+  const currentPage = Math.min(Math.max(1, requestedPage), totalPages);
+
+  return {
+    articles: articles.slice(0, currentPage * pageSize),
+    currentPage,
+    pageSize,
+    totalArticles,
+    totalPages,
+  };
+};

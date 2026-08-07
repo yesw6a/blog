@@ -3,16 +3,19 @@
 import { useState, useTransition } from 'react';
 
 import type { FormEvent } from 'react';
+import type { ArticleBrowseMode } from './article-navigation';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as stylex from '@stylexjs/stylex';
 
+import { getArticleBrowseHref } from './article-navigation';
 import { getArticleTagHref } from './article.constants';
 import { articleStyles } from './article.styles';
 
 type ArticleFilterProps = {
   basePath: string;
+  browseMode?: ArticleBrowseMode;
   tags: string[];
   query?: string;
   selectedTag?: string;
@@ -23,15 +26,14 @@ const MOBILE_VISIBLE_TAG_COUNT = 6;
 const DESKTOP_VISIBLE_TAG_COUNT = 10;
 const TAG_LIST_ID = 'article-tag-filter-list';
 
-const withQuery = (path: string, query?: string, tag?: string) => {
-  const params = new URLSearchParams();
-  if (query) params.set('q', query);
-  if (tag) params.set('tag', tag);
-  const search = params.toString();
-  return search ? `${path}?${search}` : path;
-};
-
-export default function ArticleFilter({ basePath, tags, query, selectedTag, selectedTagInPath }: ArticleFilterProps) {
+export default function ArticleFilter({
+  basePath,
+  browseMode = 'pagination',
+  tags,
+  query,
+  selectedTag,
+  selectedTagInPath,
+}: ArticleFilterProps) {
   const router = useRouter();
   const [showAllTags, setShowAllTags] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -45,7 +47,7 @@ export default function ArticleFilter({ basePath, tags, query, selectedTag, sele
     const tagQuery = selectedTagInPath ? undefined : selectedTag;
 
     startTransition(() => {
-      router.push(withQuery(basePath, nextQuery, tagQuery), { scroll: false });
+      router.push(getArticleBrowseHref({ basePath, browseMode, query: nextQuery, tag: tagQuery }), { scroll: false });
     });
   };
 
@@ -78,7 +80,10 @@ export default function ArticleFilter({ basePath, tags, query, selectedTag, sele
           <span aria-live="polite" {...stylex.props(articleStyles.filterStatus)}>
             {isPending ? '正在更新筛选…' : '当前筛选已生效'}
           </span>
-          <Link href="/articles" {...stylex.props(articleStyles.clearLink)}>
+          <Link
+            href={getArticleBrowseHref({ basePath: '/articles', browseMode })}
+            {...stylex.props(articleStyles.clearLink)}
+          >
             清除筛选
           </Link>
         </div>
@@ -86,7 +91,7 @@ export default function ArticleFilter({ basePath, tags, query, selectedTag, sele
 
       <nav id={TAG_LIST_ID} aria-label="按标签筛选" {...stylex.props(articleStyles.tagList)}>
         <Link
-          href={withQuery('/articles', query)}
+          href={getArticleBrowseHref({ basePath: '/articles', browseMode, query })}
           aria-current={!selectedTag ? 'page' : undefined}
           {...stylex.props(articleStyles.tagLink, !selectedTag && articleStyles.tagLinkActive)}
         >
@@ -100,7 +105,7 @@ export default function ArticleFilter({ basePath, tags, query, selectedTag, sele
           return (
             <Link
               key={tag}
-              href={withQuery(getArticleTagHref(tag), query)}
+              href={getArticleBrowseHref({ basePath: getArticleTagHref(tag), browseMode, query })}
               aria-current={active ? 'page' : undefined}
               {...stylex.props(
                 articleStyles.tagLink,

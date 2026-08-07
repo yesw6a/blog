@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import * as stylex from '@stylexjs/stylex';
 
+import { getArticleBrowseHref } from './article-navigation';
 import { articlePaginationStyles } from './article-pagination.styles';
-import { getArticlePageHref } from './article.constants';
 
 type ArticlePaginationProps = {
   basePath: string;
@@ -27,16 +27,6 @@ const getPageItems = (currentPage: number, totalPages: number) => {
   });
 };
 
-const getQueryPageHref = (basePath: string, page: number, queryParams: Record<string, string | undefined> = {}) => {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(queryParams)) {
-    if (value) params.set(key, value);
-  }
-  if (page > 1) params.set('page', String(page));
-  const search = params.toString();
-  return search ? `${basePath}?${search}` : basePath;
-};
-
 export default function ArticlePagination({
   basePath,
   currentPage,
@@ -47,7 +37,13 @@ export default function ArticlePagination({
   if (totalPages <= 1) return null;
 
   const hrefForPage = (page: number) =>
-    mode === 'query' ? getQueryPageHref(basePath, page, queryParams) : getArticlePageHref(page, basePath);
+    getArticleBrowseHref({
+      basePath,
+      browseMode: 'pagination',
+      page,
+      query: mode === 'query' ? queryParams?.q : undefined,
+      tag: mode === 'query' ? queryParams?.tag : undefined,
+    });
   const previousPage = currentPage - 1;
   const nextPage = currentPage + 1;
 

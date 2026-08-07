@@ -218,6 +218,9 @@ export const articleStyles = stylex.create({
   },
   articleItem: {
     display: 'grid',
+    contentVisibility: 'auto',
+    containIntrinsicSize: '0 220px',
+    scrollMarginTop: `calc(${layout.headerSafeArea} + 1rem)`,
     gridTemplateColumns: {
       default: '9rem minmax(0, 1fr)',
       '@media (max-width: 700px)': 'minmax(0, 1fr)',

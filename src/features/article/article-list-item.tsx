@@ -1,9 +1,11 @@
+import type { ArticleBrowseMode } from './article-navigation';
 import type { ArticleSearchMatch, ArticleSummary } from './article.types';
 
 import Link from 'next/link';
 import HighlightedText from '@/features/search/highlighted-text';
 import * as stylex from '@stylexjs/stylex';
 
+import { getArticleBrowseHref } from './article-navigation';
 import { getArticleTagHref } from './article.constants';
 import { articleStyles } from './article.styles';
 
@@ -15,14 +17,21 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
 
 type ArticleListItemProps = {
   article: ArticleSummary;
+  browseMode?: ArticleBrowseMode;
+  itemId?: string;
   searchMatch?: ArticleSearchMatch;
 };
 
-export default function ArticleListItem({ article, searchMatch }: ArticleListItemProps) {
+export default function ArticleListItem({
+  article,
+  browseMode = 'pagination',
+  itemId,
+  searchMatch,
+}: ArticleListItemProps) {
   const articleHref = searchMatch?.url ?? `/articles/${article.slug}`;
 
   return (
-    <li {...stylex.props(articleStyles.articleItem)}>
+    <li id={itemId} {...stylex.props(articleStyles.articleItem)}>
       <time dateTime={article.publishedAt} {...stylex.props(articleStyles.articleDate)}>
         {dateFormatter.format(new Date(article.publishedAt))}
       </time>
@@ -55,7 +64,11 @@ export default function ArticleListItem({ article, searchMatch }: ArticleListIte
           <span>{article.readingTime} 分钟阅读</span>
           {article.draft ? <span {...stylex.props(articleStyles.draftBadge)}>草稿</span> : null}
           {article.tags.map((tag) => (
-            <Link key={tag} href={getArticleTagHref(tag)} {...stylex.props(articleStyles.inlineTag)}>
+            <Link
+              key={tag}
+              href={getArticleBrowseHref({ basePath: getArticleTagHref(tag), browseMode })}
+              {...stylex.props(articleStyles.inlineTag)}
+            >
               #{tag}
             </Link>
           ))}
