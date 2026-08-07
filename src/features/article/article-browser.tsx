@@ -5,12 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ArticleBrowseMode } from './article-navigation';
 import type { ArticlePageResult, ArticleSearchResult } from './article.types';
 
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import ArticleBrowserView from './article-browser-view';
 import { accumulateArticlePages, paginateArticles, parseArticlePage } from './article-filtering';
 import { fetchArticleIndex } from './article-index';
-import { getArticleBrowseHref } from './article-navigation';
+import { getArticleBrowseHref, parseArticleBrowseMode, readArticleBrowseModePreference } from './article-navigation';
 import { searchArticles } from './article-search';
 
 type ArticleBrowserProps = {
@@ -25,14 +25,23 @@ type ArticleCollection = ArticleSearchResult & {
 };
 
 export default function ArticleBrowser({ basePath, initialPage, selectedTag, tags }: ArticleBrowserProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get('q')?.trim() || undefined;
   const legacyTag = selectedTag ? undefined : searchParams.get('tag')?.trim() || undefined;
   const effectiveTag = selectedTag ?? legacyTag;
-  const requestedPage = parseArticlePage(searchParams.get('page'));
-  const browseMode: ArticleBrowseMode = searchParams.get('view') === 'infinite' ? 'infinite' : 'pagination';
+  const queryTag = selectedTag ? undefined : effectiveTag;
+  const requestedPage = parseArticlePage(searchParams.get('page') ?? String(initialPage.currentPage));
+  const explicitBrowseMode = parseArticleBrowseMode(searchParams.get('view'));
+  const paginationPathMode: ArticleBrowseMode | undefined =
+    !explicitBrowseMode && /\/page\/\d+\/?$/.test(pathname) ? 'pagination' : undefined;
+  const preferenceRequired = !explicitBrowseMode && !paginationPathMode;
+  const [preferredBrowseMode, setPreferredBrowseMode] = useState<ArticleBrowseMode>();
+  const browseMode: ArticleBrowseMode = explicitBrowseMode ?? paginationPathMode ?? preferredBrowseMode ?? 'pagination';
+  const browseModePending = preferenceRequired && preferredBrowseMode === undefined;
   const infiniteMode = browseMode === 'infinite';
-  const needsCollection = Boolean(query || legacyTag || infiniteMode);
+  const needsCollection = !browseModePending && Boolean(query || legacyTag || infiniteMode);
   const blockingCollection = Boolean(query || legacyTag);
   const [collection, setCollection] = useState<ArticleCollection>();
   const [collectionError, setCollectionError] = useState(false);
@@ -41,6 +50,23 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
   const [infiniteProgress, setInfiniteProgress] = useState({ key: '', page: 1 });
   const visiblePage = infiniteProgress.key === progressKey ? infiniteProgress.page : requestedPage;
   const scrolledAnchorRef = useRef('');
+
+  useEffect(() => {
+    if (!preferenceRequired) return;
+
+    const resolvedBrowseMode = readArticleBrowseModePreference() ?? 'infinite';
+    setPreferredBrowseMode(resolvedBrowseMode);
+    router.replace(
+      getArticleBrowseHref({
+        basePath,
+        browseMode: resolvedBrowseMode,
+        page: requestedPage,
+        query,
+        tag: queryTag,
+      }),
+      { scroll: false },
+    );
+  }, [basePath, preferenceRequired, query, queryTag, requestedPage, router]);
 
   useEffect(() => {
     if (!needsCollection) {
@@ -91,7 +117,6 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
   }, [progressKey, requestedPage]);
 
   const retry = useCallback(() => setReloadKey((current) => current + 1), []);
-  const queryTag = selectedTag ? undefined : effectiveTag;
   const paginationHref = getArticleBrowseHref({
     basePath,
     browseMode: 'pagination',
@@ -108,7 +133,8 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
         query,
         tag: queryTag,
       });
-  const collectionLoading = needsCollection && !collection && !collectionError;
+  const collectionLoading =
+    (browseModePending && blockingCollection) || (needsCollection && !collection && !collectionError);
 
   useEffect(() => {
     if (!infiniteMode) {
@@ -128,6 +154,7 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
     <ArticleBrowserView
       basePath={basePath}
       browseMode={browseMode}
+      browseModePending={browseModePending}
       collectionBlocking={blockingCollection}
       collectionError={needsCollection && collectionError}
       collectionLoading={collectionLoading}

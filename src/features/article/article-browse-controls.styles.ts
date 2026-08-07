@@ -78,6 +78,9 @@ export const articleBrowseControlStyles = stylex.create({
     },
     outlineOffset: '2px',
   },
+  switchInputDisabled: {
+    cursor: 'default',
+  },
   switchTrack: {
     position: 'relative',
     width: '2.75rem',

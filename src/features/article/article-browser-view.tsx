@@ -3,6 +3,7 @@ import type { ArticlePageResult, ArticleSearchMatch } from './article.types';
 
 import * as stylex from '@stylexjs/stylex';
 
+import ArticleBackToTop from './article-back-to-top';
 import { articleBrowseControlStyles } from './article-browse-controls.styles';
 import ArticleBrowseModeSwitch from './article-browse-mode-switch';
 import ArticleFilter from './article-filter';
@@ -14,6 +15,7 @@ import { articleStyles } from './article.styles';
 type ArticleBrowserViewProps = {
   basePath: string;
   browseMode?: ArticleBrowseMode;
+  browseModePending?: boolean;
   collectionBlocking?: boolean;
   collectionError?: boolean;
   collectionLoading?: boolean;
@@ -30,9 +32,12 @@ type ArticleBrowserViewProps = {
   tags: string[];
 };
 
+const ARTICLE_BROWSER_HEADER_ID = 'article-browser-header';
+
 export default function ArticleBrowserView({
   basePath,
   browseMode = 'pagination',
+  browseModePending = false,
   collectionBlocking,
   collectionError,
   collectionLoading,
@@ -63,7 +68,7 @@ export default function ArticleBrowserView({
 
   return (
     <div>
-      <header {...stylex.props(articleStyles.pageHeader)}>
+      <header id={ARTICLE_BROWSER_HEADER_ID} tabIndex={-1} {...stylex.props(articleStyles.pageHeader)}>
         <h1 {...stylex.props(articleStyles.pageTitle)}>{selectedTag ? `#${selectedTag}` : '文章'}</h1>
         <p {...stylex.props(articleStyles.pageDescription)}>
           {selectedTag
@@ -85,7 +90,7 @@ export default function ArticleBrowserView({
         <span aria-live="polite" {...stylex.props(articleBrowseControlStyles.resultCount)}>
           {countText}
         </span>
-        <ArticleBrowseModeSwitch checked={infiniteMode} href={switchHref} />
+        <ArticleBrowseModeSwitch checked={infiniteMode} disabled={browseModePending} href={switchHref} />
       </div>
 
       {collectionBlocking && collectionLoading ? (
@@ -133,6 +138,8 @@ export default function ArticleBrowserView({
           )}
         </>
       )}
+
+      <ArticleBackToTop targetId={ARTICLE_BROWSER_HEADER_ID} />
     </div>
   );
 }

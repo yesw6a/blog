@@ -10,6 +10,12 @@ export const articleStyles = stylex.create({
   pageHeader: {
     maxWidth: '46rem',
     marginBottom: '3rem',
+    scrollMarginTop: '1rem',
+    outline: {
+      default: 'none',
+      ':focus-visible': `2px solid ${colors.primaryStrong}`,
+    },
+    outlineOffset: '0.5rem',
   },
   pageTitle: {
     margin: 0,

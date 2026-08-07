@@ -8,27 +8,32 @@ import { useRouter } from 'next/navigation';
 import * as stylex from '@stylexjs/stylex';
 
 import { articleBrowseControlStyles } from './article-browse-controls.styles';
+import { writeArticleBrowseModePreference } from './article-navigation';
 
 type ArticleBrowseModeSwitchProps = {
   checked: boolean;
+  disabled?: boolean;
   href: string;
 };
 
-export default function ArticleBrowseModeSwitch({ checked, href }: ArticleBrowseModeSwitchProps) {
+export default function ArticleBrowseModeSwitch({ checked, disabled = false, href }: ArticleBrowseModeSwitchProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const switchDisabled = disabled || isPending;
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.currentTarget.checked === checked || isPending) return;
+    if (event.currentTarget.checked === checked || switchDisabled) return;
+
+    writeArticleBrowseModePreference(event.currentTarget.checked ? 'infinite' : 'pagination');
     startTransition(() => router.push(href, { scroll: false }));
   };
 
   return (
     <label
-      aria-busy={isPending}
+      aria-busy={switchDisabled}
       {...stylex.props(
         articleBrowseControlStyles.switchGroup,
-        isPending && articleBrowseControlStyles.switchGroupPending,
+        switchDisabled && articleBrowseControlStyles.switchGroupPending,
       )}
     >
       <span {...stylex.props(!checked && articleBrowseControlStyles.switchTextActive)}>分页</span>
@@ -39,8 +44,12 @@ export default function ArticleBrowseModeSwitch({ checked, href }: ArticleBrowse
           aria-label="无限滚动加载"
           aria-checked={checked}
           checked={checked}
+          disabled={switchDisabled}
           onChange={handleChange}
-          {...stylex.props(articleBrowseControlStyles.switchInput)}
+          {...stylex.props(
+            articleBrowseControlStyles.switchInput,
+            switchDisabled && articleBrowseControlStyles.switchInputDisabled,
+          )}
         />
         <span
           aria-hidden="true"
