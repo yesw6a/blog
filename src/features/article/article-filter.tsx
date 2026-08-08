@@ -7,6 +7,7 @@ import type { ArticleBrowseMode } from './article-navigation';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { textLinkStyles } from '@/styles/text-link.styles';
 import * as stylex from '@stylexjs/stylex';
 
 import { getArticleBrowseHref } from './article-navigation';
@@ -82,7 +83,7 @@ export default function ArticleFilter({
           </span>
           <Link
             href={getArticleBrowseHref({ basePath: '/articles', browseMode })}
-            {...stylex.props(articleStyles.clearLink)}
+            {...stylex.props(articleStyles.clearLink, textLinkStyles.hitArea)}
           >
             清除筛选
           </Link>

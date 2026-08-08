@@ -3,6 +3,7 @@ import type { ArticleSearchMatch, ArticleSummary } from './article.types';
 
 import Link from 'next/link';
 import HighlightedText from '@/features/search/highlighted-text';
+import { textLinkStyles } from '@/styles/text-link.styles';
 import * as stylex from '@stylexjs/stylex';
 
 import { getArticleBrowseHref } from './article-navigation';
@@ -67,7 +68,7 @@ export default function ArticleListItem({
             <Link
               key={tag}
               href={getArticleBrowseHref({ basePath: getArticleTagHref(tag), browseMode })}
-              {...stylex.props(articleStyles.inlineTag)}
+              {...stylex.props(articleStyles.inlineTag, textLinkStyles.hitArea)}
             >
               #{tag}
             </Link>

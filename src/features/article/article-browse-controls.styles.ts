@@ -181,11 +181,7 @@ export const articleBrowseControlStyles = stylex.create({
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
     fontWeight: 600,
-    textDecorationLine: {
-      default: 'none',
-      ':hover': 'underline',
-    },
-    textUnderlineOffset: '4px',
+    textDecorationLine: 'none',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,

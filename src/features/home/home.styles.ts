@@ -122,11 +122,7 @@ export const homeStyles = stylex.create({
       ':hover': colors.primaryStrong,
     },
     fontWeight: 650,
-    textDecorationLine: {
-      default: 'none',
-      ':hover': 'underline',
-    },
-    textUnderlineOffset: '4px',
+    textDecorationLine: 'none',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,

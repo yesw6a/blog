@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 
 import Link from 'next/link';
+import { textLinkStyles } from '@/styles/text-link.styles';
 import * as stylex from '@stylexjs/stylex';
 
 import { articleBrowseControlStyles } from './article-browse-controls.styles';
@@ -66,7 +67,11 @@ export default function ArticleInfiniteLoader({
           重试
         </button>
         {paginationHref ? (
-          <Link href={paginationHref} scroll={false} {...stylex.props(articleBrowseControlStyles.fallbackLink)}>
+          <Link
+            href={paginationHref}
+            scroll={false}
+            {...stylex.props(articleBrowseControlStyles.fallbackLink, textLinkStyles.hitArea)}
+          >
             改用分页
           </Link>
         ) : null}

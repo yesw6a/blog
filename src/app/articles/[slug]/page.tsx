@@ -12,6 +12,7 @@ import {
   getPublishedArticleSummaries,
 } from '@/features/article/article.repository';
 import { articleStyles } from '@/features/article/article.styles';
+import { textLinkStyles } from '@/styles/text-link.styles';
 import * as stylex from '@stylexjs/stylex';
 
 type ArticlePageProps = {
@@ -94,7 +95,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       />
 
       <header {...stylex.props(articleStyles.detailHeader)}>
-        <Link href="/articles" {...stylex.props(articleStyles.backLink)}>
+        <Link href="/articles" {...stylex.props(articleStyles.backLink, textLinkStyles.hitArea)}>
           返回文章列表
         </Link>
         <h1 {...stylex.props(articleStyles.detailTitle)}>{article.title}</h1>

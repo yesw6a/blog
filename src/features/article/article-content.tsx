@@ -6,6 +6,7 @@ import Link from 'next/link';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeSlug from 'rehype-slug';
 import remarkGfm from 'remark-gfm';
+import { textLinkStyles } from '@/styles/text-link.styles';
 import * as stylex from '@stylexjs/stylex';
 
 import { articleStyles } from './article.styles';
@@ -24,7 +25,7 @@ const Callout = ({ title, children }: CalloutProps) => (
 
 const ArticleLink = ({ href = '', children, className, ...props }: ComponentPropsWithoutRef<'a'>) => {
   const isHeadingAnchor = className?.includes('article-heading-link');
-  const styles = isHeadingAnchor ? {} : stylex.props(articleStyles.proseLink);
+  const styles = isHeadingAnchor ? {} : stylex.props(articleStyles.proseLink, textLinkStyles.prose);
   const mergedClassName = [className, styles.className].filter(Boolean).join(' ');
   if (href.startsWith('/')) {
     return (

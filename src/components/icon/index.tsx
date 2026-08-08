@@ -16,9 +16,17 @@ const ICONS = {
   arrowUp:
     '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m6 10l6-6l6 6M12 4v16"/>',
   rss: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M4.5 4.5c8.284 0 15 6.716 15 15M4.5 10.5a9 9 0 0 1 9 9"/><circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/></g>',
+  travel:
+    '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><circle cx="12" cy="12" r="6.5"/><path d="M3.5 15.5c1.5 2.5 7.6 2.2 13-.9s8.2-7.8 6.7-10.3c-.8-1.3-2.8-1.5-5.2-.8"/><circle cx="21.2" cy="5.2" r="1.1" fill="currentColor" stroke="none"/></g>',
   cloudServer:
     '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.478 8h.022a4.5 4.5 0 1 1 0 9H7a5 5 0 0 1-.48-9.977M17.478 8q.021-.247.022-.5a5.5 5.5 0 0 0-10.98-.477M17.478 8a5.5 5.5 0 0 1-1.235 3M6.52 7.023Q6.757 7 7 7c1.126 0 2.165.372 3 1m4 12.75v-.25a1 1 0 0 0-1-1h-1m2 1.25V21a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-.25m4 0h5m-9 0v-.25a1 1 0 0 1 1-1h1m-2 1.25H5m7-1.25V17"/>',
   code: '<path fill="currentColor" d="m8 18l-6-6l6-6l1.425 1.425l-4.6 4.6L9.4 16.6zm8 0l-1.425-1.425l4.6-4.6L14.6 7.4L16 6l6 6z"/>',
+  toolbox:
+    '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M4.5 7.5h15A1.5 1.5 0 0 1 21 9v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19V9a1.5 1.5 0 0 1 1.5-1.5"/><path d="M9 7.5V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2.5M3 12h6m6 0h6m-12-1.5v3h6v-3"/></g>',
+  gridView:
+    '<g fill="none" stroke="currentColor" stroke-width="1.5"><rect width="7" height="7" x="3" y="3" rx="1.25"/><rect width="7" height="7" x="14" y="3" rx="1.25"/><rect width="7" height="7" x="3" y="14" rx="1.25"/><rect width="7" height="7" x="14" y="14" rx="1.25"/></g>',
+  listView:
+    '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><rect width="3" height="3" x="3" y="4" rx=".75"/><path d="M10 5.5h11"/><rect width="3" height="3" x="3" y="10.5" rx=".75"/><path d="M10 12h11"/><rect width="3" height="3" x="3" y="17" rx=".75"/><path d="M10 18.5h11"/></g>',
   palette:
     '<path fill="currentColor" d="M12 22q-2.05 0-3.875-.788t-3.187-2.15t-2.15-3.187T2 12q0-2.075.813-3.9t2.2-3.175T8.25 2.788T12.2 2q2 0 3.775.688t3.113 1.9t2.125 2.875T22 11.05q0 2.875-1.75 4.413T16 17h-1.85q-.225 0-.312.125t-.088.275q0 .3.375.863t.375 1.287q0 1.25-.687 1.85T12 22m-5.5-9q.65 0 1.075-.425T8 11.5t-.425-1.075T6.5 10t-1.075.425T5 11.5t.425 1.075T6.5 13m3-4q.65 0 1.075-.425T11 7.5t-.425-1.075T9.5 6t-1.075.425T8 7.5t.425 1.075T9.5 9m5 0q.65 0 1.075-.425T16 7.5t-.425-1.075T14.5 6t-1.075.425T13 7.5t.425 1.075T14.5 9m3 4q.65 0 1.075-.425T19 11.5t-.425-1.075T17.5 10t-1.075.425T16 11.5t.425 1.075T17.5 13"/>',
   speed:

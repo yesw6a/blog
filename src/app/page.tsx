@@ -6,6 +6,7 @@ import { getPublishedArticleSummaries } from '@/features/article/article.reposit
 import HomeAvatar from '@/features/home/home-avatar';
 import { HOME_CONTENT, SITE_SERVICES, TECHNOLOGY_STACK } from '@/features/home/home.content';
 import { homeStyles } from '@/features/home/home.styles';
+import { textLinkStyles } from '@/styles/text-link.styles';
 import * as stylex from '@stylexjs/stylex';
 
 export const dynamic = 'force-static';
@@ -39,7 +40,12 @@ const ExternalLinks = ({ items }: { items: HomeExternalLink[] }) => (
     {items.map((item, index) => (
       <span key={item.name}>
         {index > 0 ? <span aria-hidden> · </span> : null}
-        <a href={item.link} target="_blank" rel="noopener noreferrer" {...stylex.props(homeStyles.externalLink)}>
+        <a
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          {...stylex.props(homeStyles.externalLink, textLinkStyles.animated)}
+        >
           {item.name}
         </a>
       </span>
@@ -93,7 +99,7 @@ export default async function Home() {
             <h2 id="latest-articles-title" {...stylex.props(homeStyles.sectionTitle)}>
               最近文章
             </h2>
-            <Link href="/articles" {...stylex.props(homeStyles.sectionLink)}>
+            <Link href="/articles" {...stylex.props(homeStyles.sectionLink, textLinkStyles.hitArea)}>
               查看全部 →
             </Link>
           </div>

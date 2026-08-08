@@ -118,11 +118,7 @@ export const articleStyles = stylex.create({
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.875rem',
     fontWeight: 600,
-    textDecorationLine: {
-      default: 'none',
-      ':hover': 'underline',
-    },
-    textUnderlineOffset: '4px',
+    textDecorationLine: 'none',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,
@@ -308,11 +304,7 @@ export const articleStyles = stylex.create({
     minHeight: '44px',
     alignItems: 'center',
     color: colors.primaryStrong,
-    textDecorationLine: {
-      default: 'none',
-      ':hover': 'underline',
-    },
-    textUnderlineOffset: '3px',
+    textDecorationLine: 'none',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,
@@ -477,9 +469,7 @@ export const articleStyles = stylex.create({
   proseLink: {
     color: colors.primaryStrong,
     fontWeight: 600,
-    textDecorationLine: 'underline',
-    textDecorationThickness: '1px',
-    textUnderlineOffset: '4px',
+    textDecorationLine: 'none',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,

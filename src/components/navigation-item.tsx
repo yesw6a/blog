@@ -65,14 +65,23 @@ const styles = stylex.create({
     position: 'relative',
     zIndex: 10,
     display: 'flex',
-    minWidth: '48px',
-    minHeight: '48px',
+    minWidth: {
+      default: '48px',
+      '@media (max-width: 360px)': '44px',
+    },
+    minHeight: {
+      default: '48px',
+      '@media (max-width: 360px)': '44px',
+    },
     cursor: 'pointer',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: '9999px',
     backgroundColor: 'transparent',
-    padding: '0.75rem',
+    padding: {
+      default: '0.75rem',
+      '@media (max-width: 360px)': '0.625rem',
+    },
     color: {
       default: 'inherit',
       ':hover': colors.primary,

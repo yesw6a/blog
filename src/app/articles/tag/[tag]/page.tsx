@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { rssFeedAlternates } from '@/config/site';
 import ArticleArchive from '@/features/article/article-archive';
-import { getArticleTagHref } from '@/features/article/article.constants';
+import { decodeArticleTagParam, getArticleTagHref } from '@/features/article/article.constants';
 import { getAllTags, getTagArticlePage } from '@/features/article/article.repository';
 
 type ArticleTagPageProps = {
@@ -11,7 +11,7 @@ type ArticleTagPageProps = {
 };
 
 export const dynamic = 'force-static';
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 export async function generateStaticParams() {
   const tags = await getAllTags({ includeDrafts: false });
@@ -19,7 +19,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: ArticleTagPageProps): Promise<Metadata> {
-  const { tag } = await params;
+  const { tag: encodedTag } = await params;
+  const tag = decodeArticleTagParam(encodedTag);
   return {
     title: `#${tag} 相关文章`,
     description: `浏览标记为「${tag}」的文章。`,
@@ -28,7 +29,8 @@ export async function generateMetadata({ params }: ArticleTagPageProps): Promise
 }
 
 export default async function ArticleTagPage({ params }: ArticleTagPageProps) {
-  const { tag } = await params;
+  const { tag: encodedTag } = await params;
+  const tag = decodeArticleTagParam(encodedTag);
   const [page, tags] = await Promise.all([getTagArticlePage(tag, 1), getAllTags()]);
   if (!page || page.totalArticles === 0) notFound();
 

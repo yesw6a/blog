@@ -31,6 +31,7 @@ export const colors = stylex.defineVars({
 export const layout = stylex.defineVars({
   headerSafeArea: '5rem',
   headerInnerHeight: '3.5rem',
+  navigationItemStep: '3.5rem',
 });
 
 export const darkTheme = stylex.createTheme(colors, {

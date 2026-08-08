@@ -11,6 +11,7 @@ import Icon from '@/components/icon';
 import NavigationItem from '@/components/navigation-item';
 import Tooltip, { TooltipContent, TooltipTrigger } from '@/components/tooltip';
 import BusuanziStatsFooter from '@/features/busuanzi/busuanzi-stats-footer';
+import { textLinkStyles } from '@/styles/text-link.styles';
 import { colors, darkTheme, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
@@ -23,6 +24,7 @@ const SiteSearchDialog = dynamic(() => import('@/features/search/site-search-dia
 const ROUTES: ReadonlyArray<{ label: string; key: string; icon: IconName; path: string }> = [
   { label: '首页', key: 'home', icon: 'home', path: '/' },
   { label: '文章', key: 'articles', icon: 'article', path: '/articles' },
+  { label: '工具箱', key: 'tools', icon: 'toolbox', path: '/tools' },
 ];
 
 const APP_THEME_ROOT_ID = 'app-theme-root';
@@ -57,7 +59,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [mounted, setMounted] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchReturnFocusRef = useRef<HTMLElement | null>(null);
-  const isArticlesRoute = isCurrentPath(pathname, '/articles');
+  const activeRouteIndex = Math.max(
+    0,
+    ROUTES.findIndex(({ path }) => isCurrentPath(pathname, path)),
+  );
 
   const openSearch = useCallback(() => {
     searchReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -94,11 +99,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <header {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.headerInner)}>
           <div {...stylex.props(styles.navigation)}>
-            {isArticlesRoute ? (
-              <div aria-hidden {...stylex.props(styles.activeIndicator, styles.activeIndicatorArticles)} />
-            ) : (
-              <div aria-hidden {...stylex.props(styles.activeIndicator)} />
-            )}
+            <div
+              aria-hidden
+              {...stylex.props(styles.activeIndicator)}
+              style={{ transform: `translate3d(calc(${activeRouteIndex} * ${layout.navigationItemStep}), -50%, 0)` }}
+            />
             {ROUTES.map(({ label, key, icon, path }) => (
               <NavigationItem
                 key={key}
@@ -134,6 +139,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <TooltipContent hideArrow>RSS 订阅</TooltipContent>
             </Tooltip>
 
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://travel.moe/go.html?travel=on"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="开启异次元之旅（在新窗口打开）"
+                  {...stylex.props(styles.headerAction)}
+                >
+                  <Icon name="travel" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent hideArrow>异次元之旅 · 自动跃迁</TooltipContent>
+            </Tooltip>
+
             <button
               type="button"
               {...stylex.props(styles.headerAction)}
@@ -161,7 +181,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             href="https://icp.gov.moe/?keyword=20268082"
             target="_blank"
             rel="noopener noreferrer"
-            {...stylex.props(styles.footerLink)}
+            {...stylex.props(styles.footerLink, textLinkStyles.hitArea)}
           >
             萌ICP备20268082号
           </a>
@@ -189,6 +209,11 @@ const styles = stylex.create({
       default: '3.5rem',
       '@media (max-width: 640px)': '3.25rem',
     },
+    [layout.navigationItemStep]: {
+      default: '3.5rem',
+      '@media (max-width: 640px)': '3.125rem',
+      '@media (max-width: 360px)': '2.75rem',
+    },
   },
   header: {
     position: 'sticky',
@@ -199,7 +224,11 @@ const styles = stylex.create({
     height: layout.headerSafeArea,
     alignItems: 'center',
     backgroundColor: colors.canvas,
-    paddingInline: '1rem',
+    paddingInline: {
+      default: '1rem',
+      '@media (max-width: 640px)': '0.5rem',
+      '@media (max-width: 360px)': '0.25rem',
+    },
   },
   headerInner: {
     display: 'flex',
@@ -215,6 +244,7 @@ const styles = stylex.create({
     paddingInline: {
       default: '1rem',
       '@media (max-width: 640px)': '0.625rem',
+      '@media (max-width: 360px)': '0.125rem',
     },
     boxShadow: '0 8px 30px rgb(0 0 0 / 10%)',
   },
@@ -226,6 +256,7 @@ const styles = stylex.create({
     gap: {
       default: '0.5rem',
       '@media (max-width: 640px)': '0.125rem',
+      '@media (max-width: 360px)': 0,
     },
   },
   headerActions: {
@@ -241,20 +272,20 @@ const styles = stylex.create({
     position: 'absolute',
     left: 0,
     top: '50%',
-    width: '3rem',
-    height: '3rem',
+    width: {
+      default: '3rem',
+      '@media (max-width: 360px)': '2.75rem',
+    },
+    height: {
+      default: '3rem',
+      '@media (max-width: 360px)': '2.75rem',
+    },
     borderRadius: '9999px',
     backgroundColor: colors.primaryTransparent10,
     transform: 'translate3d(0, -50%, 0)',
     transitionDuration: motionDuration,
     transitionProperty: 'transform',
     transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
-  },
-  activeIndicatorArticles: {
-    transform: {
-      default: 'translate3d(3.5rem, -50%, 0)',
-      '@media (max-width: 640px)': 'translate3d(3.125rem, -50%, 0)',
-    },
   },
   headerAction: {
     display: 'inline-flex',
@@ -330,11 +361,7 @@ const styles = stylex.create({
       default: colors.textMuted,
       ':hover': colors.primaryStrong,
     },
-    textDecoration: {
-      default: 'none',
-      ':hover': 'underline',
-    },
-    textUnderlineOffset: '0.2em',
+    textDecorationLine: 'none',
     outline: {
       default: 'none',
       ':focus-visible': `2px solid ${colors.primaryStrong}`,

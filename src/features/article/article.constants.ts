@@ -28,4 +28,12 @@ export const isArticleCategory = (value: unknown): value is ArticleCategory =>
 export const getArticlePageHref = (page: number, basePath = '/articles') =>
   page <= 1 ? basePath : `${basePath}/page/${page}`;
 
-export const getArticleTagHref = (tag: string) => `/articles/tag/${encodeURIComponent(tag)}`;
+export const getArticleTagHref = (tag: string) => `/articles/tag/${tag}`;
+
+export const decodeArticleTagParam = (tag: string) => {
+  try {
+    return decodeURIComponent(tag);
+  } catch {
+    return tag;
+  }
+};
