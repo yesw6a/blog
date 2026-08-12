@@ -5,7 +5,11 @@ import { notFound } from 'next/navigation';
 import { absoluteUrl, rssFeedAlternates, siteConfig } from '@/config/site';
 import ArticleContent from '@/features/article/article-content';
 import ArticleTableOfContents from '@/features/article/article-table-of-contents';
-import { getArticleTagHref } from '@/features/article/article.constants';
+import {
+  ARTICLE_CATEGORY_LABELS,
+  getArticleCategoryHref,
+  getArticleTagHref,
+} from '@/features/article/article.constants';
 import {
   getAdjacentArticles,
   getArticleBySlug,
@@ -27,6 +31,9 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   day: 'numeric',
 });
 
+const getSeoImageUrl = (seoImage?: string) =>
+  seoImage ? new URL(seoImage, `${siteConfig.url}/`).toString() : absoluteUrl('/seo-image');
+
 export async function generateStaticParams() {
   const articles = await getPublishedArticleSummaries();
   return articles.map((article) => ({ slug: article.slug }));
@@ -38,6 +45,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   if (!article) return {};
 
   const canonical = `/articles/${article.slug}`;
+  const seoImage = getSeoImageUrl(article.seoImage);
   return {
     title: article.title,
     description: article.description,
@@ -54,11 +62,13 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       modifiedTime: article.updatedAt,
       authors: [siteConfig.author],
       tags: article.tags,
+      images: [{ url: seoImage, width: 1200, height: 630, alt: article.title }],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: article.title,
       description: article.description,
+      images: [seoImage],
     },
   };
 }
@@ -68,23 +78,63 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const [article, adjacent] = await Promise.all([getArticleBySlug(slug), getAdjacentArticles(slug)]);
   if (!article) notFound();
 
+  const canonical = absoluteUrl(`/articles/${article.slug}`);
+  const categoryLabel = ARTICLE_CATEGORY_LABELS[article.category];
+  const seoImage = getSeoImageUrl(article.seoImage);
   const structuredData = {
     '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: article.title,
-    description: article.description,
-    datePublished: article.publishedAt,
-    dateModified: article.updatedAt || article.publishedAt,
-    mainEntityOfPage: absoluteUrl(`/articles/${article.slug}`),
-    author: {
-      '@type': 'Person',
-      name: siteConfig.author,
-    },
-    publisher: {
-      '@type': 'Person',
-      name: siteConfig.author,
-    },
-    keywords: article.tags.join(', '),
+    '@graph': [
+      {
+        '@type': 'BlogPosting',
+        '@id': `${canonical}#article`,
+        url: canonical,
+        headline: article.title,
+        description: article.description,
+        image: [seoImage],
+        datePublished: article.publishedAt,
+        dateModified: article.updatedAt || article.publishedAt,
+        inLanguage: 'zh-CN',
+        articleSection: categoryLabel,
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': canonical,
+        },
+        author: {
+          '@type': 'Person',
+          name: siteConfig.author,
+          url: siteConfig.url,
+        },
+        publisher: {
+          '@type': 'Person',
+          name: siteConfig.author,
+          url: siteConfig.url,
+        },
+        keywords: article.tags.join(', '),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: '首页',
+            item: absoluteUrl('/'),
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: '文章',
+            item: absoluteUrl('/articles'),
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: article.title,
+            item: canonical,
+          },
+        ],
+      },
+    ],
   };
 
   return (
@@ -109,6 +159,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           {article.draft ? <span {...stylex.props(articleStyles.draftBadge)}>草稿预览</span> : null}
         </div>
         <div aria-label="文章标签" {...stylex.props(articleStyles.detailTags)}>
+          <Link href={getArticleCategoryHref(article.category)} {...stylex.props(articleStyles.detailTag)}>
+            {ARTICLE_CATEGORY_LABELS[article.category]}
+          </Link>
           {article.tags.map((tag) => (
             <Link key={tag} href={getArticleTagHref(tag)} {...stylex.props(articleStyles.detailTag)}>
               {tag}

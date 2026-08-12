@@ -10,4 +10,4 @@ export const articleTopics = [
 ];
 
 export const articleCategories = new Set(articleTopics.map((topic) => topic.category));
-export const reservedArticleSlugs = new Set(['archive', 'page', 'search', 'tag']);
+export const reservedArticleSlugs = new Set(['archive', 'category', 'page', 'search', 'tag']);

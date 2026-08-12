@@ -1,4 +1,5 @@
 import type { ArticleBrowseMode } from './article-navigation';
+import type { ArticleCategory } from './article.constants';
 import type { ArticlePageResult, ArticleSearchMatch } from './article.types';
 
 import * as stylex from '@stylexjs/stylex';
@@ -19,6 +20,7 @@ type ArticleBrowserViewProps = {
   collectionBlocking?: boolean;
   collectionError?: boolean;
   collectionLoading?: boolean;
+  description?: string;
   hasMore?: boolean;
   onLoadMore?: () => void;
   onRetry?: () => void;
@@ -26,10 +28,12 @@ type ArticleBrowserViewProps = {
   paginationHref?: string;
   query?: string;
   searchMatches?: Record<string, ArticleSearchMatch>;
+  selectedCategory?: ArticleCategory;
   selectedTag?: string;
   selectedTagInPath?: boolean;
   switchHref?: string;
   tags: string[];
+  title?: string;
 };
 
 const ARTICLE_BROWSER_HEADER_ID = 'article-browser-header';
@@ -41,6 +45,7 @@ export default function ArticleBrowserView({
   collectionBlocking,
   collectionError,
   collectionLoading,
+  description,
   hasMore,
   onLoadMore = () => undefined,
   onRetry = () => undefined,
@@ -48,10 +53,12 @@ export default function ArticleBrowserView({
   paginationHref = basePath,
   query,
   searchMatches,
+  selectedCategory,
   selectedTag,
   selectedTagInPath,
   switchHref = `${basePath}?view=infinite`,
   tags,
+  title,
 }: ArticleBrowserViewProps) {
   const filtering = Boolean(query || selectedTag);
   const infiniteMode = browseMode === 'infinite';
@@ -69,11 +76,12 @@ export default function ArticleBrowserView({
   return (
     <div>
       <header id={ARTICLE_BROWSER_HEADER_ID} tabIndex={-1} {...stylex.props(articleStyles.pageHeader)}>
-        <h1 {...stylex.props(articleStyles.pageTitle)}>{selectedTag ? `#${selectedTag}` : '文章'}</h1>
+        <h1 {...stylex.props(articleStyles.pageTitle)}>{title ?? (selectedTag ? `#${selectedTag}` : '文章')}</h1>
         <p {...stylex.props(articleStyles.pageDescription)}>
-          {selectedTag
-            ? `收录标记为「${selectedTag}」的文章。`
-            : '记录前端开发、工程实践，以及那些值得在写代码之外继续想一想的问题。'}
+          {description ??
+            (selectedTag
+              ? `收录标记为「${selectedTag}」的文章。`
+              : '记录前端开发、工程实践，以及那些值得在写代码之外继续想一想的问题。')}
         </p>
       </header>
 
@@ -82,6 +90,7 @@ export default function ArticleBrowserView({
         browseMode={browseMode}
         tags={tags}
         query={query}
+        preserveBasePathOnClear={Boolean(selectedCategory)}
         selectedTag={selectedTag}
         selectedTagInPath={selectedTagInPath}
       />

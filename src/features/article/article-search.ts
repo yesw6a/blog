@@ -1,4 +1,5 @@
 import type { SearchTextMatch } from '@/features/search/search.types';
+import type { ArticleCategory } from './article.constants';
 import type { ArticleSearchMatch, ArticleSearchResult, ArticleSummary } from './article.types';
 
 import { fetchSiteSearchIndex, searchSite } from '@/features/search/search';
@@ -27,11 +28,23 @@ const mergeMetadataMatches = (current: SearchTextMatch[], next: SearchTextMatch[
   return [...merged.values()];
 };
 
-export const searchArticles = async (query?: string, tag?: string): Promise<ArticleSearchResult> => {
+type ArticleSearchFilters = {
+  category?: ArticleCategory;
+  tag?: string;
+};
+
+const matchesFilters = (article: ArticleSummary, filters: ArticleSearchFilters) =>
+  (!filters.category || article.category === filters.category) &&
+  (!filters.tag || article.tags.includes(filters.tag));
+
+export const searchArticles = async (
+  query?: string,
+  filters: ArticleSearchFilters = {},
+): Promise<ArticleSearchResult> => {
   if (!query) {
     const index = await fetchSiteSearchIndex();
     return {
-      articles: tag ? index.articles.filter((article) => article.tags.includes(tag)) : index.articles,
+      articles: index.articles.filter((article) => matchesFilters(article, filters)),
       matches: {},
     };
   }
@@ -45,7 +58,7 @@ export const searchArticles = async (query?: string, tag?: string): Promise<Arti
   for (const result of results) {
     const item = result.document;
     const slug = item.articleSlug;
-    if (!slug || (tag && !item.tags.includes(tag))) continue;
+    if (!slug) continue;
 
     const existing = matches[slug];
     if (existing) {
@@ -55,7 +68,7 @@ export const searchArticles = async (query?: string, tag?: string): Promise<Arti
     }
 
     const article = articlesBySlug.get(slug);
-    if (!article) continue;
+    if (!article || !matchesFilters(article, filters)) continue;
 
     articles.push(article);
     matches[slug] = {

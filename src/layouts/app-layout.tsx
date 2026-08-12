@@ -59,10 +59,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [mounted, setMounted] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchReturnFocusRef = useRef<HTMLElement | null>(null);
-  const activeRouteIndex = Math.max(
-    0,
-    ROUTES.findIndex(({ path }) => isCurrentPath(pathname, path)),
-  );
+  const activeRouteIndex = ROUTES.findIndex(({ path }) => isCurrentPath(pathname, path));
 
   const openSearch = useCallback(() => {
     searchReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -99,11 +96,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <header {...stylex.props(styles.header)}>
         <div {...stylex.props(styles.headerInner)}>
           <div {...stylex.props(styles.navigation)}>
-            <div
-              aria-hidden
-              {...stylex.props(styles.activeIndicator)}
-              style={{ transform: `translate3d(calc(${activeRouteIndex} * ${layout.navigationItemStep}), -50%, 0)` }}
-            />
+            {activeRouteIndex >= 0 ? (
+              <div
+                aria-hidden
+                {...stylex.props(styles.activeIndicator)}
+                style={{
+                  transform: `translate3d(calc(${activeRouteIndex} * ${layout.navigationItemStep}), -50%, 0)`,
+                }}
+              />
+            ) : null}
             {ROUTES.map(({ label, key, icon, path }) => (
               <NavigationItem
                 key={key}

@@ -13,6 +13,7 @@ import type {
   ArticlePageResult,
   ArticleSummary,
 } from './article.types';
+import type { ArticleCategory } from './article.constants';
 
 import GithubSlugger from 'github-slugger';
 import matter from 'gray-matter';
@@ -22,7 +23,12 @@ import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 
-import { ARTICLE_PAGE_SIZE, ARTICLE_RESERVED_SLUGS, isArticleCategory } from './article.constants';
+import {
+  ARTICLE_CATEGORIES,
+  ARTICLE_PAGE_SIZE,
+  ARTICLE_RESERVED_SLUGS,
+  isArticleCategory,
+} from './article.constants';
 
 const ARTICLES_DIRECTORY = path.join(process.cwd(), 'content', 'articles');
 const ARTICLE_EXTENSION = '.mdx';
@@ -111,6 +117,7 @@ const parseFrontmatter = (data: Record<string, unknown>, filename: string): Arti
     description: requireString(data, 'description', filename),
     publishedAt: requireDate(data, 'publishedAt', filename),
     updatedAt: optionalDate(data, 'updatedAt', filename),
+    seoImage: optionalString(data, 'seoImage', filename),
     category: data.category,
     tags,
     series: optionalString(data, 'series', filename),
@@ -376,6 +383,32 @@ export const getPublishedTagArticlePage = async (tag: string, page: number, page
   );
 };
 
+export const getCategoryArticlePage = async (
+  category: ArticleCategory,
+  page: number,
+  options?: { includeDrafts?: boolean; pageSize?: number },
+) => {
+  const articles = await getArticleSummaries(options);
+  return createPageResult(
+    articles.filter((article) => article.category === category),
+    page,
+    options?.pageSize,
+  );
+};
+
+export const getPublishedCategoryArticlePage = async (
+  category: ArticleCategory,
+  page: number,
+  pageSize = ARTICLE_PAGE_SIZE,
+) => {
+  const articles = await getPublishedArticleSummaries();
+  return createPageResult(
+    articles.filter((article) => article.category === category),
+    page,
+    pageSize,
+  );
+};
+
 export const getAllTags = async (options?: { includeDrafts?: boolean }) => {
   const articles = await getArticleSummaries(options);
   const tagCounts = new Map<string, number>();
@@ -394,6 +427,17 @@ export const getAllTags = async (options?: { includeDrafts?: boolean }) => {
     .map(([tag]) => tag);
 };
 
+export const getPublishedTagArticleCount = async (tag: string) => {
+  const articles = await getPublishedArticleSummaries();
+  return articles.filter((article) => article.tags.includes(tag)).length;
+};
+
+export const getPublishedCategories = async () => {
+  const articles = await getPublishedArticleSummaries();
+  const categories = new Set(articles.map((article) => article.category));
+  return ARTICLE_CATEGORIES.filter((category) => categories.has(category));
+};
+
 export const getPublishedArticlePageParams = async () => {
   const articles = await getPublishedArticleSummaries();
   const totalPages = Math.ceil(articles.length / ARTICLE_PAGE_SIZE);
@@ -410,6 +454,21 @@ export const getPublishedTagPageParams = async () => {
   return [...tagCounts.entries()].flatMap(([tag, count]) =>
     Array.from({ length: Math.max(0, Math.ceil(count / ARTICLE_PAGE_SIZE) - 1) }, (_, index) => ({
       tag,
+      page: String(index + 2),
+    })),
+  );
+};
+
+export const getPublishedCategoryPageParams = async () => {
+  const articles = await getPublishedArticleSummaries();
+  const categoryCounts = new Map<ArticleCategory, number>();
+  for (const article of articles) {
+    categoryCounts.set(article.category, (categoryCounts.get(article.category) ?? 0) + 1);
+  }
+
+  return ARTICLE_CATEGORIES.flatMap((category) =>
+    Array.from({ length: Math.max(0, Math.ceil((categoryCounts.get(category) ?? 0) / ARTICLE_PAGE_SIZE) - 1) }, (_, index) => ({
+      category,
       page: String(index + 2),
     })),
   );

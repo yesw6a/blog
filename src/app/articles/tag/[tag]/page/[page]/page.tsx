@@ -3,8 +3,18 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { rssFeedAlternates } from '@/config/site';
 import ArticleArchive from '@/features/article/article-archive';
-import { decodeArticleTagParam, getArticlePageHref, getArticleTagHref } from '@/features/article/article.constants';
-import { getAllTags, getPublishedTagPageParams, getTagArticlePage } from '@/features/article/article.repository';
+import {
+  decodeArticleTagParam,
+  getArticlePageHref,
+  getArticleTagHref,
+  isArticleTagIndexable,
+} from '@/features/article/article.constants';
+import {
+  getAllTags,
+  getPublishedTagArticleCount,
+  getPublishedTagPageParams,
+  getTagArticlePage,
+} from '@/features/article/article.repository';
 
 type ArticleTagPaginationPageProps = {
   params: Promise<{ page: string; tag: string }>;
@@ -26,10 +36,12 @@ export async function generateMetadata({ params }: ArticleTagPaginationPageProps
 
   const tag = decodeArticleTagParam(encodedTag);
   const basePath = getArticleTagHref(tag);
+  const articleCount = await getPublishedTagArticleCount(tag);
   return {
     title: `#${tag} · 第 ${page} 页`,
     description: `标记为「${tag}」的文章归档第 ${page} 页。`,
     alternates: { canonical: getArticlePageHref(page, basePath), types: rssFeedAlternates },
+    robots: isArticleTagIndexable(tag, articleCount) ? undefined : { index: false, follow: true },
   };
 }
 

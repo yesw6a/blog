@@ -3,8 +3,16 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { rssFeedAlternates } from '@/config/site';
 import ArticleArchive from '@/features/article/article-archive';
-import { decodeArticleTagParam, getArticleTagHref } from '@/features/article/article.constants';
-import { getAllTags, getTagArticlePage } from '@/features/article/article.repository';
+import {
+  decodeArticleTagParam,
+  getArticleTagHref,
+  isArticleTagIndexable,
+} from '@/features/article/article.constants';
+import {
+  getAllTags,
+  getPublishedTagArticleCount,
+  getTagArticlePage,
+} from '@/features/article/article.repository';
 
 type ArticleTagPageProps = {
   params: Promise<{ tag: string }>;
@@ -21,10 +29,12 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: ArticleTagPageProps): Promise<Metadata> {
   const { tag: encodedTag } = await params;
   const tag = decodeArticleTagParam(encodedTag);
+  const articleCount = await getPublishedTagArticleCount(tag);
   return {
     title: `#${tag} 相关文章`,
     description: `浏览标记为「${tag}」的文章。`,
     alternates: { canonical: getArticleTagHref(tag), types: rssFeedAlternates },
+    robots: isArticleTagIndexable(tag, articleCount) ? undefined : { index: false, follow: true },
   };
 }
 

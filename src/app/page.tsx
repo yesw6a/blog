@@ -2,6 +2,7 @@ import type { HomeExternalLink } from '@/features/home/home.content';
 
 import Link from 'next/link';
 import { Icon, TextKeyword } from '@/components';
+import { getArticleTagHref } from '@/features/article/article.constants';
 import { getPublishedArticleSummaries } from '@/features/article/article.repository';
 import HomeAvatar from '@/features/home/home-avatar';
 import { HOME_CONTENT, SITE_SERVICES, TECHNOLOGY_STACK } from '@/features/home/home.content';
@@ -136,7 +137,7 @@ export default async function Home() {
           <ol {...stylex.props(homeStyles.topicList)}>
             {topTopics.map((topic) => (
               <li key={topic.name}>
-                <Link href={`/articles?tag=${encodeURIComponent(topic.name)}`} {...stylex.props(homeStyles.topicLink)}>
+                <Link href={getArticleTagHref(topic.name)} {...stylex.props(homeStyles.topicLink)}>
                   <span>#{topic.name}</span>
                   <span aria-label={`${topic.count} 篇文章`} {...stylex.props(homeStyles.topicCount)}>
                     {String(topic.count).padStart(2, '0')}

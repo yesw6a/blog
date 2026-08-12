@@ -17,6 +17,7 @@ import { articleStyles } from './article.styles';
 type ArticleFilterProps = {
   basePath: string;
   browseMode?: ArticleBrowseMode;
+  preserveBasePathOnClear?: boolean;
   tags: string[];
   query?: string;
   selectedTag?: string;
@@ -30,6 +31,7 @@ const TAG_LIST_ID = 'article-tag-filter-list';
 export default function ArticleFilter({
   basePath,
   browseMode = 'pagination',
+  preserveBasePathOnClear,
   tags,
   query,
   selectedTag,
@@ -82,7 +84,7 @@ export default function ArticleFilter({
             {isPending ? '正在更新筛选…' : '当前筛选已生效'}
           </span>
           <Link
-            href={getArticleBrowseHref({ basePath: '/articles', browseMode })}
+            href={getArticleBrowseHref({ basePath: preserveBasePathOnClear ? basePath : '/articles', browseMode })}
             {...stylex.props(articleStyles.clearLink, textLinkStyles.hitArea)}
           >
             清除筛选

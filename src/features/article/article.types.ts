@@ -6,6 +6,7 @@ export interface ArticleFrontmatter {
   description: string;
   publishedAt: string;
   updatedAt?: string;
+  seoImage?: string;
   category: ArticleCategory;
   tags: string[];
   series?: string;

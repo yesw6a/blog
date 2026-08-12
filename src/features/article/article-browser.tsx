@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { ArticleCategory } from './article.constants';
 import type { ArticleBrowseMode } from './article-navigation';
 import type { ArticlePageResult, ArticleSearchResult } from './article.types';
 
@@ -15,16 +16,27 @@ import { searchArticles } from './article-search';
 
 type ArticleBrowserProps = {
   basePath: string;
+  description?: string;
   initialPage: ArticlePageResult;
+  selectedCategory?: ArticleCategory;
   selectedTag?: string;
   tags: string[];
+  title?: string;
 };
 
 type ArticleCollection = ArticleSearchResult & {
   pageSize: number;
 };
 
-export default function ArticleBrowser({ basePath, initialPage, selectedTag, tags }: ArticleBrowserProps) {
+export default function ArticleBrowser({
+  basePath,
+  description,
+  initialPage,
+  selectedCategory,
+  selectedTag,
+  tags,
+  title,
+}: ArticleBrowserProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,7 +58,7 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
   const [collection, setCollection] = useState<ArticleCollection>();
   const [collectionError, setCollectionError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const progressKey = `${query ?? ''}\u0000${effectiveTag ?? ''}\u0000${requestedPage}`;
+  const progressKey = `${query ?? ''}\u0000${selectedCategory ?? ''}\u0000${effectiveTag ?? ''}\u0000${requestedPage}`;
   const [infiniteProgress, setInfiniteProgress] = useState({ key: '', page: 1 });
   const visiblePage = infiniteProgress.key === progressKey ? infiniteProgress.page : requestedPage;
   const scrolledAnchorRef = useRef('');
@@ -80,11 +92,16 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
     setCollectionError(false);
 
     const request = query
-      ? searchArticles(query, effectiveTag).then((result) => ({ ...result, pageSize: initialPage.pageSize }))
+      ? searchArticles(query, { category: selectedCategory, tag: effectiveTag }).then((result) => ({
+          ...result,
+          pageSize: initialPage.pageSize,
+        }))
       : fetchArticleIndex().then((index) => ({
-          articles: effectiveTag
-            ? index.articles.filter((article) => article.tags.includes(effectiveTag))
-            : index.articles,
+          articles: index.articles.filter(
+            (article) =>
+              (!selectedCategory || article.category === selectedCategory) &&
+              (!effectiveTag || article.tags.includes(effectiveTag)),
+          ),
           matches: {},
           pageSize: index.pageSize,
         }));
@@ -100,7 +117,7 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
     return () => {
       cancelled = true;
     };
-  }, [effectiveTag, initialPage.pageSize, needsCollection, query, reloadKey]);
+  }, [effectiveTag, initialPage.pageSize, needsCollection, query, reloadKey, selectedCategory]);
 
   const page = useMemo(() => {
     if (!collection) return initialPage;
@@ -158,6 +175,7 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
       collectionBlocking={blockingCollection}
       collectionError={needsCollection && collectionError}
       collectionLoading={collectionLoading}
+      description={description}
       hasMore={infiniteMode && Boolean(collection) && page.currentPage < page.totalPages}
       onLoadMore={loadMore}
       onRetry={retry}
@@ -165,10 +183,12 @@ export default function ArticleBrowser({ basePath, initialPage, selectedTag, tag
       paginationHref={paginationHref}
       tags={tags}
       query={query}
+      selectedCategory={selectedCategory}
       selectedTag={effectiveTag}
       selectedTagInPath={Boolean(selectedTag)}
       searchMatches={query ? collection?.matches : undefined}
       switchHref={switchHref}
+      title={title}
     />
   );
 }

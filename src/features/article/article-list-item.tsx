@@ -7,7 +7,7 @@ import { textLinkStyles } from '@/styles/text-link.styles';
 import * as stylex from '@stylexjs/stylex';
 
 import { getArticleBrowseHref } from './article-navigation';
-import { getArticleTagHref } from './article.constants';
+import { ARTICLE_CATEGORY_LABELS, getArticleCategoryHref, getArticleTagHref } from './article.constants';
 import { articleStyles } from './article.styles';
 
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
@@ -64,6 +64,12 @@ export default function ArticleListItem({
         <div {...stylex.props(articleStyles.articleMeta)}>
           <span>{article.readingTime} 分钟阅读</span>
           {article.draft ? <span {...stylex.props(articleStyles.draftBadge)}>草稿</span> : null}
+          <Link
+            href={getArticleCategoryHref(article.category)}
+            {...stylex.props(articleStyles.inlineTag, textLinkStyles.hitArea)}
+          >
+            {ARTICLE_CATEGORY_LABELS[article.category]}
+          </Link>
           {article.tags.map((tag) => (
             <Link
               key={tag}
