@@ -32,7 +32,7 @@ const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
 });
 
 const getSeoImageUrl = (seoImage?: string) =>
-  seoImage ? new URL(seoImage, `${siteConfig.url}/`).toString() : absoluteUrl('/seo-image');
+  seoImage ? new URL(seoImage, `${siteConfig.url}/`).toString() : absoluteUrl('/seo-image.png');
 
 export async function generateStaticParams() {
   const articles = await getPublishedArticleSummaries();

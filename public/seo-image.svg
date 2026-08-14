@@ -1,10 +1,4 @@
-import { siteConfig } from '@/config/site';
-
-export const dynamic = 'force-static';
-
-export function GET() {
-  const hostname = siteConfig.url.replace(/^https?:\/\//, '').replace(/&/g, '&amp;');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#09090b" />
@@ -19,14 +13,6 @@ export function GET() {
   <text x="80" y="310" fill="#f8fafc" font-family="Arial, sans-serif" font-size="88" font-weight="700" letter-spacing="-4">Clovemu Blog</text>
   <text x="80" y="370" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="30" letter-spacing="0.6">AI · Engineering · Essays</text>
   <line x1="80" y1="520" x2="1120" y2="520" stroke="#94a3b8" stroke-opacity="0.32" />
-  <text x="80" y="565" fill="#94a3b8" font-family="Arial, sans-serif" font-size="22">${hostname}</text>
+  <text x="80" y="565" fill="#94a3b8" font-family="Arial, sans-serif" font-size="22">blog.clovemu.com</text>
   <text x="1120" y="565" text-anchor="end" fill="#94a3b8" font-family="Arial, sans-serif" font-size="22">Ideas worth keeping.</text>
-</svg>`;
-
-  return new Response(svg, {
-    headers: {
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      'Content-Type': 'image/svg+xml; charset=utf-8',
-    },
-  });
-}
+</svg>

@@ -7,7 +7,7 @@ import * as stylex from '@stylexjs/stylex';
 
 import './globals.css';
 
-const defaultSeoImage = absoluteUrl('/seo-image');
+const defaultSeoImage = absoluteUrl('/seo-image.png');
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),

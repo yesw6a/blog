@@ -13,6 +13,7 @@
 - 新增分类描述、分类导航链接、分类分页静态参数与站点地图收录。
 - 新增站点级 SEO 图片路由 `/seo-image`，并为首页和文章详情页补充 Open Graph、Twitter Card 与结构化数据图片信息。
 - 新增 `robots.txt` 生成路由，声明站点地图和允许抓取范围。
+- 发布 3 篇 AI 与工程技术文章，涵盖 TypeScript 7 原生编译器、Qwen 3.8-Max 开源落地和投机解码演进。
 
 ### 🔄 Changed
 
@@ -20,17 +21,21 @@
 - 标签索引根据公开文章数量和保留标签规则生成 `noindex` 策略，避免低价值归档页进入索引。
 - 文章详情、文章列表和首页统一使用分类与标签路由构造器，保留 URL 编码一致性。
 - 404 页面改为更紧凑的编辑式双栏布局，修复异常边框、宽屏留白、标题层级和正文换行，并统一 `/404` 作为人工预览入口。
+- 全站与文章详情页的默认社交卡片改为仓库内 1200×630 静态 PNG（`/seo-image.png`），保留文章自定义 `seoImage` 与旧 `/seo-image` 兼容入口。
+- `/seo-image` 从 `next/og`/`ImageResponse` 运行时渲染改为轻量 SVG 响应，避免将图像渲染 WASM 带入 Worker。
 
 ### 🐛 Fixed
 
 - 修复未知路径错误显示首页导航活动指示器的问题。
 - 修复 404 页面右侧和底部未定义边框宽度导致的粗 L 形边框。
+- 修复 Cloudflare Workers 免费计划部署因 `resvg.wasm`、`yoga.wasm` 导致 Worker gzip 包体超过 3 MiB（错误码 10027）的问题。
 
 ### ✅ Verify
 
 - 目标源文件通过 Prettier、`pnpm.cmd typecheck`、`pnpm.cmd lint`、`pnpm.cmd build` 与 `git diff --check`。
 - 生产构建成功生成 `/_not-found`，404 内容和 `noindex` 元数据存在；构建仅保留 Browserslist 数据过期的非阻塞提示。
 - 版本来源 `package.json` 已与本 CHANGELOG 的 `v.0.5.0` 窗口保持一致；未修改依赖，因此无需变更 `pnpm-lock.yaml`。
+- OpenNext 生产打包和 Wrangler `deploy --dry-run` 通过；总上传 `4868.71 KiB`、gzip `988.67 KiB`，低于免费计划 `3072 KiB` 限制，且静态 `seo-image.png` 已纳入资产目录；未执行真实部署。
 
 ## v.0.4.0 (2026-08-08 ~ 2026-08-08)
 

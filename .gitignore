@@ -26,6 +26,11 @@
 # local implementation plans
 .archives/
 
+# local build and deployment logs
+/.tmp-build/
+/temp/commit-msg-*.txt
+*.build.log
+
 # misc
 .DS_Store
 *.pem
