@@ -1,0 +1,124 @@
+---
+title: pnpm 12：Rust 重写的包管理器，升级却"不是迁移"
+description: 8 月 10 日，pnpm 官方博客发布 pnpm 12 差异说明：用 Rust 重写、处于 RC 阶段，却保留 pnpm 11 的命令、设置与锁文件格式。本文拆解三大实质变化、Rust 重写的演进路径，以及团队切换前需要检查什么。
+publishedAt: 2026-08-19
+category: engineering-practice
+tags:
+  - pnpm
+  - Rust
+  - 包管理
+  - 前端工程化
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一个刻意低调的 RC 公告
+
+2026 年 8 月 10 日，pnpm 首席维护者 Zoltan Kochan 在 [pnpm 官方博客](https://pnpm.io/zh/blog) 发布了一篇只有"一分钟阅读"篇幅的公告，标题直白：pnpm 12 is a rewrite of pnpm in Rust, and it is currently a release candidate。
+
+这条消息的分量被刻意压低了。pnpm 是 2026 年 npm 生态里周下载量过亿的包管理器，这次大版本重写底层语言，官方却把它定位成"升级不是迁移"：保留 pnpm 11 的命令、标志、设置和锁文件格式，文档对两个版本通用。整篇公告列出的实质差异只有三项，其中只有一项——一个被移除的标志——会让旧脚本直接报错。
+
+对团队来说，这比"又一个大版本"更值得认真读一遍：它定义了包管理器换引擎时，兼容性可以做到什么程度。
+
+## 三个实质变化
+
+### 项目感知的全局命令
+
+第一个变化是 `globalShims`：全局安装的 node、deno 或 bun，现在会跟随当前项目锁定的版本，而不是永远运行全局那份。
+
+如果项目通过 `devEngines.runtime` 固定运行时，或者把运行时作为依赖安装，那么在项目内执行 `node` 会使用项目固定的版本；在项目外仍使用全局版本。官方公告的点睛之笔是：你不再需要一个单独的版本管理器来获得这个行为。
+
+```json
+{
+  "name": "my-project",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=24"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": ">=12"
+    }
+  }
+}
+```
+
+对团队来说，这消除了一整类"在我机器上能跑"的问题：shell 里的 node 就是项目声明的 node，同一个机制也适用于按项目安装的 deno 和 bun。
+
+### Git 依赖解析：身份，而非传输方式
+
+第二个变化针对 GitHub、GitLab 和 Bitbucket 上的依赖。在 pnpm 12 里，一个 specifier 现在是"身份"而不是"传输方式的选择"：
+
+```text
+kevva/is-positive
+github:kevva/is-positive
+git+https://github.com/kevva/is-positive.git
+git+ssh://git@github.com/kevva/is-positive.git
+```
+
+以上写法都解析为同一个依赖，统一通过宿主平台的规范 HTTPS URL 解析，pnpm 不再为这些平台记录 SSH URL。某个机器用什么传输方式访问主机，是那台机器的 Git 配置，而不是项目的属性——因此在一台配了 SSH 钥匙的笔记本上写出的锁文件，在没有钥匙的 CI 运行器上也能正常安装。
+
+pnpm 11 的解析器会探测传输方式，可能记录下 `git@github.com:owner/repo.git`，之后任何没有该主机密钥的机器都会安装失败。如果旧锁文件里有这类条目，需要手动执行一次 `pnpm update` 重新解析——pnpm 不会自行改写，因为锁文件是"要安装什么"的记录。
+
+访问私有仓库的 SSH 需求，改为在 Git 层配置重写，而不是写在 specifier 里：
+
+```bash
+git config --global url."git@github.com:".insteadOf https://github.com/
+```
+
+pnpm 最终调用 git 完成操作，这条重写会自动作用于它的所有 Git 操作。
+
+### 移除 --resolution-only
+
+第三项是唯一会"直接失败"的变化：`pnpm install --resolution-only` 在 pnpm 12 里不再实现，执行会直接报 `unexpected argument '--resolution-only' found`。
+
+这个标志原本用于输出 peer 依赖问题。pnpm 11 起已有的 `pnpm peers check` 可以直接从锁文件读取 peer 依赖问题，既不需要重新解析也不需要安装。公告特别提醒：如果 CI 脚本里用了 `--resolution-only`，这是本次升级中唯一会让构建停止而不是改变结果的变化，切换前值得全局 grep 一遍。
+
+## Rust 重写：一条铺垫已久的演进路径
+
+pnpm 12 不是一夜之间重写的。第三方视角的梳理（如 [dev.to 上的分析](https://dev.to/morellodev/pnpm-v12-is-being-rewritten-in-rust-5036)）显示，Rust 引擎（项目内部称为 pacquet）是分阶段切入的：
+
+- 早期版本先用 Rust 完成 fetch 和 link，解析与锁文件写入仍在 TypeScript 侧；
+- pnpm 11.7 起，标准安装可以端到端委托给 pacquet，解析、锁文件写入、链接全部在单次 Rust 调用中完成；
+- pnpm 11.10 增加了 `pnpm self-update next-12`，可以直接拉取 v12 线试用 Rust 二进制；
+- pnpm 12 中，Rust 引擎从"可选加入"变成默认路径。
+
+性能数据方面，官方没有发布正式基准，但 pnpm 团队对自家 monorepo 的内部 profiling 显示，fetch-and-link 阶段至少有 2 倍提速；v12 以原生二进制分发（`@pnpm/exe`），命令执行不再有 Node.js 启动开销。官方团队已经在自己的代码库上运行 v12 alpha，这本身是可信信号。
+
+安装方面，pnpm 12 RC 发布在 npm 的 `next-12` tag 和 GitHub prerelease 上，Homebrew、winget、Scoop、Chocolatey 暂时都还没有。
+
+## 工具链原生化的大背景
+
+pnpm 12 是 2026 年 JavaScript 工具链"原生化"浪潮的最新一员。这条脉络已经非常清晰：
+
+| 工具 | 新实现语言 | 对应旧实现 |
+| --- | --- | --- |
+| pnpm 12 | Rust | TypeScript |
+| TypeScript 7 | Go | TypeScript |
+| Vite 8（Rolldown） | Rust | esbuild + Rollup |
+| Turbopack | Rust | Webpack |
+| Biome | Rust | ESLint + Prettier |
+| Deno | Rust | 从零构建的运行时 |
+
+需要澄清的是，Bun 是 Zig 写的，不属于"万物皆 Rust"叙事；TypeScript 7 选择了 Go 而不是 Rust，说明"原生"比"具体哪种语言"更重要。驱动这些重写的共同诉求是一致的：消除 Node.js 启动与解释执行开销、用多核并行换取构建与安装吞吐、让性能关键路径靠近硬件。
+
+对普通项目来说，这些重写的共同设计哲学更值得关注：**接口不变、引擎替换**。pnpm 12 保留锁文件格式、Vite 8 保留 Rollup 兼容插件 API、TypeScript 7 通过 `@typescript/typescript6` 兼容包并行过渡——生态在换取性能的同时，尽量不让用户迁移。
+
+## 切换 pnpm 12 前要检查什么
+
+按官方公告和社区实践，评估切换时可以按这个清单走：
+
+1. **grep CI 脚本**：搜索 `--resolution-only`，有则改为 `pnpm peers check`。
+2. **检查旧锁文件**：`grep -E "git\+ssh|git@github" pnpm-lock.yaml`，有 SSH 形式条目就执行一次 `pnpm update` 重新解析。
+3. **私有仓库**：确认 `git config --global url."git@github.com:".insteadOf https://github.com/` 已按需配置。
+4. **在分支上试用**：`pnpm self-update next-12` 或通过 `next-12` tag 安装，在隔离的 git worktree 里跑一遍关键安装命令，对比锁文件与 node_modules 结构。
+5. **等待正式版**：RC 阶段不建议直接切生产 CI；官方路线图还会继续推进解析、运行等剩余命令的原生化，正式版发布前功能对齐情况以官方文档为准。
+
+对绝大多数项目而言，pnpm 12 的升级会接近"无操作"。但正因为官方把破坏面控制得极小，那几个真正变化的点反而更容易被忽略——尤其是会让 CI 直接失败的 `--resolution-only`。花十分钟把清单过一遍，再决定什么时候跟上这条 Rust 快车道。
+
+_（内容由AI生成，仅供参考）_
