@@ -1,0 +1,93 @@
+---
+title: GitHub Copilot 走进 Slack 与 Teams：编码代理开始"在团队会话里上班"
+description: 8 月 21 日，GitHub Copilot 在 Slack 与 Microsoft Teams 的集成同日进入公开预览：在频道、群聊或私聊里 @GitHub，就能把一个云代理会话拉进对话，让它调查问题、改代码、开 PR，整个团队都能看见并引导。配合前一天的 Slack Code 频道与 Codex CLI 的 agents dashboard，本周的信号很清楚——编码代理正在从"个人终端里的工具"变成"团队协作的一部分"。本文拆解这三件事及其背后的取向。
+publishedAt: 2026-08-24
+category: tools-productivity
+tags:
+  - GitHub Copilot
+  - 开发者工具
+  - AI Agent
+  - 团队协作
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 本周最值得停下来看的不是某款新模型，而是 agent 的"工位"
+
+过去几个月，编码代理的新闻大多围绕模型、CLI 和 IDE 插件。但 8 月 20 日至 21 日这 48 小时里，几个发布把竞争焦点移到了另一个地方：**团队聊天**。
+
+- 8 月 20 日，Slack 发布 [Slack Code](https://slack.com/blog)（为编码代理设计的全新频道类型），Anthropic、Cognition、GitHub、Vercel 成为首发伙伴；
+- 8 月 21 日，GitHub 连发两条 changelog：[Copilot in Slack](https://github.blog/changelog/2026-08-21-the-new-github-copilot-experience-in-slack) 与 [Copilot in Microsoft Teams](https://github.blog/changelog/2026-08-21-shared-agentic-work-with-github-copilot-in-microsoft-teams) 同日进入公开预览；
+- 同一天稍早，OpenAI 的 [Codex CLI 0.149.0](https://github.com/openai/codex/releases) 带来交互式 agents dashboard 与跨会话消息队列。
+
+三件事指向同一个方向：**编码代理不再只属于个人的终端和编辑器，它开始出现在团队讨论发生的现场。**
+
+## Copilot in Slack：@GitHub，让对话直接变成可交付的工作
+
+Slack 集成把 GitHub Copilot CLI 与 Copilot app 的 agentic 能力搬进了频道、线程和私聊，公开预览面向 Copilot Business 与 Enterprise 组织。核心交互只有一个动作：**在对话里 @GitHub**。
+
+启动后，代理会话可以做这些事：
+
+- 回答关于代码库与 GitHub 活动的问题；
+- 分流（triage）bug 报告，更新既有 issue，或新建并打标签 issue；
+- 调查失败、实现修改，并在安全云沙箱里验证自己的产出；
+- 打开一个 PR，并把对话链接贴回聊天供评审。
+
+两个设计点值得记录。
+
+第一是**异步与跨端续接**：代理在会议、通勤或你专注其他事时持续工作，你可以在 Slack 里随时调整方向，也可以等它开完 PR 后，在终端、Copilot app 或 IDE 里继续接手。会话不再被"打开它的窗口"绑定。
+
+第二是 **Slack Code 频道**：Copilot 可以为任务创建一个专属代码频道，把 plan、diff、HTML 之类的输出预览放在那里，任何人可以从原线程加入频道、补充上下文、调整方向或叫停会话。官方给出的治理承诺是：从对话创建的 issue 与 PR 归属于 Copilot app 身份，行为受既有 GitHub 权限约束；仓库管理员还可以要求 agent 身份创建的 PR 合并前必须增加一道人工审批——"人留在环里"被做成了可配置的合规开关。
+
+## Copilot in Teams：把会议结论直接变成待办工作
+
+Teams 集成的定位几乎一致，但更强调"共享"：在一个频道、群聊、会议聊天或 1:1 里 @GitHub，就能启动一个**所有人都看得见、都能引导的云代理会话**。任何参与者都可以提问、补充上下文、帮忙规划或调整方向；对仓库有写权限的人可以触发 Copilot 实际改代码。
+
+最典型的场景是会议产生的行动项：站会里讨论出一个 bug 要查，直接在讨论中把任务交给 Copilot，它会创建一个专属代码频道，团队在频道里跟进进度、补充上下文。产出的 artifact 可以在终端、Copilot app 或 IDE 里继续处理。计费层面，Teams 启动的会话消耗 AI credits，云沙箱用量单独计费；仓库管理员同样可以要求 Copilot 创建的 PR 需要额外审批（若仓库本身要求两人审批，则 Copilot PR 需要三人）。
+
+Slack 与 Teams 两个入口细节有差异（例如 Slack 侧重 Slack Code 频道协作、Teams 更强调会议场景与跨端续接），但底层的产品判断是同一句话：**最好的 prompt 可能就是团队已经聊完的那场对话**——让代理直接工作在上下文产生的地方，而不是让某个开发者把讨论"翻译"成一段长提示词。
+
+## 参照：Codex CLI 的 agents dashboard，个人终端的"会话管理"补课
+
+同一天稍早，OpenAI 的 Codex CLI 0.149.0 也在做会话管理：新增交互式 agents dashboard，可以搜索、启动、打开、重命名和停止任务；新增 `codex queue` 命令，让一个会话向另一个已存在（本地或远程）的会话发消息——比如让部署线程接住编码线程的产出；还补了 `/cd`、`/pwd`、`/cwd` 工作目录命令和更强的 `codex doctor` 诊断。
+
+这条更新的意义不在于某个新功能，而在于它承认了**多代理并行已经成为常态**：当一个人同时跑五六个 agent 会话时，真正的痛点不是"生成质量"而是"任务管理"——我在跑什么、哪个卡住了、怎么给另一个线程喂指令。dashboard 和 queue 是把代理当"工作系统"来管理的信号，与 Copilot 进 Slack/Teams 是同一趋势的两个侧面：**agent 多了，就得有管理界面和协作协议。**
+
+## 一个被低估的背景：Agent Plugins 1.0
+
+8 月 12 日，GitHub 联合 AWS、Anysphere、Microsoft、OpenAI、Vercel 发布了 [Agent Plugins 1.0](https://github.blog/changelog/2026-08-12-agent-plugins-1-0/)：一套跨客户端的 agent 插件规范，写一次就能在 VS Code、Copilot CLI、Copilot app 等兼容客户端里复用。
+
+把它和本周的发布放在一起看，行业正在悄悄搭建编码代理的三层基础设施：
+
+| 层 | 解决什么问题 | 本周代表 |
+| --- | --- | --- |
+| 插件与能力分发 | agent 的能力可移植、可复用 | Agent Plugins 1.0 |
+| 会话管理 | 并行 agent 可观察、可编排 | Codex agents dashboard / queue |
+| 团队协作界面 | agent 进入讨论现场、留痕可审 | Copilot in Slack / Teams、Slack Code |
+
+单看任何一条都是"又发了个新功能"，合起来才看得清：**编码代理正在从"个人生产力工具"变成"团队工程基础设施"。** 这比某个模型又强了多少更值得记录。
+
+## 我的看法
+
+把这几条更新放在一起，我看到的行业取向是：**编码代理的竞争焦点，正在从"谁能把代码写对"转向"谁能把代理安排进团队的工作流"**。
+
+写对代码是必要条件，不是差异点。真正的差异在三个方面：会话能不能被团队看见（可见性）、人能不能随时引导和叫停（可控性）、agent 的产出能不能进入既有的审批与合规流程（治理）。Copilot 在 Slack/Teams 里的"额外审批开关"、Slack Code 的"审计式频道"，本质都是在回答同一个问题：**当代码由代理产出时，团队如何保持信任与责任边界。**
+
+对普通开发者，本周最值得尝试的不是立刻把代理接进团队聊天，而是先感受一下"会话管理"这个新维度：如果你同时在跑多个 agent 任务，Codex 的 dashboard、Copilot 的 agents 视图这类工具会明显降低"我不知道它在干嘛"的焦虑。等团队协作入口稳定后，再考虑把代理请进频道——毕竟，让代理参与团队讨论，前提是团队已经习惯讨论本身。
+
+---
+
+**笔记**
+
+- GitHub Copilot in Slack（2026-08-21，公开预览）：@GitHub 启动云代理会话，可回答问题、分流 issue、调查失败、改代码、在云沙箱验证并开 PR；支持 Slack Code 专属代码频道；面向 Copilot Business/Enterprise，管理员可要求 agent PR 额外审批。
+- GitHub Copilot in Microsoft Teams（2026-08-21，公开预览）：频道/群聊/会议聊天/1:1 中 @GitHub 启动共享会话，全员可引导，有写权限者可触发修改；会话消耗 AI credits，云沙箱单独计费；同样支持额外审批开关。
+- Slack Code（2026-08-20）：面向编码代理的频道类型，Anthropic、Cognition、GitHub、Vercel 为首发伙伴。
+- Codex CLI 0.149.0（2026-08-20）：交互式 agents dashboard、codex queue 跨会话消息、/cd /pwd /cwd、codex doctor 增强。
+- Agent Plugins 1.0（2026-08-12）：AWS、Anysphere、Microsoft、OpenAI、Vercel 联合，一次构建多客户端复用。
+- 核心观察：编码代理竞争焦点从"生成质量"转向"可见性、可控性、治理"；代理正在从个人工具变成团队基础设施。
+
+_（内容由AI生成，仅供参考）_
