@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## v.0.6.0 (2026-08-24 ~ 2026-08-28)
+
+### 📦 Version
+
+- 项目版本从 `0.5.0` 升级到 `0.6.0`。
+- 本发布窗口累计发布 9 篇技术文章，并新增通过 SceneMeld 桌面客户端使用的 AI 图像工作台，属于向后兼容的 Minor 级功能更新。
+
+### 🎉 Added
+
+- 工具箱新增 `/tools/ai-image-studio` AI 图像工作台，提供 SceneMeld 桌面客户端的最新版本下载、源码仓库、支持平台、Endpoint/API Key、固定模型和应用签名风险说明。
+- AI 图像工作台采用桌面客户端从用户设备直连自备兼容 Endpoint 的模式，规避浏览器跨域限制，支持对话生图、图生图和分镜创作。
+- 发布 9 篇 AI 与工程技术文章，涵盖 DeepSeek Agent 执行层、扩散语言模型、GLM-5.3 后训练、阿里灵犀业务调整、大模型行业变阵、pnpm 12 Rust 重写、OpenAI 前沿训练安全成本、AI 辅助开发反思和 Copilot 协作平台集成。
+
+### 🔄 Changed
+
+- 工具定义新增数据处理策略，区分浏览器本地处理与桌面客户端直连，并在各工具详情页展示对应的数据去向提示。
+- 工具箱总览不再笼统声明所有输入都只在浏览器处理，改为明确提示需要安装或联网的工具会在详情页说明数据去向。
+
+### ✅ Verify
+
+- `pnpm.cmd run typecheck`、`pnpm.cmd run lint`、`pnpm.cmd run build` 与 `git diff --check` 检查通过；生产构建成功生成 145 个静态页面，并包含 `/tools/ai-image-studio`。
+- 构建仅保留 Browserslist `caniuse-lite` 数据过期的非阻塞警告。
+- 版本来源 `package.json` 已与本 CHANGELOG 的 `v.0.6.0` 窗口保持一致；未修改依赖，且当前 `pnpm-lock.yaml` 不记录根项目版本，因此锁文件无需变更。
+
 ## v.0.5.0 (2026-08-10 ~ 2026-08-14)
 
 ### 📦 Version

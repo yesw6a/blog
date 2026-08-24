@@ -18,6 +18,7 @@ const TOOL_COMPONENTS: Record<ToolSlug, ComponentType> = {
   base64: nextDynamic(() => import('@/features/toolbox/tools/base64-tool')),
   'text-inspector': nextDynamic(() => import('@/features/toolbox/tools/text-inspector-tool')),
   'color-contrast': nextDynamic(() => import('@/features/toolbox/tools/color-contrast-tool')),
+  'ai-image-studio': nextDynamic(() => import('@/features/toolbox/tools/scene-meld-desktop-tool')),
 };
 
 export const dynamicParams = false;

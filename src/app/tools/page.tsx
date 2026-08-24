@@ -7,7 +7,7 @@ import * as stylex from '@stylexjs/stylex';
 
 export const metadata: Metadata = {
   title: '工具箱',
-  description: '处理文本、数据、时间和写作内容的浏览器本地工具。',
+  description: '处理文本、数据、时间与视觉内容的浏览器工具和独立客户端入口。',
   alternates: { canonical: '/tools' },
 };
 
@@ -19,7 +19,7 @@ export default function ToolsPage() {
       <header {...stylex.props(toolboxStyles.hero)}>
         <h1 {...stylex.props(toolboxStyles.title)}>工具箱</h1>
         <p {...stylex.props(toolboxStyles.description)}>
-          一些处理文本、数据和写作内容的小工具。无需注册，输入内容仅在浏览器本地处理。
+          一些处理文本、数据和创作内容的小工具。大多数浏览器工具在本地处理；需要安装或联网的工具会在详情页明确说明数据去向。
         </p>
       </header>
       <ToolboxCatalog tools={TOOL_DEFINITIONS} />

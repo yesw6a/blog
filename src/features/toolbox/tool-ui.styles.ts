@@ -67,12 +67,17 @@ export const toolUiStyles = stylex.create({
   },
   privacyNote: {
     display: 'inline-flex',
+    maxWidth: '48rem',
     marginTop: '1rem',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: '0.4rem',
     color: colors.textMuted,
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     fontSize: '0.8125rem',
+    lineHeight: 1.55,
+  },
+  privacyNoteIcon: {
+    marginTop: '0.12rem',
   },
   workspace: {
     borderTopWidth: '1px',

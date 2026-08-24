@@ -4,6 +4,8 @@ export const TOOL_CATEGORIES = ['writing', 'data', 'time', 'visual'] as const;
 
 export type ToolCategory = (typeof TOOL_CATEGORIES)[number];
 
+export type ToolDataPolicy = 'browser-local' | 'desktop-direct';
+
 export type ToolDefinition = {
   slug: string;
   name: string;
@@ -11,4 +13,5 @@ export type ToolDefinition = {
   category: ToolCategory;
   keywords: readonly string[];
   icon: IconName;
+  dataPolicy: ToolDataPolicy;
 };

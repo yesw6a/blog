@@ -15,6 +15,7 @@ export const TOOL_DEFINITIONS = [
     category: 'data',
     keywords: ['JSON', '格式化', '校验', '压缩', '开发'],
     icon: 'code',
+    dataPolicy: 'browser-local',
   },
   {
     slug: 'timestamp',
@@ -23,6 +24,7 @@ export const TOOL_DEFINITIONS = [
     category: 'time',
     keywords: ['Unix', 'timestamp', '时间戳', '日期', 'UTC', 'ISO'],
     icon: 'speed',
+    dataPolicy: 'browser-local',
   },
   {
     slug: 'url-codec',
@@ -31,6 +33,7 @@ export const TOOL_DEFINITIONS = [
     category: 'data',
     keywords: ['URL', 'encode', 'decode', 'query', '查询参数'],
     icon: 'sourceCode',
+    dataPolicy: 'browser-local',
   },
   {
     slug: 'base64',
@@ -39,6 +42,7 @@ export const TOOL_DEFINITIONS = [
     category: 'data',
     keywords: ['Base64', 'UTF-8', '编码', '解码'],
     icon: 'checkCircle',
+    dataPolicy: 'browser-local',
   },
   {
     slug: 'text-inspector',
@@ -47,6 +51,7 @@ export const TOOL_DEFINITIONS = [
     category: 'writing',
     keywords: ['文本', '字数', '字符', '单词', '行数', '字节', '空白'],
     icon: 'article',
+    dataPolicy: 'browser-local',
   },
   {
     slug: 'color-contrast',
@@ -55,6 +60,16 @@ export const TOOL_DEFINITIONS = [
     category: 'visual',
     keywords: ['颜色', 'HEX', 'RGB', 'WCAG', '对比度', '无障碍'],
     icon: 'palette',
+    dataPolicy: 'browser-local',
+  },
+  {
+    slug: 'ai-image-studio',
+    name: 'AI 图像工作台',
+    description: '使用 SceneMeld 桌面客户端，通过自备兼容 Endpoint 进行对话生图、图生图和分镜创作。',
+    category: 'visual',
+    keywords: ['AI 生图', '文生图', '图生图', '分镜', '参考图', 'SceneMeld', 'gpt-image-2', '桌面客户端'],
+    icon: 'imageSparkle',
+    dataPolicy: 'desktop-direct',
   },
 ] as const satisfies readonly ToolDefinition[];
 
