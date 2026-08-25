@@ -1,0 +1,112 @@
+---
+title: Next.js 16.3.2 换掉 CI 里的长期令牌：Turborepo 远程缓存认证改为 OIDC
+description: 2026 年 8 月 21 日发布的 Next.js 16.3.2 把仓库 CI 里 Turborepo 远程缓存的认证方式，从长期有效的静态 PAT 换成了每次任务临时签发的 OIDC 令牌。本文拆解 PR #97590 的动机、Vercel 侧的三步迁移配置，以及团队切换前值得检查的事项。
+publishedAt: 2026-08-25
+category: engineering-practice
+tags:
+  - Next.js
+  - Turborepo
+  - OIDC
+  - CI/CD
+  - 前端工程化
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一个藏在发布说明里的安全改造
+
+2026 年 8 月 21 日，Next.js 发布 [v16.3.2](https://github.com/vercel/next.js/releases/tag/v16.3.2)。这只是一个 LTS backport 修复版，六项 Core Changes 里五项是 Turbopack 与路由问题，看起来平平无奇。但其中一条值得单独读一遍：
+
+> Authenticate Turborepo remote caching with OIDC instead of a static PAT (#97603)
+
+这句话的意思是：Next.js 自己的 GitHub Actions CI，不再用仓库里存放的长期 Personal Access Token 去连接 Vercel Remote Cache，而是改为每个 job 用 GitHub OIDC 令牌换取短时访问令牌。由 @eps1lon 在 [PR #97590](https://github.com/vercel/next.js/pull/97590) 中完成，随后 backport 到 16.3.x 分支，随本次补丁发布。
+
+对使用 Turborepo 远程缓存的团队来说，这是官方项目带头示范的一次"CI 凭据最小化"改造：把仓库 secrets 里的长期令牌，换成按次签发、只给缓存权限的短时令牌。
+
+## 背景：远程缓存的两种认证方式
+
+Turborepo 的远程缓存让团队和 CI 共享构建产物，避免同一任务在每台机器上重复执行。托管在 Vercel 上的 Remote Cache 一直有两种认证方式：
+
+- **Personal Access Token（PAT）**：长期有效、按团队成员身份签发的令牌，作为 `TURBO_TOKEN` 存进 CI 的 secrets。
+- **OpenID Connect（OIDC）**：CI/CD 提供商（如 GitHub）用 OIDC 令牌向 Vercel 换取短时 Turborepo 访问令牌，设置到 `TURBO_TOKEN` 环境变量。
+
+2026 年 7 月 30 日，Vercel 在 [官方 changelog](https://vercel.com/changelog/turborepo-and-remote-cache-now-support-openid-connect-oidc) 中宣布 OIDC 支持上线，并明确给出三个对比点：
+
+- OIDC 令牌是短期的，而 PAT 是长期有效的；
+- OIDC 令牌只授予 Vercel Remote Cache 访问权限，范围更窄；
+- OIDC 令牌与 Vercel team 关联，而不是与某个团队成员绑定。
+
+官方当时的建议就是：所有客户把 CI/CD 工作流从 PAT 迁移到 OIDC。
+
+## PR #97590 的自述：长期 PAT 的三个问题
+
+Next.js 团队自己的 CI 此前用的就是 `TURBO_TOKEN` 仓库 secret。PR #97590 的描述直白地列出了它不满意的三点：
+
+1. **令牌永不过期**：长期 PAT 没有自然的轮换周期，泄露后影响面持续存在；
+2. **绑定成员而非团队**：令牌与具体团队成员的身份绑定，人员离职、权限变更时容易留下悬挂凭据；
+3. **可见面过大**：放在仓库 secrets 里，所有继承 secrets 的 job 都能读到它，即使某个 job 根本不需要远程缓存。
+
+改造后的行为是：每个 job 通过 `vercel/setup-turborepo-remote-cache-action` 请求 GitHub OIDC 令牌，向 Vercel 上配置的 Turborepo CLI OIDC 策略换取自己的短时缓存令牌。令牌按 job 签发、只访问 Remote Cache、随任务结束失效。
+
+## 迁移怎么做：三步配置
+
+对普通团队来说，把 CI 从 PAT 换成 OIDC 只需要在 Vercel 和 GitHub 两侧各做一次配置，然后改一行 workflow。官方文档（[Use Remote Caching from external CI/CD](https://vercel.com/docs/monorepos/remote-caching/external-ci-cd)）给出了完整流程：
+
+**第一步：在 Vercel 创建 Turborepo CLI OIDC 策略**
+
+进入团队的 Settings → Build and Deployment → OIDC Policies for CLI Access，添加一条 Turborepo CLI 策略。如果 CI/CD 提供商在列表里（GitHub 就在其中），直接选择对应的 GitHub 账户和仓库；也可以手动配置 OIDC issuer 和 claims。策略可以进一步限定到某个 workflow 或分支，并自定义 audience。
+
+**第二步：设置 `TURBO_TEAM` 仓库变量**
+
+`TURBO_TEAM` 是 Vercel 团队 slug（团队 URL 中 `vercel.com/` 后面的部分）。官方建议用仓库 **variable** 而不是 secret 存放，因为 GitHub 不会对日志里的 variable 做打码，团队名在 CI 日志里保持可读：
+
+```bash
+gh variable set TURBO_TEAM --body "your-team-slug"
+```
+
+**第三步：在 workflow 里换上 setup action**
+
+在运行 turbo 的步骤之前加入 `vercel/setup-turborepo-remote-cache-action`。它负责请求 GitHub OIDC 令牌、向 Vercel 换取短时 Turborepo 访问令牌，并设置 `TURBO_TOKEN` 和 `TURBO_TEAM` 供后续步骤使用。关键前提是 job 需要声明 `id-token: write` 权限：
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@v1.0.0
+        with:
+          team: ${{ vars.TURBO_TEAM }}
+      # ... 后续运行 turbo 的步骤
+```
+
+如果团队配置了多条 OIDC 策略且可能同时匹配，还需要在 `policy` 输入里显式指定要用的策略 ID。
+
+## 边界与回退：这次改造的取舍
+
+PR #97590 还披露了两个值得注意的工程决策：
+
+- **fork 仓库直接跳过**：fork 没有访问仓库 variables 的权限，因此该步骤在 fork 的 CI 里会被跳过，避免 fork 提交 PR 时因缺少配置而失败。
+- **失败时静默降级**：步骤设置了 `continue-on-error` 式的容忍——在服务故障或权限异常时，步骤结果被忽略，CI 回退到无远程缓存的行为。作者也承认这可能导致"静默回归"：远程缓存悄悄失效，而 CI 仍然全绿。原仓库计划通过监控补上这块盲区。
+
+对迁移中的团队，这意味着：**OIDC 换完后不能只看 CI 是否通过，还要确认日志里真的出现了 remote cache hit**，否则可能在不知情的情况下丢掉了缓存收益。
+
+## 团队切换前检查什么
+
+- **确认 Vercel 侧 OIDC 策略已生效**：先在本地或临时 workflow 里跑一次带 `--verbosity=2` 的 turbo 命令，观察令牌交换是否成功。
+- **清理旧 PAT**：迁移完成后，删除仓库 secrets 里的 `TURBO_TOKEN`，并去 Vercel 撤销对应的长期令牌；不要只加新认证而不回收旧凭据。
+- **检查缓存命中**：CI 日志里确认出现 remote cache hit/upload，而不是每次都 miss。
+- **限制策略范围**：OIDC 策略尽量限定到具体仓库、workflow 和分支，缩小令牌可被滥用的面。
+- **注意多策略场景**：配置了多条匹配策略时，在 action 里显式传入 `policy` ID，避免匹配歧义。
+
+Next.js 16.3.2 本身只是一个小补丁，但它示范了一件事：即使只是"读缓存的 CI 凭据"，也值得用短期、窄权限的令牌替代长期共享 secret。这套模式同样适用于其他支持 OIDC 的缓存与部署服务——把"永不轮换、人人可见"的凭据，换成"按需签发、用完即弃"的短时令牌。
+
+_（内容由AI生成，仅供参考）_
