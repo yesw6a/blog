@@ -1,0 +1,87 @@
+---
+title: Bun 1.4：一百万行代码从 Zig 重写到 Rust
+description: 2026 年 8 月 Bun 1.4 正式发布，将约一百万行核心代码从 Zig 重写为 Rust。本文梳理这次重写的原因、11 天 LLM 辅助重写的过程，以及 Node.js 兼容性、性能与内建 API 带来的实际变化。
+publishedAt: 2026-09-04
+category: engineering-practice
+tags:
+  - Bun
+  - Rust
+  - Zig
+  - JavaScript运行时
+  - 前端工程化
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一次真正发生在运行时的重写
+
+2026 年 8 月，[Bun 1.4 发布公告](https://bun.com/blog/bun-v1.4) 给出了一个比新增功能更显眼的事实：Bun 的核心代码已经从 Zig 全部重写为 Rust。公告称这次重写覆盖约一百万行代码，是 Bun 自 1.0 以来在 Node.js 兼容性上增幅最大的一次发布，也修复了超过 2,900 个 issue。
+
+重写不是孤立事件。2025 年 12 月 Bun 被 Anthropic 收购后，团队在 [Rewriting Bun in Rust](https://bun.com/blog/bun-in-rust) 一文中详细交代了动机与过程。对前端与全栈工程师来说，这件事值得认真读一遍：它同时回答了两个问题——为什么一个运行时要放弃亲手选择的语言，以及借助 AI 大规模重写存量代码是否真的可行。
+
+## 为什么放弃 Zig：内存安全债
+
+Bun 创始人 Jarred Sumner 在 2021 年 4 月写下第一行 Zig，最初是把 esbuild 的 JS/TS transpiler 从 Go 逐行移植到 Zig，一年内在公寓里写出了 Bun 初版。他在重写博客里明确说："Zig 让 Bun 成为可能。"
+
+但规模带来另一面。Bun 现在承载 transpiler、bundler、npm 兼容包管理器、测试运行器、Node.js API 兼容层与 HTTP 服务器，代码量巨大。仅 Zig 部分就有 535,496 行（不含注释）。1.3.14 修复的崩溃样本读起来像内存安全教科书的反例列表：
+
+- `node:zlib` 在异步 `write()` 尚未完成时调用 `.reset()`，触发 heap-use-after-free。
+- `node:http2` 在重入 JS 回调中触发 hashmap rehash，使内部流指针失效。
+- `Buffer#copy` / `Buffer#fill` 在参数强制转换期间 `ArrayBuffer` 被 detach，导致越界读。
+- 多处错误路径上"忘记释放"造成的内存泄漏，例如 `tlsSocket.setSession()` 每次调用泄漏约 6.5 KB。
+
+团队评估过 C++ 作为替代：Bun 已有约 20% 的代码用 C++ 编写，并内嵌 JavaScriptCore、BoringSSL、SQLite 等 C/C++ 库。但 C++ 仍依赖代码评审和风格指南来约束，ASAN 只能事后发现问题。相比之下，safe Rust 把 use-after-free、double-free 这类错误直接变成编译错误，`Drop` 提供了 RAII 式自动清理——"编译器错误比风格指南更好的反馈回路"。
+
+历史上团队也曾尝试折中方案：模仿 Rust 在 Zig 代码库中加入智能指针。但作者承认自制智能指针"人体工学比 Rust 差，又没有 Rust 的保证"。
+
+## 11 天：LLM 辅助完成百万行重写
+
+传统观点认为重写是灾难的起点：小团队手工把 53 万行 Zig 移植到另一种语言需要一整年，期间冻结 bug 修复与安全更新，不可接受。转折点是作者花一周测试 Anthropic 新模型能否承担移植——几天后测试套件通过率快速上升，结论从"值得一试"变成"我要合并它"。
+
+执行上有两个关键决策：
+
+第一，**一次性整体重写而非增量重写**。增量迁移会产生大量"希望最终被删掉"的临时代码；作者移植 esbuild 到 Zig 的经验是整体重写更好。
+
+第二，**风格上先"转译"后重构**。第一版刻意做成"看起来像把 Zig transpile 成 Rust"，保持架构、性能与功能不变，尽量少引入行为差异，等 1.4 发布后再逐步降低 `unsafe` 比例、向地道 Rust 靠拢。
+
+过程本身是 50 个左右在 Claude Code 中持续运行的动态 workflow，累计 11 天。每个 workflow 是一个循环：取任务、生成代码、交给独立的评审者、应用反馈。具体包括：先生成 Zig 到 Rust 的模式映射手册（PORTING.md 与 LIFETIMES.tsv），再机械化移植每个 `.zig` 文件，修复 crate 编译错误，让 `bun test`、`bun build` 等子命令逐项跑通，最后让整个测试套件通过。
+
+最值得关注的是它的质量保障机制。面对 +1 百万行的 PR，如何建立合并信心？作者给出的答案是：与语言无关的测试套件 + 对抗性评审。Bun 的测试套件用 TypeScript 编写、拥有约一百万条断言，不依赖运行时实现语言，因此成为重写最可靠的安全网。对抗性评审则借鉴了人类工程实践：实现者想合并代码、评审者想找出问题，于是每个实现者配两个以上"只拿到 diff、被告知假定代码是错的"的评审上下文，只负责找 bug。博客展示了三个被对抗性评审在合并前拦截的真实 bug——它们都能编译、看起来都合理。
+
+这不是纸面方案：Claude Code 已经基于 Rust 移植版运行数月，Prisma 的 [Prisma Compute](https://www.prisma.io/blog/bun-rust-rewrite-prisma-compute) 也构建在它之上。
+
+## 用户可见的变化：兼容性、性能与体积
+
+对普通开发者，重写本身不可见，但结果可衡量。
+
+**Node.js 兼容性**：新增 1,517 个来自 Node.js 官方测试套件的测试，是 Bun 1.0 以来最大增幅。按模块看，`node:http`、`node:fs`、`node:cluster`、`node:timers`、`node:zlib`、`node:vm`、`node:stream` 通过 Node 自身测试的 97%，`node:quic` 99%，`node:events`、`node:trace_events`、`node:sqlite` 100%。生态侧，Playwright 现在可以直接跑在 Bun 上，`bun --bun next build` 支持 Next.js 16.3 + Turbopack + React Compiler，vitest 含 `--coverage` 可运行，OpenTelemetry 与 Datadog 的 instrumentation 也能工作。
+
+**性能与资源占用**：空闲 CPU 使用最多下降 5 倍；HTTP 服务器场景内存降低 13%–48%，例如 fastify 峰值内存从 233 MB 降到 120 MB（对比 Node.js 26 的 156 MB），Express 从 169 MB 降到 92 MB。一个典型的 Next.js App Router SSR 模式（`React.cache` + `no-store` fetch 的动态路由）在 Bun 1.3 中内存无界增长，1.4 稳定在 238 MB，低于 Node 的 410 MB。启动速度上，Windows 快 2.5 倍（15.5 ms vs Bun 1.3 的 39.0 ms），Linux 快 2 倍（5.1 ms vs 10.9 ms）。Linux/Windows 二进制体积缩小约 17%（Linux x64 从 88.5 MB 到 77.0 MB）。此外 `bun:ffi` 因改用 JavaScriptCore 内建 FFI 而提速约 3 倍。
+
+## 15 个 npm 依赖变成内建 API
+
+除重写外，Bun 1.4 的另一个方向是继续把常用依赖"吸进"运行时。官方列出的内建能力覆盖了原先需要额外安装的 15 个典型依赖：
+
+- `Bun.Image`：解码、缩放、旋转与编码 JPEG/PNG/WebP/GIF/BMP，API 形似 sharp，无需原生插件，1080p PNG 缩放为 400×400 JPEG 比 sharp 快 1.38 倍。
+- `Bun.WebView`：内置无头浏览器自动化，可导航、点击、滚动、执行 JS 并截图，替代 Puppeteer/Playwright 的常见用例。
+- `Bun.markdown`：内置 Markdown 解析器，支持 GFM 表格、删除线、任务列表，可输出 HTML、React 元素或终端渲染回调。
+- `Bun.cron()`：把定时任务注册到操作系统（Linux crontab、macOS launchd、Windows 任务计划程序），形状与 Cloudflare Workers Cron Triggers 一致。
+- `Bun.Terminal`：内建伪终端，驱动 bash、vim、htop 无需 node-pty。
+- `bun run --parallel` / `bun test --parallel`：并发执行 package.json 脚本，替代 npm-run-all 与 concurrently。
+- `Bun.JSON5`、`Bun.XML`、`Bun.TOML`、`Bun.Archive`、`URLPattern`、`CompressionStream`/`DecompressionStream` 等一批内建解析与标准流能力。
+
+发布博客用一张"0 dependencies"图表达这一理念：这些能力全部随 Bun 二进制分发，没有安装步骤、没有原生构建、没有 lockfile 条目。可观测性方向也新增了 `--cpu-prof-md` 与 `--heap-prof-md`，把 CPU/堆分析直接输出成 Markdown 报告，便于在终端、SSH 或 bug 报告中阅读。
+
+## 工程意义
+
+把 Bun 1.4 放进更长的语境里看，有两点值得记录。
+
+其一，**运行时正在吞噬工具链**。从包管理器、bundler、测试运行器，到图片处理、浏览器自动化与定时任务，一个二进制能替代的 npm 依赖越来越多。Bun 选择的路线是"标准库化 + 内置"，这与 pnpm 12 用 Rust 重写、TypeScript 7 用 Go 重写反映的是同一股浪潮：JS 基础设施正在集体换用内存安全、高性能的系统语言，同时把更多能力下沉到单一运行时。对团队而言，依赖数量减少意味着供应链面收窄，但绑定单一运行时也带来新的锁定风险。
+
+其二，**LLM 让"大规模重写"的经济学改变了**。过去重写被反复证明是糟糕选择，因为人力成本高、冻结期长。而这次百万行级移植在 11 天内完成，靠的是语言无关测试套件、对抗性评审流程与可监督的自动化 workflow——过程方法论比"让模型写代码"这个表象更值得借鉴。当然，Bun 有罕见的工程条件：测试覆盖极其充分、原作者深度参与监控、AI 公司内部团队有工具链优势。普通团队照搬"让 AI 重写核心系统"仍需谨慎，先确保测试基线足够可靠。
+
+_（内容由AI生成，仅供参考）_
