@@ -1,0 +1,87 @@
+---
+title: VS Code 1.136：Agent Merge 把 PR 收尾交给代理
+description: 2026 年 9 月 2 日发布的 VS Code 1.136 将重点放在 Agent 工作流上：Agent Merge 进入公开预览，负责处理评审意见、失败检查和合并冲突直至 PR 可合并；会话层级管理、跨窗口 Agent host 与多根工作区支持同步到来。本文基于官方 Release Notes 梳理这些变化。
+publishedAt: 2026-09-05
+category: tools-productivity
+tags:
+  - VS Code
+  - AI编程
+  - Agent
+  - 开发者工具
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一个版本，把 Agent 从"写代码"推向"收尾代码"
+
+2026 年 9 月 2 日，微软发布 [Visual Studio Code 1.136](https://code.visualstudio.com/updates/v1_136)（随后推出修复补丁 1.136.1）。官方对这次版本的一句话概括很直白：帮助开发者用 Agent 完成 Pull Request，并在复杂工作区与相关会话之间管理 Agent 工作。
+
+经过近两年的 AI 编辑器竞争，各家产品的差异化已经很少落在"自动补全"上，而更多落在 Agent 的**流程控制能力**：它能不能自己把一件事做完，而不是只给出建议。1.136 的所有主要更新都指向同一个方向——让 Agent 承担的边界从"产生代码"推进到"让代码合入"。
+
+## Agent Merge：让代理自己把 PR 推到可合并状态
+
+本版本最值得尝试的功能是 **Agent Merge**，目前处于公开预览阶段。
+
+按照 [Release Notes](https://code.visualstudio.com/updates/v1_136) 的描述，Agent Merge 的目标是"把 PR 带过终点线"：它会指示一个 Agent 处理评审反馈、修复失败的检查与合并冲突，并重新运行工作流，重复这一过程直到 PR 准备好合并。
+
+启用方式有两步：
+
+- 设置项 `chat.agentMerge.enabled` 打开功能开关；
+- 当前只能从 Agents 窗口为某个会话启用，可运行命令 **Enable Agent Merge for Active Session**，或点击标题栏上的 Agent Merge 按钮。
+
+微软同步提供了 [使用 Agent Merge 完成 PR 的文档](https://code.visualstudio.com/docs/agents/run/agents-window#_finish-a-pull-request-with-agent-merge)。对维护多仓库、多 PR 的开发者来说，这个功能把过去最耗人的"评审回来改一轮、检查红了再改一轮"循环变成了可交给代理的异步任务。
+
+## 会话层级：Agent 之间怎么组织
+
+单个 Agent 任务会派生出多个子任务，如果这些子任务都以平铺的会话出现，很快就会失控。1.136 在 Agents 窗口中引入了会话树：
+
+- Chats 作为父会话（parent session）的子节点出现，Agent 委派出的独立工作会自动获得有意义的标题并进入该层级；
+- 每个 chat 行显示自己的标题、状态与待批准项，便于看出哪个会话在等人工输入；
+- 新会话或 chat 会放置在来源附近，请求中带有 **Sent by another session** 或 **Sent from another chat** 的来源链接，点击即可回到发起它的会话；
+- 会话文件在编辑器面包屑中改用稳定的 provider 与会话标签，不再暴露内部会话标识符。
+
+这套设计把"多个 Agent 并行工作"从技术上可做到推进到**视觉上可理解**。配合新增的会话通知设置（`chat.notifyWindowOnConfirmation` 与 `chat.notifyWindowOnResponseReceived`），窗口不在前台时也能收到"Agent 需要你"或"Agent 干完了"的系统通知，并直接跳回对应会话。
+
+## Agent host：同一会话跨窗口连接
+
+1.136 引入了 **Agent host**：它允许从多个 VS Code 窗口连接到同一个 Agent 会话，在独立进程中基于 [Agent Host Protocol（AHP）](https://microsoft.github.io/agent-host-protocol/) 运行 agent harness。
+
+值得注意的架构选择是：Agent host 中的 Copilot agent 由 [Copilot SDK](https://www.npmjs.com/package/@github/copilot-sdk) 驱动，使其行为与 Copilot CLI、独立 GitHub Copilot 应用等产品保持一致。官方在 [Agent Host 架构博客](https://code.visualstudio.com/blogs/2026/08/26/agent-host-architecture) 中解释了构建原因、开放协议的设计，以及可以尝试的工作流。可以理解为微软正在把"编辑器里的 Agent"和"命令行里的 Agent"收敛到同一套行为语义上。
+
+## 工作区支持扩展：向多根与项目名解析前进
+
+Agent 的能力边界也在向更复杂的工程结构扩展：
+
+- **多根工作区（实验性）**：编辑器窗口中的 Copilot 与 Claude Agent 会话现已支持 multi-root workspaces，通过 `chat.agentHost.copilotAgent.multiRootEnabled` 与 `chat.agentHost.claudeAgent.multiRootEnabled` 开关控制。目前 Agent hooks 仍限定在单个工作区文件夹，若多个文件夹检测到 hooks，会提示选择主文件夹加载。
+- **按项目名解析工作区**：除了绝对路径与 workspace URI，Agent 现在可以用项目名定位工作区，例如直接说"run this in the vscode workspace"而不必给出完整路径。若存在同名工作区，Agent 会报告可能的匹配项而不是静默选一个；远程 workspace URI 同样支持。
+
+这些能力意味着 Agent 正在从"单仓库助手"过渡为"多仓库、多窗口协作的参与者"。
+
+## 其它值得注意的更新
+
+- **新会话输入框重设计**：提示词、模型选择、工作区选择与会话控制合入同一布局，减少开始委派任务的设置步骤。
+- **Chat 背景（实验性）**：可为 Agents 窗口设置装饰性背景，支持内置 Codicons 图案或本机图片，并提供 11 种布局；高对比度主题下自动禁用。最近使用的 5 张图片仅保存在本机。
+- **紧凑布局密度（实验性）**：启用 `workbench.experimental.modernUI` 后，`window.density.layout` 可切换 Compact 密度，缩小面板间距以容纳更多内容。
+- **自动换行改进**：注入文本不再把换行行推出视口，自动换行会把颜色装饰、inlay hint 间距等视觉宽度纳入计算。
+- **集成浏览器拼写建议**：在可编辑字段中右键拼写错误的单词可看到修正建议，持久化数据会话还支持 Add to Dictionary。
+- **终端命令延迟修复**：扩展执行的终端命令在 shell integration 就绪时不再产生非必要延迟，使用 JavaScript debugger 的用户不再遇到启动时约 5 秒的等待。
+- **企业听写数据控制**：管理员可通过企业策略要求设备端转录并禁用语言模型清理，避免听写数据送往云端转录或 Copilot 模型。
+
+## 观察：Agent 工作流正在进入"管线化"阶段
+
+把 1.136 的更新放在一起看，可以得出一个明确判断：**编辑器竞争的主战场已从"哪个模型更聪明"转向"Agent 工作流能否被可靠地编排与收尾"**。Agent Merge 的价值不在于它能改几行代码，而在于它首次把"评审—修复—重跑—合入"这个闭环做成 IDE 内建能力；会话层级与跨窗口 Agent host 则在解决 Agent 大规模使用后的组织问题。
+
+需要说明的是，Agent Merge 目前仍是预览，且只能从 Agents 窗口为单个会话启用；把它接入正式评审流程前，建议先在低风险仓库试运行，观察它处理冲突时的行为是否符合团队预期。这类能力的成熟速度通常很快，值得每个重度使用 AI 编程的团队列入下一轮工具评估。
+
+## 资料来源
+
+- [Visual Studio Code 1.136 Release Notes](https://code.visualstudio.com/updates/v1_136)
+- [Finish a pull request with Agent Merge（官方文档）](https://code.visualstudio.com/docs/agents/run/agents-window#_finish-a-pull-request-with-agent-merge)
+- [Agent Host 架构博客（2026-08-26）](https://code.visualstudio.com/blogs/2026/08/26/agent-host-architecture)
+- [Agent Host Protocol](https://microsoft.github.io/agent-host-protocol/)
+
+_（内容由AI生成，仅供参考）_
