@@ -1,0 +1,104 @@
+---
+title: Agent CLI 的这一周：deny 规则绕过、worktree 隔离与 fail-closed 信任
+description: 2026 年 9 月 6 日至 12 日，Claude Code、Codex CLI 与 Gemini CLI 的更新重心罕见地一致——不是更强的模型，而是权限与信任边界。本文梳理 Claude Code 2.1.268/2.1.269 的 deny 规则绕过与密钥泄露修复、Codex CLI 0.154.0 的实验性 worktree 隔离与破坏性变更，以及 Gemini CLI 0.59.0 的 fail-closed 工作区信任。
+publishedAt: 2026-09-13
+category: tools-productivity
+tags:
+  - Claude Code
+  - Codex CLI
+  - Gemini CLI
+  - 开发者工具
+  - AI编程
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 这一周，三家 CLI 都在补"边界"的课
+
+过去一个月的终端 Agent 更新，主线是"让开发者看见 Agent 在做什么"：实时 diff 面板、技能诊断、自动 recap。到了 9 月第二周，主线换了一条，而且是三家工具同时换的——**把"它不该做的事"真正拦住，把"它做过的事"划清范围**。
+
+- 9 月 10 日，Anthropic 推送 Claude Code 2.1.268，修复两处 `deny` 规则被静默绕过的问题，同时堵住两个会打印密钥的泄露路径。
+- 9 月 9 日至 10 日，OpenAI 发布 Codex CLI 0.154.0，加入实验性 git worktree 支持，并移除一个已弃用的入口点。
+- 9 月 8 日，Gemini CLI 0.59.0 只做了两件事，都是安全修复：MCP OAuth 流程的 SSRF 防护，以及工作区信任的 fail-closed 化。
+
+这一周没有新模型、没有性能数字，但三份更新日志回答的是同一个问题：**当 Agent 长时间、无人值守地跑在真实仓库里，它和代码库之间的边界由谁定义。** 下面按工具梳理，并标注每一项的来源。
+
+## Claude Code：写下的禁令，这一周才真正生效
+
+### 2.1.268：两处 deny 规则绕过
+
+2.1.268（9 月 10 日）是本轮最需要优先升级的版本。据官方 [Changelog](https://code.claude.com/docs/en/changelog) 与社区周报的整理，它修掉了两处 `deny` / `ask` 规则没有生效的场景：
+
+1. **符号链接路径**：针对符号链接目录（macOS 上的 `/tmp`、`/var`、`/etc`，Linux 上的 `/bin`）写的规则，在通过真实路径访问时不会生效；Bash 命令也不认按符号链接拼写写的 `deny` 规则。
+2. **含 `env -C` 或 `eval` 的命令行**：当同一行里出现权限检查器无法解析的命令时，Read 或 Edit 的 `deny` 规则可能整条失效。
+
+两处属于同一类问题——你写了一条禁止，但它实际上不在生效状态。如果团队依赖 `deny` 规则把 `.env`、凭据文件挡在 Agent 视野之外，这个版本值得优先更新。同一版本还关掉了两个密钥泄露路径：`/mcp`、`/plugin` 的服务器详情，`claude mcp list` / `get`，以及 MCP 登录错误，都不再打印从 MCP 配置 `${VAR}` 占位符解析出的真实密钥；插件与市场报错也不再回显 git 源 URL 里的 token 或密码。
+
+其余几项修复覆盖的是长期运行场景：第三方 Anthropic 兼容端点（`ANTHROPIC_BASE_URL`）每轮请求都返回 HTTP 400 的问题；WebFetch 在服务端不关闭响应时永久挂起的问题（现在 300 秒后失败，可用 `CLAUDE_CODE_WEBFETCH_DEADLINE_MS` 覆盖）；以及长时间空闲会话因忙循环持续占用 CPU 的问题。
+
+### 2.1.269：让插件变更是可验证的
+
+2.1.269（9 月 11 日）转向"可验证性"。新增的 `claude plugin eval` 可以针对 Claude Code 运行插件的评估套件，返回带评分的可复现结果，并输出 JSON 与 HTML 报告——插件作者在发布前多了一个检查"这次改动有没有让行为回退"的固定动作。
+
+同一版本还带来几项控制面上的补充：
+
+- `/output-style [name]` 可在提示、Remote Control 以及云端等无头会话中列出并切换输出样式。
+- Bash 工具处理文件编辑时，结果里附带命令改动文件的 diff，由 `bashEditDiffEnabled` 控制。
+- `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`（取值 1–256）可以调高 Workflow 工具单次运行的并发 Agent 上限，面向推理密集的扇出场景。
+- OpenTelemetry 指标可通过 `OTEL_METRICS_INCLUDE_REPOSITORY` 打上 `vcs.*` 仓库属性。
+- 以 `!` 开头的 `deny` 或 `ask` 规则不再越出写入它的设置来源生效，单独的 `!` 取反会被忽略。
+
+另外，会话压缩后告知 Claude 的 git status 现在反映当前状态，而不是会话开始时的快照——对一个替你改代码的工具来说，这个修正比它看起来重要。
+
+## Codex CLI 0.154.0：用 worktree 给会话一个工位
+
+OpenAI 在 9 月 9 日至 10 日发布 Codex CLI 0.154.0。按照社区整理与官方 Changelog，这版的六组新特性里，最影响日常用法的是实验性 [worktree 支持](https://learn.chatgpt.com/docs/changelog)：通过 `--worktree` 或 `/worktree`，新会话或分叉会话可以拿到独立的 git checkout，而不是所有会话共用同一个工作目录；这些 worktree 会话可以浏览、可以稍后恢复。
+
+对同时跑多个 Agent 任务的仓库，这解决的是"未提交改动互相踩踏"的问题：让探查性、风险较高的任务在独立 checkout 里跑，主工作树保持干净，审查时把 diff 和会话状态放在一起看，只合回有用的产出。
+
+同一版本的其余变化：
+
+- **破坏性变更**：弃用的 `codex mcp-server` 入口点被移除，脚本、服务定义或编辑器集成里若还在调用它，需要在升级前替换。
+- **内联问答**：任务执行中可以直接提问并用建议选项或自由文本作答，不必丢掉已经在写的草稿。
+- **Windows 后台服务**：Windows 会话可以共享一个后台 Codex server，配有 daemon 生命周期命令与托管更新，不必每个会话新起进程。
+- **信任处理收紧**：启动阶段不再在建立信任之前运行工作区可控的辅助程序；macOS 沙箱阻止终端输入注入。
+- Vim 模式补齐替换模式与转义处理；Python SDK（`openai-codex==0.154.0`）新增 `max` / `ultra` 推理强度，`HookMetadata` 的迁移点是把 `hook.command` 换成 `hook.root.command`。
+
+### 一个被低估的细节
+
+`developersdigest` 的分析把话说得很直：这版真正的信号不是 GPT-6 Astra 进入模型选择器，而是"Agent 会话不再是一次性对话，而是带隔离、可恢复、有权限与插件状态、有审查边界的工作区"。当模型差异在几天内被所有工具拉平，剩下的竞争就是这类工程细节。
+
+## Gemini CLI 0.59.0：不确定时，先拒绝
+
+Gemini CLI 0.59.0（9 月 8 日）只列了两项实质性变更，都是安全修复：
+
+1. **修复 MCP OAuth 元数据发现与认证中的 SSRF**（PR #29081）。
+2. **工作区信任改为 fail-closed，并在受限模式下过滤 `mcpServers`**（PR #29099）。
+
+第二条会改变习惯用法：未建立信任的工作区里，MCP 服务器定义不再被加载。克隆一个仓库就直接在里面启动 Gemini CLI 的人，会明显感到行为变化。
+
+这里的 **fail-closed** 值得单独说明：系统无法判定某个操作是否被允许时，选择拒绝；它的反面 fail-open 则在判定不出结果时放行。对一个会读文件、执行命令、连 MCP 服务的工具来说，fail-open 的默认值意味着任何一次解析失败都可能变成一次放行。这也是为什么 Claude Code 2.1.269 里那条"不可读时全员放行"的 allowlist 修复，和 Gemini CLI 的这次调整属于同一类问题。
+
+## 三家放在一起看
+
+| 工具 | 版本与日期 | 本周重点 | 需要动手的事 |
+| --- | --- | --- | --- |
+| Claude Code | 2.1.268（9-10）、2.1.269（9-11） | deny 规则绕过修复、密钥泄露堵漏、插件评估套件、并发 Agent 上限 | 升到 2.1.268 以上；检查 `/tmp`、`/var` 一类符号链接路径上的 deny 规则 |
+| Codex CLI | 0.154.0（9-9/9-10） | worktree 隔离会话、内联问答、Windows 后台服务 | 检索脚本中的 `codex mcp-server` 调用并替换 |
+| Gemini CLI | 0.59.0（9-8） | MCP OAuth SSRF 修复、fail-closed 工作区信任 | 确认没有从不可信工作区加载 MCP 服务器 |
+
+三条线合起来，指向的是同一个成熟度门槛：**Agent 从"能执行"到"敢让它持续执行"，中间隔着的不是模型能力，而是隔离、可验证与失败时默认拒绝。** 本周没有一条更新提升模型智商，但每一条都在降低"让它自己跑一晚"的风险。
+
+## 升级与自查清单
+
+- [ ] 把 Claude Code 升到 2.1.268 或更高，确认 `deny` 规则在符号链接路径上按预期生效。
+- [ ] 使用第三方 `ANTHROPIC_BASE_URL` 端点的环境，确认没有停留在 2.1.265–2.1.267。
+- [ ] 升级 Codex CLI 前，检索脚本、服务定义与编辑器集成中的 `codex mcp-server`。
+- [ ] 在 Gemini CLI 中确认不会从尚未信任的工作区加载 `mcpServers`。
+- [ ] 把"发布前跑一次评估/检查"变成插件与 Agent 工作流的固定步骤，而不只依赖人工审查。
+
+_（内容由AI生成，仅供参考）_
