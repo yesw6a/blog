@@ -1,0 +1,73 @@
+---
+title: GitHub CLI 2.99.0：命令行直接贴图贴视频，issue 开发接入 worktree
+description: GitHub CLI 2.99.0 带来两个值得更新的能力：可重复的 --attach 标志让 issue、PR 与评论可以直接上传本地图片和视频，gh issue develop 则新增 worktree 检出支持，让从 issue 到隔离分支的工作流不再打扰当前工作副本。本文基于官方 Release Notes 与 Changelog 梳理用法、限制与配套修复。
+publishedAt: 2026-09-16
+category: tools-productivity
+tags:
+  - GitHub CLI
+  - 开发者工具
+  - Worktree
+  - 效率工具
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 终端里少切一次浏览器，少碰一次工作副本
+
+GitHub CLI 长期是"写文本"的工具：issue、PR、评论都通过命令行生成 Markdown。但有些问题用文字说不清——界面 bug、渲染结果、报错画面，这些场景过去必须打开浏览器、把文件拖进评论框、再复制结果回去。9 月 1 日发布的 GitHub CLI [2.99.0](https://github.com/cli/cli/releases/tag/v2.99.0) 改变了这一点：新增可重复的 `--attach` 标志，让截图和视频直接随命令上传并嵌入正文；同时把 `gh issue develop` 扩展到 Git worktree，从 issue 开分支不再打扰当前工作副本。两项能力都面向日常开发中最高频的摩擦点，本文依据官方 [Release Notes](https://github.com/cli/cli/releases/tag/v2.99.0) 与 [Changelog](https://github.blog/changelog/2026-09-01-github-cli-media-in-issues-pull-requests-and-comments/) 梳理具体用法、限制与配套修复。
+
+## --attach：在写 Markdown 的同一条命令里附上媒体
+
+`--attach` 是重复使用的标志，适用于所有写 Markdown 的 GitHub CLI 命令：`gh issue create`、`gh issue edit`、`gh issue comment`、`gh pr create`、`gh pr edit`、`gh pr comment`。官方 [Changelog](https://github.blog/changelog/2026-09-01-github-cli-media-in-issues-pull-requests-and-comments/) 给出的示例：
+
+```bash
+# 创建 issue 时附带截图，并指定 alt 文本
+gh issue create --attach './repro.png#The error state'
+
+# 编辑 PR 时附带 before/after 对比图
+gh pr edit 456 --attach ./after.png
+
+# 在评论里附加视频
+gh issue comment 123 --attach ./walkthrough.mp4
+```
+
+### 本地引用会被原地替换
+
+一个值得注意的设计是：如果正文里已经用本地路径写了图片引用，`gh` 会上传文件并把路径替换为上传后的 URL，同时保留原有 alt 文本，例如 `![alt](./login.png)` 会变成指向已上传资源的图片；而只通过 `--attach` 传入、正文没有引用的文件，会被追加到正文末尾。这避免了"先占位、后替换"的两步操作。
+
+### 支持的格式、大小与认证
+
+根据官方 Changelog，`--attach` 支持 PNG、JPEG、GIF、WebP、SVG、MP4、MOV、WebM 八种格式。大小限制与网页上传流程一致：图片和 GIF 为 10 MB；视频在 Free 计划为 10 MB，付费计划为 100 MB。alt 文本写在路径后的 `#` 之后（如 `--attach './login.png#The login error state'`），省略时回退为文件名。上传使用 `gh` 已有的认证凭据（`gh auth login` 的 OAuth token 或 classic personal access token），需要目标仓库的写权限；单次调用最多附加 50 个文件（对应 [修复 #14289](https://github.com/cli/cli/pull/14289)）。
+
+### 可用范围
+
+官方 Changelog 明确：`--attach` 对所有 GitHub 用户、所有计划直接 GA，没有预览期；支持 GitHub.com 与 GitHub Enterprise Cloud，但本版本不支持 GitHub Enterprise Server。这意味着团队只要把 `gh` 升级到 v2.99.0 就能用，不需要等待灰度。
+
+## gh issue develop：把 issue 变成隔离的 worktree
+
+第二个变化是 `gh issue develop` 对 Git worktree 的支持。该命令原本会为 issue 创建关联分支；2.99.0 新增 `--checkout --worktree` 组合（[PR #14136](https://github.com/cli/cli/pull/14136)），可以把关联分支检出到新的 worktree，当前工作副本保持不动：
+
+```bash
+gh issue develop 123 --checkout --worktree /path/to/wt-feature
+```
+
+对同时维护多个任务、或正在处理一半不想中断当前工作的开发者，这相当于把"为 issue 开分支"变成"为 issue 开一个独立工作区"，切换上下文不再以暂存或放弃当前改动为代价。
+
+### 配套的 worktree 安全修复
+
+Release Notes 还显示，v2.99.0 围绕 worktree 场景做了一组配套修复：`gh issue develop` 会拒绝非空的 worktree 目标，避免在已有内容的目录上创建分支（[#14244](https://github.com/cli/cli/pull/14244)）；`gh repo sync` 修复了 linked-worktree 损坏问题，并在目标分支被另一个 worktree 检出时给出说明（[#14060](https://github.com/cli/cli/pull/14060)、[#14076](https://github.com/cli/cli/pull/14076)）；`gh pr merge --delete-branch` 也能安全处理 linked worktrees，不会误删仍在使用的分支（[#14007](https://github.com/cli/cli/pull/14007)）。这些细节说明 worktree 支持不是简单加一个参数，而是把"分支可能同时存在于多个工作区"这一约束纳入了命令的常规语义。
+
+## 对工作流的两点实际影响
+
+把两个特性放在一起看，2.99.0 解决的是同一类问题：**减少上下文切换**。
+
+- **报告侧**：bug 报告可以直接带着截图落地，不需要"终端写文字、浏览器补图"两步；对 coding agent 也是如此，官方 Changelog 特别提到 agent 现在可以在终端里展示结果，而不是用文字描述结果。
+- **开发侧**：issue 开发接入 worktree 后，多任务并行时不必反复 stash 或切换分支；配套修复同时保证了 sync、merge 等命令在 worktree 场景下的安全性。
+
+对已经习惯纯终端工作流的开发者，升级到 v2.99.0 的成本几乎为零，换来的是 issue/PR 沟通中少一次浏览器往返；对使用 `gh` 驱动自动化或 agent 的团队，`--attach` 则让机器生成的报告可以直接附带可核验的截图证据。更完整的用法可参考官方文档 [Attaching files with GitHub CLI](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli) 与 [gh.io/gh-attach](https://gh.io/gh-attach)。
+
+_（内容由AI生成，仅供参考）_
