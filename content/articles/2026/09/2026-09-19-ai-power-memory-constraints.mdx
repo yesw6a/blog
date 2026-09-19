@@ -1,0 +1,150 @@
+---
+title: 第二道墙：AI 扩张的约束为什么换成了电网与内存
+description: 9 月 16 日，英伟达、谷歌联合 Emerald AI 成立 AI 能源管理联盟，声称可从现有电网释放最高 100GW 容量；同一周，英特尔 CEO 预警内存短缺还会恶化，美光高管称供需失衡或持续到 2028 年后。本文用联盟文件、厂商表态与第三方数据，拆解算力扩张的约束如何从芯片转向电力与存储，以及"需求响应"这条路能解决多少问题。
+publishedAt: 2026-09-19
+category: tech-industry
+tags:
+  - AI 基础设施
+  - 数据中心
+  - 电力
+  - 存储芯片
+  - 行业观察
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 这一周，两条"物理约束"同时上了桌
+
+过去两年，讨论 AI 瓶颈时最常被提起的是芯片：产能、良率、先进封装、出口管制。这周出现在同一批报道里的瓶颈，换成了两个更靠下的东西——电和内存。
+
+9 月 16 日，英伟达、谷歌与电网软件公司 Emerald AI 宣布成立 **AI 能源管理联盟（AEMA，AI Energy Management Alliance）**，同期加入的还有 Anthropic 以及 AES、Constellation、National Grid、NRG Energy 等公用事业与能源公司（[TechCrunch](https://techcrunch.com/2026/09/17/google-nvidia-and-anthropic-want-emerald-ai-to-find-space-on-the-grid-for-more-data-centers)）。联盟给出的核心数字是：通过让数据中心在电网压力最大的时段主动压负荷、把非关键计算任务挪走，**现有美国电网可以额外释放最高 100GW 的数据中心容量**（[Data Center Digest](https://www.datacenterdigest.net/nvidia-google-and-emerald-ai-launch-alliance-to-speed-grid-connections)）。
+
+同一天，英特尔 CEO 陈立武公开预警：内存短缺还会继续恶化，**电力供应和冷却技术将成为半导体行业接下来必须面对的两大问题**，很多项目因为拿不到足够内存被迫延期（[每日经济新闻](https://news.qq.com/rain/a/20260917A02IUR00)）。两天后，美光高管表示，由于新建晶圆厂与洁净室建设周期漫长、内存制程本身复杂，供需失衡的局面**恐怕要等到 2028 年之后**才会随新增产能释放而逐步缓解（[网易转载](https://www.163.com/dy/article/L76A215O05566UTE.html)）。
+
+一条是电，一条是存储。它们凑在同一周出现不是巧合——**算力扩张的约束，正在从"能不能造出芯片"转向"能不能把电接进来、把内存买到手"。**
+
+主要来源：
+
+- TechCrunch：[Google, Nvidia, and Anthropic want Emerald AI to find space on the grid for more data centers](https://techcrunch.com/2026/09/17/google-nvidia-and-anthropic-want-emerald-ai-to-find-space-on-the-grid-for-more-data-centers)
+- Channel Insider：[Google, Nvidia Launch Power Alliance](https://www.channelinsider.com/ai/news-google-nvidia-ai-energy-alliance-data-centers/)
+- Edgen：[Nvidia and Google launch alliance to unlock 100 GW of grid capacity](https://www.edgen.tech/ja/news/post/nvidia-and-google-launch-alliance-to-unlock-100-gw-of-grid-capacity)
+- 每日经济新闻：[9 月 17 日全球科技早参](https://www.toutiao.com/article/7686285271251354152/)
+- 每日经济新闻：[9 月 17 日数智早参](https://news.qq.com/rain/a/20260917A02IUR00)
+
+## 第一道墙叫电力：从"用电大户"变成"电网资源"
+
+先把 AEMA 的方案讲清楚，因为它本质上不是一项技术发布，而是一次**规则提案**。
+
+需求响应（demand response）是公用事业用了几十年的老工具：电网按峰值负荷设计，一年中大部分时间容量是闲置的；于是电网在紧张时段付钱请大用户临时少用电，工厂停一条产线，数据中心则通常是点火备用柴油发电机顶上。Emerald AI 想替换掉的正是后者的"烧油方案"——它的软件把电网的调度信号直接接到数据中心的负载上，设施可以暂停非关键任务，或把计算任务迁移到电网还有余量的其他站点，响应速度被描述为"接近电池"（[TechCrunch](https://techcrunch.com/2026/09/17/google-nvidia-and-anthropic-want-emerald-ai-to-find-space-on-the-grid-for-more-data-centers)）。
+
+这套逻辑之所以现在成立，是因为 AI 负载的用电曲线恰好是需求响应最喜欢的形状：**峰值高、变化快、可调度**。训练任务和批处理任务可以往后挪，只有对延迟敏感的推理和关键业务不容易打断。
+
+把散落在这轮报道里的数字集中起来，能看到联盟论证的完整链路：
+
+| 指标 | 数值 | 来源口径 |
+| --- | --- | --- |
+| 现有电网可释放容量 | 最高 100 GW | AEMA / Emerald AI CEO Varun Sivaram 估算 |
+| 峰值时段限制用电至 90% 的释放量 | 约 76 GW | 高盛去年的研究（第三方） |
+| 每吉瓦新建 AI 数据中心的电力系统成本节省 | 约 7.33 亿美元 | AEMA 自报，未经审计 |
+| 数据中心并网等待时间 | 关键市场 5 至 7 年，部分区域十年以上 | AEMA 引述行业现状 |
+| 美国电网平均利用率 | 约 50% | Sivaram 在 Fortune 撰文 |
+| Google 已验证的需求响应能力 | 超过 1 GW | 据 Axios 报道 |
+| 示范项目实测削减幅度 | 应急条件下一分钟内削减约三分之一用电 | NVIDIA 与 Emerald AI 示范 |
+
+经济性论证还有两个被引用的第三方结论：杜克大学 Nicholas Institute 的研究指出，全年约有一半的电力系统容量处于闲置状态；Brattle Group 的报告称，电网利用率每提高 10%，可推动电价下降 3.4%（[Edgen](https://www.edgen.tech/ja/news/post/nvidia-and-google-launch-alliance-to-unlock-100-gw-of-grid-capacity)）。
+
+落地的部分也在推进。英伟达与 Emerald AI 此前已在五个商业数据中心完成电力柔性示范，涉及 AES、Constellation、Invenergy、NextEra Energy、Vistra 等电力方；双方计划在弗吉尼亚州落地一个约 100 兆瓦的"电力柔性 AI 工厂"，其中英伟达的 DSX Flex 软件将在年内于其弗吉尼亚 AI 工厂研究中心做商业规模部署（[Edgen](https://www.edgen.tech/ja/news/post/nvidia-and-google-launch-alliance-to-unlock-100-gw-of-grid-capacity)、[NriGlobe](https://nriglobe.com/technology/nvidia-google-emerald-ai-energy-management-alliance-grid-flexible-data-centers-2026)）。
+
+### 这条路的边界在哪里
+
+三点必须说清楚，否则 100GW 很容易被读成"多出来 100GW 可用电力"。
+
+**第一，100GW 是系统级估算，不是已批准的并网容量。** 它描述的是"如果柔性负荷被广泛采纳，理论上可以释放的容量"，前提是监管机构接受"灵活性可以部分替代固定容量"这个前提。7.33 亿美元/吉瓦同样是 AEMA 自己的测算，联盟未披露建模假设，也没有第三方审计（[Edgen](https://www.edgen.tech/ja/news/post/nvidia-and-google-launch-alliance-to-unlock-100-gw-of-grid-capacity)）。
+
+**第二，它不消除新增发电与输电的需求。** Emerald AI 首席科学家 Ayse Coskun 对 TechCrunch 的表述相当克制：这项技术可以减轻对新增电源的短期压力，但不会完全消除这种需求（[TechCrunch](https://techcrunch.com/2026/09/17/google-nvidia-and-anthropic-want-emerald-ai-to-find-space-on-the-grid-for-more-data-centers)）。数年的输配电排队不会因为写入一套行业标准就消失。
+
+**第三，规则才是主战场。** 大型负荷的并网条款由各州公用事业委员会和区域输电组织决定，FERC（美国联邦能源管理委员会）是否把"灵活性"写进电价与并网规则，决定了这套框架是变成规则还是停留在新闻稿层面（[Edgen](https://www.edgen.tech/ja/news/post/nvidia-and-google-launch-alliance-to-unlock-100-gw-of-grid-capacity)）。
+
+一个细节值得单独记下来：**Anthropic 是联盟里唯一的纯模型公司**——既不是芯片商，也不是云厂商或电力公司。一家前沿实验室坐到电力调度谈判桌上，本身就是"电网接入已成为模型能力扩张的战略约束"的信号（[AI News Today](https://www.ainewstoday.net/google-nvidia-and-anthropic-are-betting-on-smarter-power-grids)）。
+
+## 第二道墙叫内存：数倍涨价与 2028 年后的缓解
+
+如果说电力是刚被摆上台面的约束，存储就是已经疼了大半年的那条线，只是这周被厂商高层用最直白的语言说出来。
+
+陈立武的原话指向两个层面：一是**当下**——很多项目因拿不到足够内存而延期，对中低价位的手机和笔记本电脑尤其困难；二是**接下来**——内存短缺还会恶化，电力和冷却是行业必须面对的两大问题（[每日经济新闻](https://news.qq.com/rain/a/20260917A02IUR00)）。美光高管的判断则给出了时间尺度：新厂与洁净室建设周期漫长，制程复杂，供需失衡可能要到 2028 年之后才逐步缓解（[网易转载](https://www.163.com/dy/article/L76A215O05566UTE.html)）。
+
+这里需要处理一个引用陷阱。陈立武对内存涨幅的表述，在不同媒体转述中出现了明显分歧：一部分报道写"**涨到了原来的 5 到 7 倍**"（[今日头条转载](https://www.toutiao.com/article/7686697825597506094/)），另一部分写"**57 倍**"（[每日经济新闻](https://news.qq.com/rain/a/20260917A02IUR00)）。两个数字相差一个数量级，说明至少有一方在转述中出了错。稳妥的写法是只保留方向上确定的部分：**价格已是原来的数倍，且短缺在向明年延伸**。碰到这类数字，回溯原始采访始终是必要的动作。
+
+存储紧张的底层结构，可以从第三方数据看清：
+
+| 维度 | 数据 | 来源 |
+| --- | --- | --- |
+| 2026 年全球供需缺口 | DRAM 4.9%、NAND 4.2%、HBM 5.1%，均为 2011 年以来最高 | 高盛研报（新华网转述） |
+| AI 服务器对 DRAM 总需求的贡献 | 超过 50% | 高盛 |
+| 单台 AI 服务器的存储用量 | DRAM 为传统服务器的 8 至 10 倍，NAND 为 3 倍以上 | Gartner（中证网转述） |
+| 2026 年 AI 服务器出货预期 | 150 万台，同比增长 180% | Gartner |
+| HBM 产能缺口 | 50% 至 60% | SEMI 中国 |
+| 2026 年一季度合约价涨幅 | DRAM 环比 90% 至 95%，NAND 环比 55% 至 60% | TrendForce |
+| 九大云厂商 2026 年合计资本支出 | 约 8300 亿美元，同比增长 79% | TrendForce |
+
+（数据来源：[新华网](https://www.news.cn/20260512/13a7b514e8154c5a9d0a5d49828dedde/c.html)、[中证网](https://www.cs.com.cn/tzjj/etf/2026/06/05/detail_2026060516316.html)）
+
+把这几行连起来读，逻辑很清楚：**存储厂商把越来越多的产能倾斜给 HBM，DRAM 和 NAND 的常规供给被挤压；而 AI 服务器对这两者的消耗量本身又是传统服务器的数倍。** 供给端被高端产品抽走，需求端被 AI 服务器抬高，两条曲线同时往不利方向走。
+
+产业链已经在用行动回应。SK 海力士与英特尔正在商谈在美国本土生产存储芯片，方案包括租用英特尔俄亥俄州工厂的部分产能或成立合资企业，但 SK 海力士回应称"目前没有任何定论"（[陆家嘴财经早餐](https://www.163.com/dy/article/L70QS8RI05198RSU.html)、[每日经济新闻](https://www.toutiao.com/article/7686285271251354152/)）。把存储产能搬回美国，遇到的第一道坎就是陈立武提到的那个词——成本。
+
+## 需求端的分歧：减速论、市场情绪与"瓶颈不是需求"
+
+约束变紧的同时，需求端的叙事这周也在打架。
+
+起点是 Anthropic CEO Dario Amodei 的一篇长文。据 CoinDesk 的报道，文章题为《We Must Pace the Frontier》，主张行业应刻意放缓前沿能力的发展速度，并提出三项具体机制：在 AI 公司内部嵌入独立评估者、民主国家之间协调安全标准、推动国际协议并先行禁止最危险的应用（[CoinDesk](https://coindesk.cc/semiconductor-stocks-slide-after-anthropic-ceo-calls-for-ai-development-slowdown-113605.html)）。Sam Altman 与 Elon Musk 都公开表示支持这一方向。
+
+市场的反应是直接的。9 月 14 日周一开盘，芯片板块集体下挫：AMD 跌 4.4%、美光跌 5.3%、英特尔跌 5.6%，SanDisk 跌约 4.5%，iShares 半导体 ETF（SOXX）跌约 2.8%（[Hello Marvis](https://hellomarvisaitoday.com/articles/794de4a9-4234-4a9f-9bee-99acd4a918a9)、[CoinDesk](https://coindesk.cc/semiconductor-stocks-slide-after-anthropic-ceo-calls-for-ai-development-slowdown-113605.html)）。有分析指出，内存股跌幅约为整个芯片板块的两倍——因为内存是这轮 AI 交易里"商品属性"最强的一环，估值、波动率与大宗属性同时指向同一个方向（[AInvest](https://www.ainvest.com/fr/news/ai-warning-domino-public-memory-stocks-2609)）。同一篇分析也提醒：**呼吁放慢是一种主张，不是合同**——没有超大规模厂商取消 GPU 订单，没有数据中心停工，也没有内存买家撕毁协议，动的是情绪与估值。
+
+产业界的回应更直接。Digitimes 的报道称，芯片行业信源普遍认为减速呼吁不会影响短期需求，亚洲晶圆厂的订单至少看到 2027 年，真正的问题不是 AI 支出会不会停，而是它扩散到云、设备与传统行业的速度有多快（[GMAsia](https://gmasia.ai/news/amodeis-ai-slowdown-call-is-unlikely-to-dent-chip-demand-industry-sources-say)）。
+
+随后几天的公开表态，把分歧摆到了台面上：
+
+- **Meta CEO 扎克伯格公开反对"AI 减速论"**，认为依靠独立评估者与外部顾问已足以确保模型安全，不需要放缓开发；同时表示 Meta 出于安全考虑主动推迟了 Muse AI 技术的上市（[每日经济新闻](https://news.qq.com/rain/a/20260917A02IUR00)）。
+- **英伟达 CEO 黄仁勋 9 月 17 日在苏格兰的 AI 峰会上表示**，随着 AI 向医疗、制造、金融等行业渗透，公司 2027 年芯片销量将达到今年的约两倍，并明确指出当前瓶颈不是需求，而是把芯片生产出来的能力（[网易转载](https://www.163.com/dy/article/L76A215O05566UTE.html)、[雪球](https://xueqiu.com/3338215700/409870915)）。
+- **算力供给端的紧张也在价格上体现**：GPU 云服务商 Nebius 宣布自 10 月 1 日起全面上调定价，平均涨幅约 20%，覆盖 H100、H200、B200、B300 多款芯片，是今年 5 月以来的第二轮涨价；同期半导体设备关键零部件的交货周期被报道已延长一倍以上（[网易转载](https://www.163.com/dy/article/L76A215O05566UTE.html)）。
+
+一边是"该慢一点"的呼吁，一边是"订单接到 2027 年、销量要翻倍"的表态。这种分歧不会在短期内解决，但它本身已经说明了一件事：**在约束变紧的阶段，围绕增速的争论会越来越像一场关于资源分配的谈判。**
+
+## 把三条线并起来看
+
+现在把电力、内存、需求三条线放在同一张时间轴上，会看到一个共同的形状。
+
+**约束的性质变了。** 从 2023 年到 2025 年，AI 扩张的瓶颈主要在技术侧：模型能不能训起来、芯片能不能造出来、软件栈能不能用出效率。2026 年这一轮，卡住的是更"土木"的东西——并网排队、晶圆厂建设周期、洁净室、变压器与冷却系统。这些东西的共同点是**时间尺度不由软件决定**：一款芯片的设计迭代以季度计，一座新晶圆厂以年计，一条输电线路的审批与建设以十年计。
+
+**应对方式因此分成了三层，且速度完全不同。**
+
+| 层次 | 手段 | 见效速度 | 这周的例子 |
+| --- | --- | --- | --- |
+| 提高利用率 | 把负荷变成可调度资源 | 最快（软件与规则） | AEMA 的需求响应框架，100GW 估算 |
+| 提高单位效率 | 架构与系统优化，降低每 token 的电力与存储开销 | 中（一到两个代际） | 超节点与光互连、稀疏化与 KV Cache 优化 |
+| 扩大供给 | 建厂、建电站、修输电线路 | 最慢（数年） | SK 海力士与英特尔谈美国产存储，美光称缓解要到 2028 年后 |
+
+三者之间的关系不是替代，而是**争取时间**。需求响应不会让新电站消失，它的作用是让已经在排队的数据中心早一点接上电；同理，效率优化能压平内存需求的斜率，但压不到零。任何把其中一层当成终极解法的说法，都需要打折看。
+
+**对下游的影响是不对称的。** 陈立武提到的"中低价位手机和笔记本尤其困难"，揭示了一个常见规律：**资源紧俏时，高端产品与 AI 服务器凭借高客单价和长协订单优先拿到产能，金字塔底部被挤压。** 这条链路的终端结果，读者已经能在换机预算上感受到——存储成本抬升会直接反映到整机定价，而这与 AI 是否真的"减速"无关。
+
+**对国内供应链，这是一次结构性的窗口。** 高盛所说的 15 年来最严重的存储短缺、以及国际厂商产能向 HBM 倾斜留下的常规产品空缺，都给了国产存储加速替代的空间；今年一季度 A 股存储器公司业绩普遍高增长（[新华网](https://www.news.cn/20260512/13a7b514e8154c5a9d0a5d49828dedde/c.html)）。但窗口的另一面同样真实：扩产周期长，如果 AI 需求增速放缓，高价库存会成为负担。
+
+## 观察
+
+回到这一周。
+
+AEMA 的成立之所以值得单独写一篇，不在于 100GW 这个数字本身——它未经审计、是系统级估算、依赖监管接受——而在于**是谁站出来提这个方案**。英伟达、谷歌、Anthropic 三家在模型与算力上竞争激烈的公司，愿意和公用事业一起坐到桌边谈"我们愿意少用一点电"，说明它们已经把电网接入看成比自己能控制的任何一项技术指标更硬的约束。
+
+内存这条线则更为朴素：它不需要任何联盟或框架，价格就是信号。当一家 CPU 厂商的 CEO 公开说"拿不到内存"，说明短缺已经从财务报表传导到了排产计划。
+
+**过去两年，行业习惯用"算力"这个词来概括 AI 的全部投入；眼下这个词正在被拆开——算力背后是电、是存储、是厂房和电网，是那些不遵循摩尔定律节奏的东西。** 如果说第一道墙是芯片，第二道墙就是基础设施。翻墙的方式不会是一次发布会，而是排队、谈判、改建和等待。
+
+对普通人的影响没有想象中遥远：云服务的价格表、手机的起售价、下一代笔记本的内存配置，都会陆续体现这轮约束。至于那 100GW 最终能不能变成真实的并网容量，答案不在英伟达或谷歌手里，而在各家公用事业委员会与 FERC 的听证记录里——**这才是接下来值得盯的地方。**
+
+_（内容由AI生成，仅供参考）_
