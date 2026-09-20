@@ -1,0 +1,139 @@
+---
+title: 从听到做：语音与全模态模型在 9 月的两次转向
+description: 9 月 15 日 Google 发布 Gemini 3.8 Live，9 月 18 日阿里发布 Qwen3.8-Omni-Flash，xAI 同日更新 Grok Voice Transcribe 2.0。本文用官方博客、定价页与第三方榜单，拆解这四天里的两个转向——架构上取消"沉默思考"，定价上把音频拉到与文本同价——以及它们在银行客服、多说话人会议这类真实任务上仍然明显的边界。
+publishedAt: 2026-09-20
+category: ai-frontier
+tags:
+  - 语音模型
+  - 多模态
+  - 实时交互
+  - Gemini
+  - Qwen
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 四天里，语音这条线上换了两批模型
+
+9 月 15 日，Google DeepMind 发布 Gemini 3.8 Live 与 Gemini 3.8 Live Extended Thinking，两个"音频进、音频出"的实时对话模型（[Google 公告后的报道](https://www.aichatdaily.com/ai-models/google-deepmind-ships-gemini-3-8-live-parallel)）。9 月 18 日，阿里通义千问团队上线 Qwen3.8-Omni-Flash，原生处理文本、图像、音频、视频四类输入，上下文窗口 100 万 Token（[Qwen 官方博客](https://qwen.ai/blog?id=qwen3.8-omni-flash&utm_source=alphasignal)、[Pandaily](https://pandaily.com/qwen3-8-omni-flash-native-omni-model)）。同一天，xAI 更新 Grok Voice Transcribe 2.0，称准确率是上一代的两倍而价格不变（[x.ai 官方](https://x.ai/news/grok-voice-transcribe-2)）。
+
+把这三件事放在一起看，会发现它们不是同一类产品的常规迭代，而是同一条技术路线上的两次调整：
+
+- **一次在架构层**——语音模型不必再"停下来想"。把推理与发声拆成两条并行流，思考的时候嘴里有话说，工具调用在后台跑，对话不断线。
+- **一次在成本层**——音频从昂贵的特殊输入，变成和文本同价的普通输入。
+
+再往前五天，OpenAI 在 9 月 10 日发布 GPT-Live-1，把全双工语音带进 API（[OpenAI 开发者社区](https://community.openai.com/t/introducing-gpt-live-1-in-the-api/1396471/1)）。所以这其实是三家在同一周做的事。下面把两个转向拆开看，也把宣传口径与实际可获取的东西分开看。
+
+## 第一个转向：不再"边想边沉默"
+
+先说清楚 Gemini 3.8 Live 的结构性变化，因为这决定了它的定价与用例。
+
+传统的语音助手是一条串行流水线：语音识别（ASR）→ 语言模型 → 语音合成（TTS）。三段各有延迟，叠加起来就是那种"说完话要等两秒"的体感；更麻烦的是，任何一段在做工时，整条链路都是哑的。Gemini 3.8 Live 把这条链压成了一步：音频直接进模型、音频直接出，中间没有独立的转写与合成环节（[DataNorth](https://datanorth.ai/news/google-launches-gemini-3-8-live-and-extended-thinking)）。
+
+真正值得记下来的是**异步工具调用**。模型可以在对话进行中触发一次后台查询或 API 调用，不打断说话，等结果回来再自然地把结论缝进正在说的话里。Extended Thinking 变体更进一步：它在推理时有话说，用"让我查一下"这类口头过渡句填补思考间隙，并在后台多步任务执行时同步播报进度（[GenAI Daily](https://genaidaily.com/google-launches-gemini-3-8-live-voice-models-for-enterprise-agents)）。
+
+Google 在公告里给出的关键数据如下（均为官方口径，其中 τ-Voice 与 Big Bench Audio 由第三方 Artificial Analysis 复现）：
+
+| 项目 | 数值 | 说明 |
+| --- | --- | --- |
+| Speech to Speech 质量指数 | 82.6 | Extended Thinking 位列第一 |
+| τ-Voice | 68.6% | 客服类智能体任务完成率 |
+| Sierra τ-Voice-banking | 35.1% | 银行场景任务完成率 |
+| Big Bench Audio | 97.7% | 语音推理与理解 |
+| 支持语言 | 97 种 | 支持通话中途自动切换 |
+| 上下文 / 输出 | 128K / 64K Token | 支持音频、图像、视频、文本输入 |
+
+两处细节容易被忽略。第一，Google 的模型卡写明这两个模型**基于 Gemini 3 Pro 而非 Flash 系列**——语音被放在了旗舰基座上，不是轻量分支（[DataNorth](https://datanorth.ai/news/google-launches-gemini-3-8-live-and-extended-thinking)）。第二，所有生成音频都带 SynthID 水印，这是合成语音越来越难与真人区分之后，平台方几乎必然要做的动作。
+
+OpenAI 的路线略有不同：GPT-Live-1 自己不负责深度推理，而是把推理与动作**委托给后端模型或智能体框架**。它与 GPT-6 Astra（中等推理强度）配对时，在 Tau3（航空、零售、电信客服）上一次通过 83.6% 的任务，而上一代 GPT-Realtime-2.1 是 45.7%；轮次切换延迟 0.798 秒，对比 1.41 秒（[OpenAI 开发者社区](https://community.openai.com/t/introducing-gpt-live-1-in-the-api/1396471/1)）。
+
+一个把"想"和"说"解耦，一个把"说"和"想"分层——两种实现，指向同一个结论：**语音模型的瓶颈已经从"能不能听清"移到"能不能一边听、一边说、一边做事"。**
+
+## 第二个转向：价格表被重画了一遍
+
+如果说架构变化是给开发者看的，定价变化是给财务看的。这一周里，两家把语音的价格结构改到了不同的方向。
+
+Google 的做法是**按分钟计**：音频输入每分钟 0.005 美元，音频输出每分钟 0.018 美元，约等于每百万输入 Token 3 美元、每百万输出 Token 12 美元；文本输入 0.75 美元、文本输出 4.50 美元，图片与视频输入每百万 Token 1 美元（[DataNorth](https://datanorth.ai/news/google-launches-gemini-3-8-live-and-extended-thinking)、[Stack Futures](https://stackfutures.com/blog/gemini-38-live-speech-to-speech-number-one-2026)）。
+
+阿里的做法更直接：**把音频和文本拉到同一个价位**。阿里云国际区定价为每百万输入 Token 0.15 美元（无论这 Token 来自文本、图像、视频还是一小时音频）、命中缓存的输入 Token 0.016 美元、每百万输出 Token 0.47 美元。对照上一代，qwen3.5-omni-plus 的音频输入是每百万 Token 11 美元、文本图像视频输入 1.4 美元、输出 8.3 美元——**音频这一行降幅 98.6%，与官方"超过 98%"的口径吻合**（[PacketNebula 对定价页的核对](https://packetnebula.com/articles/qwen-3-8-omni-flash-0-15-audio-no-weights)、[AIBase](https://www.aibase.com/news/31158)）。
+
+官方口径里的百分比（音频输入每小时下降超过 98%、音视频输入下降超过 93%）按"两分钟素材处理价乘 30"估算，视频按 720p、每秒 1 帧计。这种折算方式本身就是信息：**它假设音频是长素材，而不是短指令。**
+
+价格表还有一个容易踩的坑。Google 把 3.8 Live、3.8 Live Extended Thinking 与旧的 3.1 Flash Live Preview 放在同一行定价，字面上两者同价；但 Extended Thinking 会产生推理 Token，而推理 Token 按输出价计费。Artificial Analysis 在同一组固定任务上实测，Extended Thinking 每小时音频输入成本约 3.50 美元，标准版 Live 约 0.84 美元——**同一张价目表，账单差约四倍**（[DataNorth](https://datanorth.ai/news/google-launches-gemini-3-8-live-and-extended-thinking)）。
+
+横向对比时还要注意计量单位不可直接相减：OpenAI GPT-Live-1 按其公布口径是每会话分钟 0.05 美元，且后端推理 Token 另计；Google 是按音频分钟计；阿里的口径是 Token。**"谁更便宜"这个问题，只有在固定任务集上跑出自己的账单才有答案。**
+
+## Qwen 这条路：不只看懂视频，而是在视频里找证据
+
+Qwen3.8-Omni-Flash 的官方定位是"从理解全模态内容，走向规划任务、调用工具、完成创作"。它的宣传重心在音视频智能体，其中一个设计选择值得单独拆出来。
+
+传统的长视频理解是把整段素材从头到尾处理一遍——贵，而且当答案只藏在几分钟里时，绝大部分算力是浪费的。Qwen 这次主打**智能体式长音视频理解**：模型从用户的问题出发，自己决定该看什么、该听什么，用由粗到细的多轮方式取证，而不是做一次线性扫描。官方在 OmniVideoBench 上给出的对比是：准确率从 63.4 升到 67.8，同时每次查询的 Token 消耗从 145,736 降到 79,117，**减少约 45.7%**；同样的智能体模式在 Video-MME-v2 上从 65.0 升到 71.3、LVOmniBench 从 63.3 升到 73.6（[ExplainX](https://www.explainx.ai/blog/qwen-3-8-omni-flash-launch-2026)）。
+
+**准确率更高、开销更低**，这种组合在模型发布里并不常见，也说明优化点从"处理多少"转向了"怎么找"。
+
+其余几组官方数字同样值得记录：
+
+| 指标 | 变化 | 说明 |
+| --- | --- | --- |
+| 29 至 30 项评测平均分 | 提升超过 25% | 对比上一代 Qwen3.5-Omni-Plus |
+| WildClawBench-MM | +36.5 分 | 多模态工具调用，官方口径 71.0 对 Gemini 3.8 Flash 的 58.9 |
+| AliMeeting DER / cpWER | 88.11 / 89.61 → 3.35 / 17.18 | 多说话人会议分离与转写 |
+| 上下文窗口 | 100 万 Token | 最大输入约 99.2 万，思考模式约 98.4 万，最大输出 13.1 万 |
+| 音频语言覆盖 | 113 种语言与方言 | 支持双声道与四声道空间音频 |
+
+多说话人会议那组数字是这次最有实际意义的改进之一：说话人分离错误率从 88.11 降到 3.35，意味着"谁说了什么"第一次接近可用，而不是需要人工校对的半成品。对会议纪要、播客切条、字幕生成这类场景，这是门槛式的变化。
+
+还有一个容易被当作花絮、但值得记下的细节：团队把新模型用在了自己的研发流程里——12 小时内完成评测集筛选、数据构建和四轮迭代，生成 3,413 条训练数据，把 Qwen2.5-Omni-3B 的四川方言识别字符错误率从 25.79% 降到 15.30%，相对下降约 40.7%（[AIBase](https://news.aibase.com/zh/news/31158)）。同时发布的 Realtime 版本，被描述为**首个支持"声源定位"的全模态模型**，官方给出 6 秒音频片段上首 Token 约 591 毫秒、首个音频包约 978 毫秒的延迟数据（[PacketNebula](https://packetnebula.com/articles/qwen-3-8-omni-flash-0-15-audio-no-weights)）。
+
+## 公告里能下载的那部分
+
+发布稿讲能力，工程决策藏在"能拿到什么"里。这一周至少要记住四点落差。
+
+**权重没有开放。** Qwen3.8-Omni-Flash 是纯粹的 API 模型，走阿里云百炼提供服务，开放的是配套的 Qwen-MM-Plugins 与 Qwen-Live Harness 工具，而非模型权重。按 PacketNebula 的核对，这个团队上一次公开发布 Omni 系列权重是 2025 年 9 月（[PacketNebula](https://packetnebula.com/articles/qwen-3-8-omni-flash-0-15-audio-no-weights)）。
+
+**链接未必都通。** 同一篇核对指出，发布稿中链接的 Qwen-Live Harness 仓库当时返回 404，Realtime 变体在定价页上也还没有对应行。公告与可交付物之间存在时差，这在密集发布期很常见，但对准备排期的团队来说，差别就是能不能本周开工。
+
+**价格里不含的部分要自己补。** 该模型返回文本，不生成语音——语音输出仍要靠 Qwen3.5-Omni 或 Realtime 变体。另外推理默认开启（`reasoning_effort="xhigh"`），且 `preserve_thinking` 默认打开，上一轮推理会随上下文一起进入下一轮并按输入计费。**把它直接指向两小时的录音，上下文会比你预期的更快填满。**
+
+**免费额度有地域限制。** 该系列的免费额度只在新加坡区域提供，其余区域从第一次调用起就按量计费。
+
+xAI 那边则延续了另一种策略：Grok Voice Transcribe 2.0 强调在嘈杂、多语言的真实音频上训练，官方称准确率是 1.0 版的两倍而价格不变，并在 Artificial Analysis 的 32 个流式模型准确率榜上排名第一（[x.ai 官方](https://x.ai/news/grok-voice-transcribe-2)）。**做转写而不是做对话，是避开正面消耗的务实选择。**
+
+## 边界：榜单第一与实际可用之间的那段距离
+
+这一周的数据里，最该被反复引用的是几个不好看的数字。
+
+**银行场景只有三分之一。** Gemini 3.8 Live Extended Thinking 在 Sierra 的 τ-Voice-banking 上是 35.1%，OpenAI 配对方案是 32.0%（[DataNorth](https://datanorth.ai/news/google-launches-gemini-3-8-live-and-extended-thinking)、[AIxploria](https://www.aixploria.com/en/gemini3-8-live-google-deepmind/)）。**在受监管的垂直场景里，最好的语音智能体仍然有一半以上的真实任务做不完。** 综合榜的第一名与"能接管客服电话"之间，隔着的是文档检索、账户工具调用、合规话术这些具体而琐碎的能力。
+
+**互有胜负，不是全面领先。** 阿里官方自测中，Qwen3.8-Omni-Flash 在 WildClawBench-MM、DailyOmni、SpotSoundBench、MMAU 上赢过 Gemini 3.8 Flash，但在 AgenticVBench 上以 36.8 对 45.0 落后，OmniGAIA 上 74.0 对 78.6 落后，部分视频理解任务仍由 Gemini 领先。"音视频综合接近 Gemini、音频整体超过"这个表述，范围划得相当克制，也基本符合数据。
+
+**第三方目录的数值并不一致。** 几个模型目录站点给出的 Gemini 3.8 Live（非 Extended Thinking）在 Speech to Speech 指数上的分数分别是 76.0、79.1 和 80.1（[Lab Index](https://labindex.ai/outputs/google/gemini-3.8-live)、[Data Today](https://data-today.net/gemini-3-8-live-voice-models-ship-production)、[AI Tool Crunch](https://www.aitoolcrunch.com/for-developers/models/gemini-3-8-live)）。非官方聚合页的数值仍在漂移，引用时以原始榜单为准——这一点和上个月内存涨价倍数出现"5 到 7 倍"与"57 倍"分歧是同一类陷阱。
+
+把三家的定位并排看，能更清楚地看出各自的赌注：
+
+| 维度 | Gemini 3.8 Live / ET | GPT-Live-1 | Qwen3.8-Omni-Flash |
+| --- | --- | --- | --- |
+| 发布日 | 9 月 15 日 | 9 月 10 日 | 9 月 18 日 |
+| 路线 | 端到端语音，推理与发声并行 | 全双工对话，推理委托给后端模型 | 原生全模态，音频/视频/文本同价 |
+| 定价口径 | 按音频分钟（0.005 / 0.018 美元） | 按会话分钟（0.05 美元）+ 推理 Token | 按 Token（0.15 / 0.47 美元） |
+| 权重 | 闭源 | 闭源 | 闭源（工具开源） |
+| 突出场景 | 实时客服、Search Live、Workspace | 客服、电话系统（WebRTC / 电话接入） | 长会议、长视频、视频编辑与交付 |
+| 已知短板 | 银行类任务 35.1% | 银行类任务 38.1%（TauBanking） | AgenticVBench、OmniGAIA 落后 Gemini |
+
+## 观察
+
+把这一周的两件事连起来读，会看到一个比"又发了新模型"更具体的变化。
+
+**第一，语音的评估标准正在换。** 上一代语音模型的竞争指标是词错率、响应延迟、音色自然度——都是"像不像人"。这周三家给出的数字全部是任务完成率、插话处理、工具调用成功率：τ-Voice、Tau3、Full Duplex Bench、WildClawBench-MM。**语音已经从"接口"变成"执行入口"，评估对象随之从听感转向完成度。**
+
+**第二，成本结构的改变，往往比能力提升更快地改变用法。** 音频输入降到与文本同价之后，被跳过的工作会发生位移：过去没人转写的会议录音、没人切条的直播、没人整理的素材库，之所以一直躺在硬盘上，不是因为技术做不到，而是因为按分钟计费划不来。**价格不再是障碍时，"可以做但一直没做"的那批任务会被重新拿出来评估。** 这也是为什么阿里的发布稿里，能力提升与价格下降是被并列陈述的。
+
+**第三，公告与可交付物之间的时差，是排期时的真实成本。** 权重未开放、仓库链接 404、Realtime 变体没有定价行、推理 Token 默认随上下文计费——这些细节不会出现在发布稿的标题里，但它们决定了从"看到发布"到"跑通第一个生产用例"要多久。上一篇文章里提到的建议在这里同样适用：**先用自己的 30 到 50 个真实样本建一套评测集，模型换了就重跑一遍，而不是对着榜单做决策**（[RIVER Group](https://rivergroup.ai/insights/five-frontier-models-in-three-days)）。
+
+短期看，语音会不会成为主要交互方式，答案仍然取决于这些模型在具体垂直场景里能不能把任务做完——35.1% 这个数字提醒我们，这一步还没跨过去。但有一点已经确定：**语音模型的产品形态，从"你问它答"变成了"你说它做"。** 剩下的问题不再是能不能听懂，而是能不能在听懂的同时，把事办成。
+
+_（内容由AI生成，仅供参考）_
