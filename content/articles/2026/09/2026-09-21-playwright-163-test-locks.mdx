@@ -1,0 +1,171 @@
+---
+title: Playwright 1.63：给测试加命名锁，让定位不必先找 iframe
+description: 2026 年 9 月 4 日发布的 Playwright 1.63（v1.63.0）把三件长期靠约定维持的事写进了 API：命名测试锁让访问共享资源的用例自动串行、其余保持并行，frameLocator() 可以不写选择器并在子树任意 frame 中搜索，locator.visible() 取代 :visible 伪类。此外 trace 新增 aria 与 screen 快照、Display Aria 模式与内置 Perfetto 报告器。本文基于官方 Release Notes、官方文档与两份第三方解读，梳理用法、边界与升级前需要确认的破坏性变更。
+publishedAt: 2026-09-21
+category: tools-productivity
+tags:
+  - Playwright
+  - 自动化测试
+  - 测试工具
+  - 前端工程
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 1.63 的改动集中在"并行跑起来之后"的问题
+
+Playwright 发布了 1.63.0，GitHub 上标记的发布时间是 2026-09-04T22:40:31Z（[GitHub Release](https://github.com/microsoft/playwright/releases/tag/v1.63.0)），距上一个补丁版本 1.62.1（7 月 30 日）约五周。官方 [Release Notes](https://playwright.dev/docs/release-notes) 列出的浏览器版本为 Chromium 153.0.8010.12、Firefox 155.0、WebKit 26.6，并声明针对稳定通道的 Chrome 153 与 Edge 153 做过测试。
+
+这次没有大版本级的重构，四项主要改动都落在同一类痛点上：当一个测试套件从"能跑通"走到"跑得快、跑得稳"，剩下的麻烦通常不在断言里，而在调度与定位上。
+
+| 改动 | 解决的问题 |
+| --- | --- |
+| 命名测试锁 | 少数用例共用一个不可并发的资源，过去只能整文件串行 |
+| 跨 frame 定位 | 想点一个按钮，却必须先写对 iframe 选择器 |
+| `locator.visible()` | `:visible` 伪类写法零散，隐藏副本触发 strict mode 报错 |
+| step 参数与 trace 快照 | 报告里只有步骤名，看不出这一步作用于谁、页面长什么样 |
+
+## 命名锁：把并发冲突从"靠重试掩盖"变成"提前声明"
+
+```ts
+import { test } from '@playwright/test';
+
+test('update user settings', { lock: 'user-settings' }, async ({ page }) => {
+  // 与其它持有 'user-settings' 的测试不会同时运行
+});
+```
+
+锁就是一个字符串名字。官方文档说明了它的作用域：**同名锁的测试永不并发，跨文件、跨 worker、跨 project 都生效**，而其余测试照常并行（[test locks](https://playwright.dev/docs/test-parallel#test-locks)）。一个测试可以同时持有多个锁，全部可用时才会启动；`test.describe()` 也接受 `lock`，作用于组内每个测试：
+
+```ts
+test('reset the database', { lock: ['database', 'external-api'] }, async ({ request }) => {
+  await request.post('/api/test/reset');
+});
+
+test.describe('billing admin', { lock: 'billing' }, () => {
+  test('change the plan', async ({ page }) => {});
+  test('add a payment method', async ({ page }) => {});
+});
+```
+
+获取与释放的时机是确定的：测试开始前取齐所有锁，测试结束后释放，不会出现只拿到一半的情况。
+
+### 一个容易踩的细节：默认模式下锁是按文件持有的
+
+官方文档里有一句话很容易被略过：在默认模式与 serial 模式下，同一文件的测试是一起按顺序跑的，因此**任何一个测试声明的锁都会被整个文件持有**。如果某个 spec 里只有一个用例需要锁，同文件其余十个不受影响的用例也会排在它后面。要拿到细粒度的效果，需要给该文件开启 `fullyParallel`，或者把带锁的用例放进并行的 describe。
+
+三种"限制并发"的手段代价并不相同：
+
+| 手段 | 影响范围 | 代价 |
+| --- | --- | --- |
+| `lock: 'name'` | 只有持有同名锁的测试 | 其余测试保持并行 |
+| `mode: 'serial'` | 整个文件或 describe | 组内串行，且一个失败后其余跳过 |
+| `workers: 1` | 整个测试套件 | 并行度归零，只适合本地调试 |
+
+### 锁不是隔离方案的替代品
+
+官方文档的态度很明确：如果冲突的只是一条数据库记录，更合理的做法是从 `testInfo.testId` 派生唯一标识，让并行测试天然不撞车；锁应该留给**确实无法复制**的资源，比如一个沙箱账号、一个全局开关、一次全环境清理。第三方解读（[ArtStroy](https://artstroy.net/articles/playwright_1_63_0_whats_new_automation_qa)）把这条边界总结成一个可操作的判断：当你能点出冲突的名字时用锁，当你说不清和谁冲突时，该用的是隔离重试——也就是 1.62 引入的 `retryStrategy: 'isolated'`。另外锁不负责排序，需要"必须先跑 A 再跑 B"时，仍然是 serial 模式的职责。
+
+## 跨 frame 定位：可以不先写 iframe 选择器
+
+支付组件、SSO、客服窗口通常以 iframe 形式嵌入，而它们的 id 与属性会随部署变化。旧写法要求先定位 iframe，再进到里面定位元素：
+
+```ts
+// 1.63 之前：先找到 iframe，再在它内部找
+await page
+  .frameLocator('iframe[data-testid="payment-frame"]')
+  .getByRole('button', { name: 'Pay now' })
+  .click();
+```
+
+1.63 起，`page.frameLocator()` 与 `frame.frameLocator()` 可以不带选择器调用，语义是"在这个子树的任意 frame 中搜索"（[官方说明](https://playwright.dev/docs/release-notes)）：
+
+```ts
+// 1.63：不写 iframe 选择器，直接在任意 frame 中找
+await page.frameLocator().getByRole('button', { name: 'Pay now' }).click();
+```
+
+两个边界值得记住。第一，定位链的其余部分仍然在**单个** frame 内解析，如果同一个角色和名称在两个 frame 中都存在，Playwright 会抛错，而不是随机点一个——这是正确的失败方式。第二，当"元素必须来自谁"本身就是测试需求时，仍然应该写显式的 frameLocator；不写选择器的写法适合包裹层属性反复变化、测试只关心控件本身的场景。跨域 iframe 的定位能跨过去，不代表登录态能跨过去，涉及第三方会话时仍要单独准备数据。
+
+## `locator.visible()`：把隐藏的那一个排除掉
+
+新增的 `locator.visible()` 返回一个只匹配可见元素的定位器，官方把它定位为 `:visible` CSS 伪类的推荐替代（[API 文档](https://playwright.dev/docs/api/class-locator#locator-visible)）：
+
+```ts
+await page.locator('button').visible().click();
+```
+
+用法上它更像 filter，所以有两件事要分开：**过滤**隐藏副本用 `visible()`，**断言**可见性仍然用 web-first 断言。隐藏的孪生元素是 strict mode 报错的常见来源——抽屉里未展开的副本、`display:none` 的模板、桌面端 CTA 的移动端复制品，用 `visible()` 可以把它们排除在选择之外；而"这个按钮必须可见"这类需求，写进断言表达得更准确。
+
+## 报告与追踪：从"步骤名"到"这一步作用于谁"
+
+这部分不是 headline，但对日常排障的影响可能比前两项更直接。
+
+`test.step()` 现在接受 `subtitle` 与 `params`，报告器通过 `testStep.subtitle` 和 `testStep.params` 读取：
+
+```ts
+await test.step('Login', async () => {
+  // ...
+}, { subtitle: 'as admin', params: { user: 'admin' } });
+```
+
+Playwright 自身的 API 步骤也会带上结构化数据，副标题通常是定位器或导航 URL——例如 `Click` 后面跟着 `getByRole('button')`。两者都会渲染在 trace viewer 与 HTML 报告的步骤标题旁边。
+
+trace 的 `snapshots` 选项也从布尔开关变成了可选择抓取内容的对象：
+
+```ts
+export default defineConfig({
+  use: {
+    trace: {
+      mode: 'on',
+      snapshots: { dom: true, aria: true, screen: true },
+    },
+  },
+});
+```
+
+同时具备 aria 与 screen 快照后，trace viewer 会启用新的 **Display Aria** 模式：动作截图与 aria 快照并排显示，鼠标悬停 aria 节点会在截图上高亮对应元素——排查"点错了哪个元素"这类问题时，比翻 DOM 快得多。
+
+其余与效率相关的改动：
+
+- 内置 `perfetto` 报告器，输出 Trace Event Format 文件，可在 Perfetto UI 或 `chrome://tracing` 中把整次运行看成每个 worker 一条泳道的时间线。
+- HTML 报告在步骤旁渲染耗时瀑布。
+- 新增 `--add-reporter`，在已有报告器之上追加，而不是像 `--reporter` 那样替换。
+- `list`、`line`、`dot`、`github`、`junit` 报告器新增 `omitTags`，用于抑制自动追加到标题后的标签。
+- 新增独立的 `testOptions.reducedMotion`、`forcedColors`、`contrast` 选项，做无障碍相关用例时可以直接固定浏览器偏好。
+- `npx playwright install --no-remove` 会保留其它 Playwright 安装的浏览器；`npx playwright codegen --http-credentials` 可录制 HTTP 认证之后的页面。
+
+## 升级前需要确认的破坏性变更
+
+官方把三项公告列在 Release Notes 末尾，都会改变现有 CI 的行为：
+
+1. **实验性组件测试包停止更新**。`@playwright/experimental-ct-react`、`-ct-react17`、`-ct-vue` 不再维护，需要按迁移指南转到 1.62 引入的 stories 模型；传给 `fixtures.mount()` 的 story id 现在可以通过生成的 `Stories` 注册表获得类型。
+2. **Ubuntu 20.04 不再支持**。
+3. **Linux arm64 改为下载 Chrome for Testing 构建的 Chromium**，与其它平台保持一致。
+
+如果把 1.62 也算进这次升级范围，还有两项要留意：无头模式下剪贴板已与操作系统隔离，依赖 `navigator.clipboard` 读写宿主剪贴板的测试会失效；Debian 11 支持移除。
+
+## 一个判断：这次版本的受益者并不相同
+
+按套件规模分开看，结论会更清楚：
+
+- **用例数百、worker 数在两位数、并且已知有几个用例互相踩的套件**：命名锁几乎零成本见效。它把一个只能靠注释和重试掩盖的问题，变成了可声明、可追踪的规则。
+- **定位经常被第三方 iframe 包裹层拖累的项目**：不写选择器的 frameLocator 能省掉一层脆弱依赖，但更适合按需使用——"元素必须来自支付页 iframe"这种语义需求，显式写法仍然更可靠。
+- **只有几十个用例、长期单 worker 的项目**：可感知的收益接近零，升级的主要理由是与 Chrome 153 / Edge 153 的浏览器版本保持同步。
+
+`locator.visible()` 属于顺手替换的一类：`:visible` 还在，没有必须迁移的压力，但新代码用它更一致。
+
+## 资料来源
+
+- [Playwright Release Notes（Version 1.63）](https://playwright.dev/docs/release-notes)
+- [GitHub Release v1.63.0](https://github.com/microsoft/playwright/releases/tag/v1.63.0)（发布时间 2026-09-04T22:40:31Z）
+- [Test locks 文档](https://playwright.dev/docs/test-parallel#test-locks)
+- [locator.visible()](https://playwright.dev/docs/api/class-locator#locator-visible)、[test.step()](https://playwright.dev/docs/api/class-test#test-step)、[testOptions.trace](https://playwright.dev/docs/api/class-testoptions#test-options-trace)
+- 第三方解读：ArtStroy，《Playwright 1.63: Test Locks, Visible Locators, and Better Traces》，2026-09-05，https://artstroy.net/articles/playwright_1_63_0_whats_new_automation_qa
+- 第三方解读：TestDino，《Playwright 1.63 Release: Test Locks, Cross-Frame Locators, and Aria Traces》，2026-09-08，https://testdino.com/blog/playwright-1-63-release
+
+_（内容由AI生成，仅供参考）_
