@@ -1,0 +1,244 @@
+---
+title: React 19.3：View Transitions 与 Fragment Refs 转正，外加三个可以删掉的旧写法
+description: 2026 年 9 月 9 日发布的 React 19.3 把 View Transitions 与 Fragment Refs 从实验 API 转为稳定：动画只在 Transition 中触发、addTransitionType 让同一个 state 变化有两个方向、FragmentInstance 让一组兄弟节点不必再套 wrapper。此外 react-dom 新增 browser() 逃逸口、补齐 Trusted Types，Server Components 可直接渲染 Context。本文基于官方发布博客、API 文档、changelog 与多份第三方解读，梳理用法、边界与升级时真正要做的判断。
+publishedAt: 2026-09-22
+category: engineering-practice
+tags:
+  - React
+  - View Transitions
+  - Fragment Refs
+  - 前端工程
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一次没有破坏性变更的 minor 版本
+
+React 19.3 于 2026 年 9 月 9 日发布并上线 npm（[官方发布博客](https://react.dev/blog/2026/09/09/react-19-3)）。这次没有新语法、没有新的 Hook 语义，主线只有一件事：把 2025 年 4 月以实验形式公布的 **View Transitions** 与 **Fragment Refs** 转正，去掉 `unstable_` 前缀，进入稳定 API（[去年的实验版公告](https://react.dev/blog/2025/04/23/react-labs-view-transitions-activity-and-more)）。
+
+围绕这两项，官方还塞进了三个"删掉老写法"的小 API：`react-dom` 的 `browser()`、Trusted Types 支持，以及 Server Components 直接渲染 Context。发布说明称这是 minor 版本、无破坏性变更，多家第三方解读把升级描述为"一次版本号提升，而不是一个迁移项目"（[DevX](https://www.devx.com/coding/19-3-view-transitions-fragment-refs)、[dev.to](https://dev.to/lukeocodes/react-193-is-out-and-react-20-is-not-2gad)）。
+
+先看这次发布在 React 19 系列里的位置：
+
+| 类别 | 内容 | 状态 |
+| --- | --- | --- |
+| React | `<ViewTransition>`、`addTransitionType` | 实验 → 稳定 |
+| React | `<Fragment ref>` 与 `FragmentInstance` | 实验 → 稳定 |
+| react-dom | `browser()`、`onBrowserBailout`（`react-dom/server`） | 新增 |
+| react-dom | Trusted Types 透传 | 新增 |
+| Server Components | 直接从 `'use client'` 模块渲染 Context | 新增 |
+| 其它 | 独立 transition 渲染、表单、iframe、Fast Refresh、Activity 等约 40 项修复 | 修复 |
+
+值得说明的是：**这不是 React 20**。官方发布博客没有出现任何版本 20 或大版本路线图的信息；React 的语义化版本把破坏性变更留给大版本，稳定特性落在 minor 版本属于常态（[dev.to 的解读](https://dev.to/lukeocodes/react-193-is-out-and-react-20-is-not-2gad)）。
+
+## View Transitions：React 决定"何时"，CSS 决定"怎么动"
+
+`<ViewTransition>` 是本次最显眼的改动。它包住要参与动画的子树，由 React 协调浏览器原生的 View Transition API 完成入场、退场、移动和尺寸变化：
+
+```jsx
+import { ViewTransition } from 'react';
+
+{isShowing && (
+  <ViewTransition>
+    <Component />
+  </ViewTransition>
+)}
+```
+
+React 根据树的变化自动选择动画类型（[官方博客](https://react.dev/blog/2026/09/09/react-19-3)）：
+
+| 类型 | 触发条件 |
+| --- | --- |
+| `enter` | `<ViewTransition>` 在本次更新中被加入 |
+| `exit` | `<ViewTransition>` 在本次更新中被移除 |
+| `update` | 其子节点改变样式或内容 |
+| `share` | 一个带 name 的边界在一处被移除、在同一棵树另一处被加入 |
+
+`share` 就是过去要手写库才能做的"共享元素过渡"：把列表里的一项和它的详情视图连起来。默认动画是浏览器的平滑交叉淡化，要改效果可以走两条路——传 View Transition Class（`enter` / `exit` / `update` / `share` / `default`）并在 CSS 里定义，或用 Web Animations API 通过事件属性（`onEnter`、`onExit`、`onShare`、`onUpdate`）命令式接管（[`<ViewTransition>` 文档](https://react.dev/reference/react/ViewTransition)）。
+
+官方给的前置判断是：**应用不要自己去调用浏览器 API**。React 会自己启动过渡、等待当前 React view transition 结束，并把过渡期间到达的更新合并到下一次过渡。一个接口如果正从状态 A 走向 B，中途又收到指向 C、D 的更新，后续过渡会从 B 走到 D（[ReasonCore 的解读](https://reasoncore.dev/post/react-193-makes-view-transitions-a-stable-react-primitive)）。
+
+### 只对 Transition 生效，这是设计而非限制
+
+`<ViewTransition>` 不会在每次 `setState` 时都动起来。只有被标记为 Transition 的更新才会触发动画：
+
+- `startTransition` 内部的 state 更新；
+- `<Suspense>` 揭示内容；
+- `useDeferredValue` 产生的更新。
+
+普通 `setState` 会立即渲染，不激活边界。这个约束把动画从"每次重渲染都可能误触发"变成了"显式选择"，代价是：**把 View Transitions 改造到存量项目上，意味着要先审计 state 更新发生在哪里**，而不是把组件一包了事（[CODERCOPS 的解读](https://blog.codercops.com/blog/react-19-3-view-transitions-fragment-refs-2026)）。
+
+### addTransitionType：同一个 state 变化，两个方向
+
+轮播从第 1 张翻到第 3 张，和从第 5 张翻回第 3 张，最终都设置 `currentSlide = 3`。默认情况下两者动画一样。`addTransitionType` 的作用是给 transition 补上"为什么发生"的信息：
+
+```jsx
+function nextSlide() {
+  startTransition(() => {
+    addTransitionType('next');
+    setCurrentSlide(c => c + 1);
+  });
+}
+
+function previousSlide() {
+  startTransition(() => {
+    addTransitionType('previous');
+    setCurrentSlide(c => c - 1);
+  });
+}
+```
+
+然后在组件上按类型选不同动画：
+
+```jsx
+<ViewTransition
+  enter={{
+    'next': 'from-right',
+    'previous': 'from-left',
+  }}
+  exit={{
+    'next': 'to-left',
+    'previous': 'to-right',
+  }}
+>
+  <Page />
+</ViewTransition>
+```
+
+React 还会把每个 Transition Type 作为浏览器 view transition type 挂到元素上，因此也可以在 CSS 里用 `:active-view-transition-type(...)` 限定范围（[`addTransitionType` 文档](https://react.dev/reference/react/addTransitionType)）。
+
+### 与 Suspense 配合：先想清楚哪些动画不该有
+
+把 Suspense 边界包进 `<ViewTransition>`，React 会在子内容加载完成时用一次 **update** 动画把 fallback 换成最终内容：
+
+```jsx
+<ViewTransition>
+  <Suspense fallback={<Loading />}>
+    <Component />
+  </Suspense>
+</ViewTransition>
+```
+
+但官方特意提醒了反模式：如果直接这么写，缓存命中的内容二次展开也会重新播放动画，fallback 第一次出现也可能淡入。官方给出三条原则（[官方博客](https://react.dev/blog/2026/09/09/react-19-3)）：
+
+- fallback 应当立即出现，不带动画；
+- fallback 到最终内容应当带动画；
+- 不会 suspend 的子节点应当立即出现，不带动画。
+
+落到代码上就是把除 update 以外的动画关掉：
+
+```jsx
+<ViewTransition update="auto" default="none">
+  <Suspense fallback={<Fallback />}>
+    <Component />
+  </Suspense>
+</ViewTransition>
+```
+
+同一套机制还支持把图片和字体纳入 Suspense：把 `<img>` 或带 `precedence` 的 `<style href=...>` 放进边界，React 会等到资源真正加载完成再揭示，避免"容器动画播完了图片才闪进来"（[Suspense 文档](https://react.dev/reference/react/Suspense)）。
+
+### 采用前要确认的两个边界
+
+- **仅 DOM**。当前 `ViewTransition` 只支持 DOM，React Native 与其它平台仍在开发中，不能假定它是渲染器无关的能力。
+- **不自动尊重 `prefers-reduced-motion`**。需要应用自己用媒体查询关闭或减弱动画。另外浏览器支持并非全绿：第三方整理给出的门槛是 Chrome 111+、Edge 111+、Safari 18+、Firefox 144+，同文档过渡自 2025 年 10 月起进入 Baseline，跨文档过渡仍只有 Chrome 与 Edge 支持；不支持的环境会跳过动画、正常渲染（[byteiota 的整理](https://byteiota.com/react-19-3-view-transitions-stable)）。
+
+## Fragment Refs：给一组兄弟节点挂行为，而不加 wrapper
+
+Ref 通常指向单个 DOM 节点，于是组件输出没有唯一父节点时，开发者只能加一个只为"放 ref"而存在的 `<div>`——这个 div 又可能破坏样式和布局；如果节点来自不受控的第三方组件，连改都改不了。
+
+19.3 起可以把 ref 直接交给 `<Fragment>`，拿回一个 `FragmentInstance`：
+
+```jsx
+function Component() {
+  const fragmentRef = useRef(null);
+
+  useEffect(() => {
+    const fragmentInstance = fragmentRef.current;
+    fragmentInstance.focus();
+  }, []);
+
+  return (
+    <Fragment ref={fragmentRef}>
+      {posts.map(post => (
+        <Heading key={post.id}>
+          {post.title}
+        </Heading>
+      ))}
+    </Fragment>
+  );
+}
+```
+
+`FragmentInstance` 把子节点当作一个组来处理，但不改变 DOM 结构，能力包括（[`<Fragment>` 文档](https://react.dev/reference/react/Fragment)）：
+
+- `addEventListener` / `removeEventListener` / `dispatchEvent`：为一级子节点管理事件；
+- `focus` / `focusLast` / `blur`：按深度优先在嵌套子节点间移动焦点；
+- `observeUsing` / `unobserveUsing`：接入 `IntersectionObserver` 或 `ResizeObserver`；
+- `getClientRects` / `getRootNode` / `compareDocumentPosition` / `scrollIntoView`：测量与滚动。
+
+关键限制在于**它作用于一级子节点**，而且提供的是"类 DOM 方法"而不是完整 DOM 节点行为。深层嵌套结构、或确实需要一个可设样式容器的场景，仍然需要真实的元素（[DevX 的提醒](https://www.devx.com/coding/19-3-view-transitions-fragment-refs)）。它的价值在于可以给**第三方组件**的输出现场附加行为，而不用去改对方代码。
+
+## 三个可以顺手删掉的旧写法
+
+### 1. `use(browser())` 取代 mounted 标记
+
+组件依赖浏览器专有 API（`localStorage`、本地时区）时，过去常见的写法是拿一个 state 在 effect 里翻转，或判断 `typeof window !== 'undefined'`。19.3 提供了正式的逃逸口：
+
+```jsx
+import { use } from 'react';
+import { browser } from 'react-dom';
+
+function Component() {
+  use(browser());
+}
+```
+
+语义是：**服务端触发 Suspense，客户端不触发**。服务端渲染时最近一层 Suspense 的 fallback 进入 HTML，客户端 hydration 后组件正常渲染，不产生 hydration 不匹配。与其它 `use` 调用一样，它可以写在条件语句或提前 return 之后，因此能按 prop 决定某个组件是否退出服务端渲染，例如只在没有 `initialData` 时才把 `useQuery` 交给浏览器（[官方博客](https://react.dev/blog/2026/09/09/react-19-3)、[`browser` 文档](https://react.dev/reference/react-dom/browser)）。配套地，`react-dom/server` 增加了 `onBrowserBailout` 选项，用于观察哪些子树被推迟到浏览器（[VersionTrack 的变更摘要](https://versiontrack.dev/frameworks/version/react-19-3-0)）。
+
+### 2. Trusted Types 透传
+
+Trusted Types 是浏览器用来阻断 DOM 型 XSS 的机制：站点一旦用 `Content-Security-Policy: require-trusted-types-for 'script'` 强制开启，传给 `innerHTML` 这类注入点（sink）的值就必须是通过策略创建的 `TrustedHTML` / `TrustedScript` / `TrustedScriptURL`，而不能是原始字符串。React 过去会先把值强制转成普通字符串再操作 DOM，与这类策略冲突；19.3 改为把 Trusted Types 对象原样透传、交给浏览器校验。对已经在跑严格 CSP 的团队，这是一次不需要改业务代码的安全加固（[dev.to 的解读](https://dev.to/lukeocodes/react-193-is-out-and-react-20-is-not-2gad)）。
+
+### 3. Server Components 直接渲染 Context
+
+在此之前，想在 Server Component 里消费 Context，通常要额外包一层 `'use client'` 的 Provider 组件，只为了把值送进 context。19.3 允许 Server Components 直接渲染从 `'use client'` 模块导入的 Context，这个"只为传值存在"的包装层可以删掉（[daily.dev 摘要](https://daily.dev/posts/itl123juf)、[Deniz.in 的解读](https://deniz.in/react-19-3-promotes-view-transitions-and-fragment-refs-to-stable)）。
+
+## 发布说明里容易被略过的修复
+
+headline 之外，这批修复对日常排障影响更直接：
+
+- **独立 transition 渲染**：过去一个慢 transition 会和无关 transition 纠缠、把后者一起拖住；现在互不阻塞。另有一条 DEV-only 警告，用于识别"像是因为条件调用 `use()` 而被解除阻塞"的组件。
+- **表单**：submit 事件带上 `submitter`，Server Action 重置表单后会正确触发 `onReset`，组件 state 更新时表单状态不再错误保留。
+- **iframe**：新增 `credentialless` 布尔属性，以及 `onFullscreenChange`、`onFullscreenError` 事件。
+- **Fast Refresh**：更可靠地处理 `lazy`、`memo` 和组件种类变化的编辑并正确重挂载。
+- **Activity 树**：隐藏的 portal 不再泄漏，隐藏 Activity 内部的错误不再冒到可见 UI。
+- **其它**：`useDeferredValue` 不再卡在旧值；context 能正确传播进 Suspense fallback；修复了 nonce 属性导致的 SSR/hydration 误报、以及 Mobile Safari 上 ViewTransition 的崩溃（[VersionTrack 变更摘要](https://versiontrack.dev/frameworks/version/react-19-3-0)、[dev.to 的解读](https://dev.to/lukeocodes/react-193-is-out-and-react-20-is-not-2gad)）。
+
+## 升级判断：什么时候直接升，什么时候先等
+
+把这次发布按团队情况拆开看，结论会更清楚：
+
+| 场景 | 建议 | 理由 |
+| --- | --- | --- |
+| 常规 19.x 应用 | 直接升 | minor、无破坏性变更，不采用新 API 也能升级；跑一遍现有测试即可 |
+| 想用 View Transitions 替换入场/退场动画库 | 可以评估，但要先审计 state 更新位置 | 动画只在 Transition 中触发，改造点不止是包一层组件 |
+| 依赖 SSR + 浏览器专有 API | 可先用 `browser()` 替换 mounted 标记 | 语义明确、无 hydration 不匹配，且可条件调用 |
+| 已强制 Trusted Types / 严格 CSP | 建议升级 | 透传修复是净收益，不需要改业务代码 |
+| 需要 React Native 上的过渡动画 | 暂不可用 | 当前仅 DOM |
+| 需要 scroll-driven、复杂时间线或物理动画 | 继续用现有动画方案 | `ViewTransition` 覆盖的是"进出与共享元素"这类高频场景 |
+
+一句话总结：19.3 不是一次要立刻动手的大改造，而是把两件实验了很久的事变成可以在生产代码里放心写的东西，同时顺手拆掉了几个长期靠约定维持的脚手架。真正需要提前规划的只有一件事——如果你打算采用 View Transitions，先盘点清楚应用里哪些更新走的是 `startTransition`、Suspense 揭示或 `useDeferredValue`，而不是急着把组件包起来。
+
+## 资料来源
+
+- [React 19.3 官方发布博客](https://react.dev/blog/2026/09/09/react-19-3)（2026-09-09）
+- [`<ViewTransition>`](https://react.dev/reference/react/ViewTransition)、[`addTransitionType`](https://react.dev/reference/react/addTransitionType)、[`<Fragment>`](https://react.dev/reference/react/Fragment)、[`browser`](https://react.dev/reference/react-dom/browser)、[Suspense](https://react.dev/reference/react/Suspense) 官方文档
+- [React 2025 年实验版公告：View Transitions、Activity 及更多](https://react.dev/blog/2025/04/23/react-labs-view-transitions-activity-and-more)
+- [VersionTrack：React 19.3 Release Notes](https://versiontrack.dev/frameworks/version/react-19-3-0)
+- 第三方解读：[CODERCOPS](https://blog.codercops.com/blog/react-19-3-view-transitions-fragment-refs-2026)（2026-09-11）、[ReasonCore](https://reasoncore.dev/post/react-193-makes-view-transitions-a-stable-react-primitive)（2026-09-10）、[byteiota](https://byteiota.com/react-19-3-view-transitions-stable)（2026-09-10）、[Deniz.in](https://deniz.in/react-19-3-promotes-view-transitions-and-fragment-refs-to-stable)（2026-09-10）、[allahabadi.dev](https://allahabadi.dev/blogs/react/react-19-3/)（2026-09-12）、[dev.to](https://dev.to/lukeocodes/react-193-is-out-and-react-20-is-not-2gad)（2026-09-13）、[DevX](https://www.devx.com/coding/19-3-view-transitions-fragment-refs)（2026-09-18）
+
+_（内容由AI生成，仅供参考）_
