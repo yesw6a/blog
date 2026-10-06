@@ -1,0 +1,112 @@
+---
+title: npm 12.2 与 pnpm 12.9：发布管道的凭据与权限收紧
+description: 2026 年 9 月底至 10 月初，npm 12.2.0 与 pnpm 12.9 相继发布。npm 侧让 dist-tag 支持 OIDC 认证，GitHub trusted publishing 新增默认关闭的 dist-tag 权限；pnpm 侧修复 pnpm login 在重定向时转发凭据的问题，新增 per-registry networkConcurrency，并在打包前警告 .env 进入 tarball。本文梳理发布管道安全相关变更、升级建议与供应链安全背景。
+publishedAt: 2026-10-06
+category: engineering-practice
+tags:
+  - npm
+  - pnpm
+  - OIDC
+  - 供应链安全
+  - 包管理
+  - dist-tag
+  - CI/CD
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 发布管道正在完成"去长期凭据"的最后一步
+
+对维护 npm 包、尤其是已经迁移到 GitHub Actions 发布流程的团队来说，九月底到十月初的这一轮更新值得一次性看完：npm CLI 12.2.0 让 `npm dist-tag` 终于支持 OIDC 认证，GitHub 给 npm trusted publishing 增加了可选的 dist-tag 权限；pnpm 12.9 修复了 `pnpm login` 在重定向时向其他源转发凭据的问题，12.8 则会在打包前警告 `.env` 进入 tarball。
+
+这些改动分散在 CLI、注册表配置和包管理器三个层面，但指向同一个目标：让"发布包"这条流水线不再依赖长期有效的 token，也不再把敏感信息漏进不该去的地方。
+
+## npm 12.2.0：dist-tag 终于支持 OIDC
+
+npm 12.2.0 于 2026 年 9 月 30 日发布（[npm CLI changelog](https://docs.npmjs.com/cli/v12/using-npm/changelog/)），核心特性只有一条：`dist-tag` 命令支持 OIDC 认证。此前 `npm dist-tag` 只能使用 token 认证，这意味着哪怕团队已经把发布流程整体切到 OIDC，发布或回滚后要调整 `latest`、`next`、`beta` 等标签时，仍然需要保留一个粒度受限的长期 token。
+
+### 注册表侧：trusted publishing 的可选 dist-tag 权限
+
+同一天，GitHub 发布了对应的注册表侧能力：npm trusted publishing 配置可以开启 **Allow npm dist-tag** 权限（[GitHub Changelog，2026-09-30](https://github.blog/changelog/2026-09-30-opt-in-dist-tag-permissions-for-npm-trusted-publishing)）。要点如下：
+
+- 该权限**默认关闭**，新建和已有配置都不会自动获得新能力。
+- 权限与直接发布相互独立：只用于 staging 的配置也可以单独获得 dist-tag 管理权。
+- 只要传入的 OIDC token 匹配任意一个开启该权限的配置，dist-tag 操作即被授权。
+- 已有的基于 token 的 dist-tag 管理不受影响，可以继续使用。
+
+对维护者来说，这意味着"发布走 OIDC、打标签却要留 token"的割裂状态可以结束。配合 12.1.0 引入的 read-write-stage-only 粒度 token（[npm changelog](https://docs.npmjs.com/cli/v12/using-npm/changelog/)），发布管道的凭据面正在逐步收窄。
+
+## pnpm 12.9：登录凭据不再跟着重定向走
+
+pnpm 12.9 在 9 月底至 10 月初发布（10 月 3 日的包管理生态周报已收录，见 [This Week in Package Management: 3 October 2026](https://nesbitt.io/2026/10/03/this-week-in-package-management.html)），其中一个 patch 是安全修复：**`pnpm login` 在重定向时不再把请求体中的凭据转发到其他源**（[pnpm 12.9.0 Release](https://github.com/pnpm/pnpm/releases/tag/v12.9.0)）。
+
+这个问题的危险性在于它是静默的：登录请求被 3xx 重定向到另一个 origin 时，框架或客户端若原样转发请求体，token 就会泄露给第三方。同类问题在 RubyGems 4.0.22（[2026-09-30 发布](https://blog.rubygems.org/2026/09/30/4.0.22-released.html)）中也有对应修复：凭据只在同源重定向时保留。对自建 registry 镜像、或经过代理登录的场景，升级后应回归验证一次登录流程。
+
+同一版本还有两项发布管道相关的工程改进：
+
+- **per-registry `networkConcurrency`**：`registries` 条目现在可以设置该源同时保持的请求数上限，其他源不受影响，适合限制公司内网 registry 的并发压力：
+
+```yaml
+registries:
+  https://npm.corp.example.com/:
+    scopes: ["@acme"]
+    networkConcurrency: 4
+```
+
+- **store 记录每个安装的项目**：`pnpm install` 现在会在 store 的 `projects` 目录中为每个安装过的项目写入符号链接，方便审计"哪些项目在使用这个 store"。
+
+## pnpm 12.8：.env 进 tarball 前的最后一道警告
+
+pnpm 12.8 增加了一个非常实用的防御：`pnpm pack` 或 `pnpm publish` 时，如果 `.env` 文件会被打进 tarball，pnpm 会给出警告（[pnpm 12.8 Release](https://pnpm.io/blog/releases/12.8)，收录于 [10 月 3 日周报](https://nesbitt.io/2026/10/03/this-week-in-package-management.html)）。
+
+`.env` 类文件进入发布包是 npm 生态里反复出现的低级事故。`files` 字段、`.npmignore` 与 `publishConfig` 的匹配规则不一致时，环境变量文件很容易被带进包体并随包公开。在 CI 上把这条警告纳入发布检查（例如让日志扫描在出现 `.env` 警告时直接失败），成本极低，收益却很直接。
+
+## 为什么这些改动都指向供应链安全
+
+把这一轮更新放回供应链安全的大背景里看，逻辑非常清楚：发布管道是攻击者最想拿到的入口，而凭据是管道的钥匙。
+
+### Renovate 的四项公告与"预设共享"风险
+
+Renovate 在 9 月发布四个安全公告，全部与**共享预设（preset）**和配置来源有关（[Renovate advisories 讨论帖](https://github.com/renovatebot/renovate/discussions/46549)）：
+
+| 公告 | 严重度 | 问题 |
+| --- | --- | --- |
+| GHSA-6873-xr44-22vm | Critical | 通过共享预设绕过 `allowedEnv` |
+| GHSA-6j6f-fh7w-vvjr | High | 通过共享预设绕过 `allowedHeaders` |
+| GHSA-8rqp-w6vc-pf27 | High | `extends` / `customDatasources` 中的 HTTP 预设 URL 导致 SSRF |
+| GHSA-2frq-pm48-6j4h | Moderate | 请求 PR rebase 时绕过 `minimumReleaseAge` |
+
+四项都在 44.79.0 修复，且不向后移植到旧主版本。对使用共享 preset 的团队，升级 Renovate 主版本不是可选项；同时建议审计自己的 preset 是否引用了不可信仓库的配置。
+
+### LuaRocks 事故：凭据与脚本解析的双重教训
+
+9 月公开的 LuaRocks.org 安全事故报告（[LuaRocks security incident，2026-09](https://luarocks.org/security-incident-september-2026)）是另一个方向的反例：rockspec 解析器在未限制文本模式的情况下调用 `loadstring`，攻击者可上传预编译字节码逃逸沙箱，漏洞在 7 月 9 日至 8 月 20 日间被利用，8 月 7 日上传了三个恶意包，并泄露了用户名、邮箱、bcrypt 密码哈希、API key、2FA secret 与 GitHub 关联 token。
+
+它说明两件事：解析用户输入的任何脚本类字段都要把"可执行路径"当威胁建模对象；以及一旦凭据库被拿，受影响面会同时覆盖账号、密钥与第三方关联，发布侧的多因素和最小权限在事故中能显著缩小损失。
+
+## 落地建议
+
+把这一轮发布管道更新整理成可直接执行的清单：
+
+1. **npm 侧**：升级到 `npm@^12.2.0`，在 trusted publishing 配置里按需开启 `Allow npm dist-tag`（先只给主发布 workflow 开，staging 配置视需要单独授权），逐步清掉"只为打 tag 保留的长期 token"。
+2. **pnpm 侧**：升级到 `pnpm@^12.9`，在自建 registry 场景配置 `registries.<url>.networkConcurrency`；把 `pnpm pack` 的 `.env` 警告加入 CI 发布门禁。
+3. **审计依赖链配置工具**：Renovate 这类会执行配置、读取环境变量的工具，升级到修复版本并复核共享 preset 来源。
+4. **发布账号采用最小权限**：无论 npm、RubyGems 还是 LuaRocks 这类小型生态，发布凭据都应与日常操作凭据分离，并启用 2FA。
+
+## 资料来源
+
+- [npm CLI Changelog（12.2.0，2026-09-30）](https://docs.npmjs.com/cli/v12/using-npm/changelog/)
+- [GitHub Changelog：Opt-in dist-tag permissions for npm trusted publishing（2026-09-30）](https://github.blog/changelog/2026-09-30-opt-in-dist-tag-permissions-for-npm-trusted-publishing)
+- [pnpm 12.9.0 Release](https://github.com/pnpm/pnpm/releases/tag/v12.9.0)
+- [pnpm 12.9.0 Blog](https://pnpm.io/blog/releases/12.9.0)
+- [pnpm 12.8 Release](https://pnpm.io/blog/releases/12.8)
+- [This Week in Package Management: 3 October 2026](https://nesbitt.io/2026/10/03/this-week-in-package-management.html)
+- [Renovate advisories 讨论帖](https://github.com/renovatebot/renovate/discussions/46549)
+- [LuaRocks Security Incident（2026 年 9 月公开）](https://luarocks.org/security-incident-september-2026)
+- [RubyGems 4.0.22 Released（2026-09-30）](https://blog.rubygems.org/2026/09/30/4.0.22-released.html)
+
+_（内容由AI生成，仅供参考）_
