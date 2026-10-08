@@ -1,0 +1,77 @@
+---
+title: GPT-6 全面上线与 10 月首周的模型竞争：多模态、开源与成本同步开打
+description: 2026 年 10 月上旬，OpenAI 面向所有 ChatGPT 用户全面上线 GPT-6 与 Intelligent UI，Anthropic 同日发布 Claude Haiku 5.5 并定价对齐；Mistral、Reflection、Aleph Alpha、Reka 等实验室密集放出开源多模态与稀疏 MoE 模型，英伟达则把 DGX Station 带入 Windows。本文盘点这一周的可核验动态，并梳理竞争焦点从模型能力转向场景与成本的信号。
+publishedAt: 2026-10-08
+category: ai-frontier
+tags:
+  - GPT-6
+  - OpenAI
+  - Intelligent UI
+  - Claude Haiku
+  - Mistral
+  - 开源模型
+  - 多模态
+  - 大模型
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一周之内，模型竞争的三条战线同时升温
+
+2026 年 10 月 8 日，OpenAI 宣布面向全球所有 ChatGPT 免费及付费用户全面上线 GPT-6 系列模型与全新的智能用户界面（Intelligent UI），正式取代此前的 GPT-5.6 SOL 与 GPT-5.6 LUNA（[IT之家报道](https://k.sina.com.cn/article_5953190046_162d6789e06703tszo.html)）。这距离上周多个实验室密集放出开源模型只有几天，而从本周的发布节奏看，大模型竞争已经同时在三条战线上展开：**交互形态（界面）、模型形态（多模态与稀疏 MoE）和单位成本（定价）**。
+
+本文只整理截至 2026 年 10 月 8 日官方已公告的事实，供关注前沿动态的开发者参考。
+
+## GPT-6 全面上线：回复不再只是文本
+
+OpenAI 于当地时间 10 月 7 日宣布，搭载 Intelligent UI 的 GPT-6 开始向 ChatGPT Plus、Pro、Business 和 Enterprise 用户推出，10 月 8 日起扩展至 Free 与 Go 用户（[界面新闻报道](https://www.163.com/dy/article/L8MUA4AQ0534A4SC.html)）。此前 GPT-6 的 Astra、Sol、Luna 三个子模型仅限 ChatGPT Work 和 Codex 用户使用，此次更新把能力下放到全民级。
+
+核心变化在交互形态。借助 Intelligent UI，GPT-6 可以根据问题灵活组合文本、图像和交互元素生成回复，包括图表、可点击的按钮、表单及其他交互式组件，官方示例中甚至用互动式视觉界面来演示学习打麻将（[IT之家报道](https://k.sina.com.cn/article_5953190046_162d6789e06703tszo.html)）。据 The Decoder 报道，该模型支持边思考边输出，等待时间缩短 44%，付费用户获得 GPT-6 Sol 版本，免费用户使用 GPT-6 Luna（[AI 日报 2026-10-08](https://ai225.com/ai-daily)）。
+
+另一个值得注意的数字：ChatGPT 全球周活跃用户已超过 12 亿（[DOIT](https://www.doit.com.cn/itnews/857229214236741.html)）。当模型能力进入全民级，业内普遍认为竞争焦点正从模型本身转向场景与数据积累。
+
+## 同一天的价格战：Claude Haiku 5.5 与 Luna 定价对齐
+
+Anthropic 在同期发布 Claude Haiku 5.5，定位高吞吐、成本敏感型任务的小模型，官方称其平均运行成本比 Haiku 4.5 低约 75%，适配摘要、分类、数据库查询及作为子智能体等场景，并同步上线 AWS Bedrock（[AI 日报 2026-10-08](https://ai225.com/ai-daily)）。
+
+更值得关注的是定价竞争：OpenAI 将 GPT-6 Luna 定价为每百万 token 输入 0.10 美元、输出 0.50 美元，与 Anthropic 同日发布的 Claude Haiku 5.5 定价完全一致（[DOIT](https://www.doit.com.cn/itnews/857229214236741.html)）。头部实验室在同一价格点"卡位"，说明在长上下文与高吞吐场景里，单位 token 成本已经成为产品决策的显性变量。
+
+## 开源阵营：多模态与稀疏 MoE 密集上新
+
+10 月 5 日至 6 日是开源模型发布最密集的两天（[No Code MBA 发布追踪](https://www.nocode.mba/ai-release-tracker)）：
+
+- **Mistral Large 4（公开预览，10 月 6 日）**：总参数 1.05 万亿、激活参数 490 亿的原生多模态模型，官方计划 10 月 27 日开放权重（[No Code MBA](https://www.nocode.mba/ai-release-tracker)）。该模型基于约 3800 块英伟达 Grace Blackwell GPU 训练，语料覆盖 160 多种自然语言，在网络安全、金融、法律等企业级负载上表现突出（[CSDN AI 日报](https://damodev.csdn.net/6ac586fead85947e68ce2caa.html)）。
+- **EmbeddingGemma 2（10 月 6 日）**：Google 发布的开源多模态 embedding 模型，740M 参数权重以 Apache 2.0 开放，把文本、代码、图像、视频和音频映射到统一嵌入空间，面向端侧搜索与检索场景（[No Code MBA](https://www.nocode.mba/ai-release-tracker)）。
+- **Reflection Beam（10 月 5 日早期访问）**：501B 总参数、23B 激活的开源权重模型，面向编码、推理与智能体工作负载，官方称推理效率较同类模型提升 3-4 倍，计划本月以 Apache 2.0 开放权重（[HeadsUpAI](https://headsupai.io/ai-news-and-updates/this-month)）。
+- **Reka Rho-1（10 月 5 日研究预览）**：19B 参数的 omni-reasoning 模型，声称在一个模型内完成文本、图像、视频的理解、生成与推理，并采取行动（[No Code MBA](https://www.nocode.mba/ai-release-tracker)）。
+- **Aleph Alpha Kolibri（10 月 3 日）**：英德双语开源 MoE 模型，78B 总参数、3B 激活参数，上下文最长 100 万 token，完整权重以 Apache 2.0 开放（[No Code MBA](https://www.nocode.mba/ai-release-tracker)）。
+
+这些发布呈现两个共性：一是"总参数大、激活参数小"的稀疏 MoE 路线被更多实验室采用，二是多模态（文本/图像/视频/音频）几乎成为新模型默认能力。加上 10 月 5 日 Amazon 宣布 Nova 2.5 Sonic 正式可用——一个面向语音智能体的实时语音到语音模型，官方称改进了推理、指令遵循与工具调用准确性（[No Code MBA](https://www.nocode.mba/ai-release-tracker)）——"单一模型覆盖多种输入输出模态"正在从卖点变成基线。
+
+## 本地算力：英伟达把"万亿参数"搬到桌面
+
+模型能力密集上新的同时，本地算力也在升级。英伟达于太平洋时间 10 月 7 日在旧金山发布面向 Windows 的 DGX Station，定位桌面级 AI 超级计算机（[驱动中国](https://so.html5.qq.com/page/real/search_news?docid=70000021_5466ac6ee1605952)）：
+
+- 搭载 GB300 Grace Blackwell Ultra Desktop Superchip：72 核 Grace CPU + Blackwell Ultra GPU。
+- 统一内存最高 748GB，其中 252GB HBM3e GPU 内存与 496GB LPDDR5X CPU 内存。
+- 官方给出的 AI 算力上限 20 PFLOPS，可支持约万亿参数模型本地运行。
+- 整机功耗 1600W，需 20A 电路，计划 2026 年第四季度上市（[快科技报道](https://new.qq.com/rain/a/20261008A03F9U00)）。
+
+此前英伟达已宣布 DGX Spark 64GB 配置将于 10 月 23 日起通过宏碁、华硕、戴尔、技嘉、惠普和微星发售，起售价 4999 美元，可本地运行最高 1000 亿参数模型（[NVIDIA Blog，2026-10-02](https://blogs.nvidia.com/recent-news)）。加上 Windows 版 DGX Station，本地 AI 的形态正从"Linux 工作站专属"扩展为 Windows 生态下的专业开发基础设施，让开发者在熟悉环境里完成微调、推理、智能体开发与生成式应用测试。
+
+## 小结：从模型能力到场景与成本的转向
+
+把 10 月首周合在一起看，几个信号值得记录：
+
+- **交互界面成为新竞争维度**：GPT-6 全面上线后，回复从纯文本扩展到可交互组件，模型竞争的胜负手部分转移到"如何呈现答案"。
+- **开源模型在容量、上下文与模态上快速追平**：1M 上下文（Kolibri）、1T 参数级 MoE（Mistral Large 4）、多模态统一嵌入（EmbeddingGemma 2）在同一个月内落地，且多采用 Apache 2.0。
+- **定价与成本成为显性变量**：GPT-6 Luna 与 Claude Haiku 5.5 定价对齐，语音模型按音频时长计费，成本敏感型小模型与旗舰模型分层更清晰。
+- **本地部署获得更大的硬件支撑**：DGX Spark 64GB 与 Windows 版 DGX Station 拉低了"在本地跑大模型"的硬件门槛。
+
+对开发者而言，选型时需要同时评估交互能力、模态覆盖、开源许可证与单位成本四个维度，而不是只看单一基准分数。以上信息均来自截至发布日的官方公告与权威媒体报道，未包含任何未经证实的产品表现数据。
+
+_（内容由AI生成，仅供参考）_
