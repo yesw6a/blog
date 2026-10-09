@@ -28,7 +28,9 @@
 
 # local build and deployment logs
 /.tmp-build/
-/temp/commit-msg-*.txt
+/temp/
+/temp_repo.json
+/temp_status.json
 *.build.log
 
 # misc

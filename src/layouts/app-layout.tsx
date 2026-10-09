@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { IconName } from '@/components/icon';
+import type { ExternalSite } from '@/features/external-link/external-sites';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { useTheme } from 'next-themes';
 import dynamic from 'next/dynamic';
@@ -11,6 +13,8 @@ import Icon from '@/components/icon';
 import NavigationItem from '@/components/navigation-item';
 import Tooltip, { TooltipContent, TooltipTrigger } from '@/components/tooltip';
 import BusuanziStatsFooter from '@/features/busuanzi/busuanzi-stats-footer';
+import { EXTERNAL_SITES } from '@/features/external-link/external-sites';
+import ExternalSitesMenu from '@/features/external-link/external-sites-menu';
 import { textLinkStyles } from '@/styles/text-link.styles';
 import { colors, darkTheme, layout } from '@/styles/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
@@ -20,6 +24,8 @@ type AppLayoutProps = {
 };
 
 const SiteSearchDialog = dynamic(() => import('@/features/search/site-search-dialog'), { ssr: false });
+
+const ExternalLinkDialog = dynamic(() => import('@/features/external-link/external-link-dialog'), { ssr: false });
 
 const ROUTES: ReadonlyArray<{ label: string; key: string; icon: IconName; path: string }> = [
   { label: '首页', key: 'home', icon: 'home', path: '/' },
@@ -58,7 +64,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [guardedSite, setGuardedSite] = useState<ExternalSite | null>(null);
   const searchReturnFocusRef = useRef<HTMLElement | null>(null);
+  const guardedReturnFocusRef = useRef<HTMLElement | null>(null);
+  const guardedFlatLinkRef = useRef<HTMLAnchorElement | null>(null);
+  const externalMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const activeRouteIndex = ROUTES.findIndex(({ path }) => isCurrentPath(pathname, path));
 
   const openSearch = useCallback(() => {
@@ -70,6 +80,36 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setSearchOpen(false);
     window.requestAnimationFrame(() => searchReturnFocusRef.current?.focus());
   }, []);
+
+  const openGuardedSite = useCallback((site: ExternalSite, returnFocus: HTMLElement | null) => {
+    guardedReturnFocusRef.current = returnFocus;
+    setGuardedSite(site);
+  }, []);
+
+  const closeGuardedSite = useCallback(() => {
+    setGuardedSite(null);
+    window.requestAnimationFrame(() => {
+      // 断点切换可能让原触发元素不可见，按可见性依次回退到平铺链接或折叠按钮
+      const candidates = [guardedReturnFocusRef.current, externalMenuTriggerRef.current, guardedFlatLinkRef.current];
+      candidates.find((element) => element?.isConnected && element.getClientRects().length > 0)?.focus();
+    });
+  }, []);
+
+  const confirmGuardedSite = useCallback(() => {
+    const targetUrl = guardedSite?.url;
+    closeGuardedSite();
+    if (targetUrl) window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  }, [closeGuardedSite, guardedSite]);
+
+  const handleGuardedClick = useCallback(
+    (event: ReactMouseEvent<HTMLAnchorElement>, site: ExternalSite) => {
+      // 修饰键点击保留浏览器原生「新标签页 / 新窗口」语义，不进入二次确认
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      openGuardedSite(site, event.currentTarget);
+    },
+    [openGuardedSite],
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -140,20 +180,47 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <TooltipContent hideArrow>RSS 订阅</TooltipContent>
             </Tooltip>
 
-            <Tooltip delayDuration={300}>
-              <TooltipTrigger asChild>
-                <a
-                  href="https://travel.moe/go.html?travel=on"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="开启异次元之旅（在新窗口打开）"
-                  {...stylex.props(styles.headerAction)}
-                >
-                  <Icon name="travel" />
-                </a>
-              </TooltipTrigger>
-              <TooltipContent hideArrow>异次元之旅 · 自动跃迁</TooltipContent>
-            </Tooltip>
+            <div {...stylex.props(styles.externalSitesFlat)}>
+              {EXTERNAL_SITES.map((site) => {
+                const requiresConfirmation = site.confirmation !== null;
+
+                return (
+                  <Tooltip key={site.id} delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <a
+                        ref={requiresConfirmation ? guardedFlatLinkRef : undefined}
+                        href={site.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={site.ariaLabel}
+                        onClick={requiresConfirmation ? (event) => handleGuardedClick(event, site) : undefined}
+                        {...stylex.props(styles.headerAction)}
+                      >
+                        <Icon name={site.icon} />
+                      </a>
+                    </TooltipTrigger>
+                    <TooltipContent hideArrow>{site.tooltip}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+
+            <div {...stylex.props(styles.externalSitesCompact)}>
+              <ExternalSitesMenu
+                sites={EXTERNAL_SITES}
+                trigger={
+                  <button
+                    ref={externalMenuTriggerRef}
+                    type="button"
+                    aria-label="站外入口"
+                    {...stylex.props(styles.headerAction)}
+                  >
+                    <Icon name="globe" />
+                  </button>
+                }
+                onGuardedSelect={openGuardedSite}
+              />
+            </div>
 
             <button
               type="button"
@@ -172,6 +239,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </header>
 
       {searchOpen ? <SiteSearchDialog onClose={closeSearch} /> : null}
+
+      {guardedSite ? (
+        <ExternalLinkDialog site={guardedSite} onCancel={closeGuardedSite} onConfirm={confirmGuardedSite} />
+      ) : null}
 
       <main {...stylex.props(styles.main)}>{children}</main>
       <footer {...stylex.props(styles.footer)}>
@@ -268,6 +339,26 @@ const styles = stylex.create({
       default: '0.125rem',
       '@media (max-width: 640px)': 0,
     },
+  },
+  externalSitesFlat: {
+    display: {
+      default: 'flex',
+      '@media (max-width: 430px)': 'none',
+    },
+    flex: '0 0 auto',
+    alignItems: 'center',
+    gap: {
+      default: '0.125rem',
+      '@media (max-width: 640px)': 0,
+    },
+  },
+  externalSitesCompact: {
+    display: {
+      default: 'none',
+      '@media (max-width: 430px)': 'flex',
+    },
+    flex: '0 0 auto',
+    alignItems: 'center',
   },
   activeIndicator: {
     position: 'absolute',

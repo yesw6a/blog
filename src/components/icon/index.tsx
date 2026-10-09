@@ -18,6 +18,10 @@ const ICONS = {
   rss: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M4.5 4.5c8.284 0 15 6.716 15 15M4.5 10.5a9 9 0 0 1 9 9"/><circle cx="5" cy="19" r="1.5" fill="currentColor" stroke="none"/></g>',
   travel:
     '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><circle cx="12" cy="12" r="6.5"/><path d="M3.5 15.5c1.5 2.5 7.6 2.2 13-.9s8.2-7.8 6.7-10.3c-.8-1.3-2.8-1.5-5.2-.8"/><circle cx="21.2" cy="5.2" r="1.1" fill="currentColor" stroke="none"/></g>',
+  compass:
+    '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><circle cx="12" cy="12" r="9.25"/><path d="M15.6 8.4l-2.4 4.8L8.4 15.6l2.4-4.8z"/></g>',
+  globe:
+    '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><circle cx="12" cy="12" r="9.25"/><path d="M2.75 12h18.5"/><path d="M12 2.75c2.45 2.6 3.68 5.68 3.68 9.25S14.45 18.65 12 21.25c-2.45-2.6-3.68-5.68-3.68-9.25S9.55 5.35 12 2.75"/></g>',
   cloudServer:
     '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.478 8h.022a4.5 4.5 0 1 1 0 9H7a5 5 0 0 1-.48-9.977M17.478 8q.021-.247.022-.5a5.5 5.5 0 0 0-10.98-.477M17.478 8a5.5 5.5 0 0 1-1.235 3M6.52 7.023Q6.757 7 7 7c1.126 0 2.165.372 3 1m4 12.75v-.25a1 1 0 0 0-1-1h-1m2 1.25V21a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-.25m4 0h5m-9 0v-.25a1 1 0 0 1 1-1h1m-2 1.25H5m7-1.25V17"/>',
   code: '<path fill="currentColor" d="m8 18l-6-6l6-6l1.425 1.425l-4.6 4.6L9.4 16.6zm8 0l-1.425-1.425l4.6-4.6L14.6 7.4L16 6l6 6z"/>',

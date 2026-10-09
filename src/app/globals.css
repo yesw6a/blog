@@ -70,7 +70,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.site-search-dialog::backdrop {
+.site-search-dialog::backdrop,
+.external-link-dialog::backdrop {
   background: rgb(15 23 42 / 52%);
 }
 
