@@ -1,0 +1,80 @@
+---
+title: VS Code 1.141：从代码编辑器到 AI 智能体管理控制台
+description: 2026 年 10 月 7 日发布的 VS Code 1.141 稳定版聚焦 AI 智能体工作流管理：工作树存储清理、跨平台沙盒、会话网格布局、Copilot harness 统一化与 GitHub Enterprise 多实例登录。本文梳理这版更新的关键能力、平台要求与对 AI 编码工具竞争格局的影响。
+publishedAt: 2026-10-10
+category: tools-productivity
+tags:
+  - VS Code
+  - AI 智能体
+  - Copilot
+  - 开发工具
+  - 编辑器
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一次围绕 Agent 生命周期管理的月度更新
+
+2026 年 10 月 7 日，微软发布 Visual Studio Code 1.141 稳定版。官方版本说明把这次更新的核心概括为四个方面：让开发者更容易管理 Agent 会话、保护 Agent 工作流、编辑列式文本，以及在多个 GitHub Enterprise 实例之间协作（[官方 Release Notes](https://code.visualstudio.com/updates/v1_141)）。
+
+表面上看这是一次常规功能更新，但把工作树清理、终端沙盒、会话网格布局和 harness 统一化放在一起，能看到一条更清晰的线索：VS Code 正在从"写代码的地方"转向"管理 AI 智能体的控制中心"。
+
+## Copilot harness：统一 Agent 运行时
+
+1.141 将 Copilot harness 推向默认可用。该 harness 由 Copilot SDK 提供支持，行为与独立的 GitHub Copilot 应用和 Copilot CLI 保持一致，运行在基于 Agent Host Protocol（AHP）的专用 agent host 进程中，因此同一个 Agent 会话可以从多个 VS Code 窗口连接（[官方 Release Notes - Copilot harness](https://code.visualstudio.com/updates/v1_141#_copilot-harness)）。
+
+这意味着在 VS Code 中启动的会话与在终端中启动的会话共享同一套运行时，Agent Host 将会话与编辑器窗口解耦：关闭文件夹、关闭窗口后回来，状态不会丢失（[钛媒体分析](https://www.tmtpost.com/agent/ai-article?id=20688)）。
+
+## 清理非活动工作树：为智能体的副产物"扫地"
+
+AI 智能体每次执行任务都会在磁盘上创建一个隔离的 Git 工作树，以保持变更与主工作区互不干扰。问题在于这些工作树不会自动消失：活跃开发者每天让 Copilot Agent 跑几轮任务，几天内磁盘就可能堆积数十 GB 的孤立工作树。
+
+1.141 新增 **Chat: Open Worktree Cleanup** 命令：提供一个专门的清理编辑器，列出非活动 Agent 会话的工作树，显示每个会话占用的磁盘空间，支持按闲置时长筛选，勾选后批量删除。清理会把所选会话标记为完成并删除其工作树，之后仍可恢复会话以重建工作树；活跃、运行中、等待输入和已固定的会话被保护，不可清理。此外还能配置自动清理已合并 Pull Request 的会话，并控制 VS Code 是否在会话存储增长过大时提示清理（[官方 Release Notes - Reclaim storage](https://code.visualstudio.com/updates/v1_141#_reclaim-storage-from-inactive-worktrees)）。
+
+## 跨平台沙盒：给 Agent 装上围栏
+
+比磁盘管理更紧迫的是安全问题。当 Copilot Agent 获得执行终端命令的权限，它可能访问哪些文件、触发哪些操作、遭遇提示注入时会造成多大影响，都需要边界约束。
+
+1.141 将 Copilot Agent Host 的沙盒能力推向 Windows、macOS 和 Linux 三大平台。沙盒限制受支持操作对文件系统和网络资源的访问，用于降低模型失误、提示注入、不可信依赖和本地工具服务器带来的影响。可用 `chat.agent.sandbox.enabled` 开关全局启用，也可在会话级 Permissions 菜单中单独切换终端沙盒；文件系统权限与网络访问可进一步细粒度配置（[官方 Release Notes - Sandboxing](https://code.visualstudio.com/updates/v1_141#_sandboxing-in-the-copilot-agent-host)）。
+
+官方文档对边界说得很直白：沙盒增加了一层保护，但**不替代端点安全**，也不构成独立的安全边界——沙盒进程仍以用户账户运行，被授予的网络访问、额外开放路径、存储的凭据或沙盒逃逸都可能削弱保护（[官方文档 - Agent sandboxing](https://code.visualstudio.com/docs/agents/run/agent-sandboxing)）。
+
+平台依赖方面：macOS 零额外配置；Linux 和 WSL2 需要安装 bubblewrap 和 socat，WSL1 不支持；Windows 需要 2026 年 9 月 8 日的安全更新，且桌面沙盒仍标记为实验性。企业客户可以通过统一 Copilot 管理策略强制开启沙盒，并用 `allowBypass: false` 禁止用户绕过（[钛媒体分析](https://www.tmtpost.com/agent/ai-article?id=20688)）。
+
+## 会话网格与后台 Shell：多任务监视
+
+当同时运行多个 Agent 会话时，窗口管理会迅速成为痛点。1.141 的 Agents 窗口引入二维网格布局：像编辑器分屏一样把会话拖到横向或纵向分栏、调整面板大小、最大化单个会话聚焦，再一键回到整体网格；布局设置可以持久化。Agents 窗口还支持按环境（本地、云端、远程主机）、harness 和创建应用（VS Code、Copilot CLI、Copilot 应用）独立过滤会话（[官方 Release Notes - Agent UX](https://code.visualstudio.com/updates/v1_141#_agent-ux)）。
+
+此外，Copilot harness 会话新增 **Background Shells** 胶囊，列出仍在后台运行的 shell 及其命令和已运行时长，可点击查看输出流；命令结束后 shell 自动离开列表（[官方 Release Notes - Background shells](https://code.visualstudio.com/updates/v1_141#_keep-track-of-background-shells)）。
+
+## 外部会话延续与 Codex 交接
+
+1.141 让跨应用会话延续成为默认行为：
+
+- Copilot CLI 或 GitHub Copilot 应用中新建的对话，会在发送第一条请求后自动作为外部会话出现在 Agents 窗口，无需重新加载，可直接打开继续（[官方 Release Notes - External sessions](https://code.visualstudio.com/updates/v1_141#_continue-local-external-copilot-sessions-without-reloading)）。
+- 在 ChatGPT 应用或 Codex CLI 中开始的 Codex 对话，可以在同一台机器的 VS Code Agents 窗口继续，历史记录完整保留，之后还能切回原应用继续同一对话。同一时间只有一个应用能向对话发送消息，其他应用打开时 VS Code 会显示 "This chat is open in another app" 横幅（[官方 Release Notes - Codex handoff](https://code.visualstudio.com/updates/v1_141#_codex-chat-handoff-between-apps)）。
+
+## GitHub Enterprise 多实例：解决企业长年摩擦
+
+企业用户长期遇到一个细节问题：如果 Copilot 认证走 GitHub Enterprise Cloud（GHE.com），而代码仓库在 GitHub Enterprise Server（GHES）上，之前无法在同一个 VS Code 窗口同时登录两个实例。
+
+1.141 用新的列表式设置 `github-enterprise.uris` 解决该问题，旧的单值 `github-enterprise.uri` 被正式弃用。新设置可同时指向多个 GHE.com 与 GHES 实例，每个账户以 host 标签区分身份，例如 `monalisa - octocat.ghe.com` 与 `monalisa - github.contoso.com` 各归各的、互不干扰；已有凭据会自动迁移（[官方 Release Notes - Multi GHE](https://code.visualstudio.com/updates/v1_141#_sign-in-to-multiple-github-enterprise-instances)）。
+
+## 其他值得留意的更新
+
+- **Dev Container 示例（实验性）**：Agents 窗口可基于现成开发环境直接尝试 Agent，无需先克隆仓库或安装语言工具，覆盖 Go、.NET、Node.js、PHP、Python 与 Rust（[官方 Release Notes - Dev Container samples](https://code.visualstudio.com/updates/v1_141#_dev-container-samples-experimental)）。
+- **MCP 服务器可见性（预览）**：由插件、扩展和内置集成提供的 MCP 服务器，现在会与配置的服务器一起显示在 Agent Customizations 编辑器中（[官方 Release Notes - MCP](https://code.visualstudio.com/updates/v1_141#_see-discovered-mcp-servers-in-customizations-editor-preview)）。
+- **多光标块粘贴**：`editor.multiCursorPaste` 设为 `spread` 时，复制一个块在单个光标处粘贴，会按行分发到连续的后续目标行（[官方 Release Notes - Spreading block pasting](https://code.visualstudio.com/updates/v1_141#_spreading-block-pasting)）。
+- **毛玻璃 UI（实验性）**：菜单、命令面板等弹层使用模糊毛玻璃背景，可通过 `workbench.modernUIFrostedGlass` 控制（[官方 Release Notes - Frosted glass](https://code.visualstudio.com/updates/v1_141#_frosted-glass-overlays-and-menus)）。
+
+## 为什么这版更新比表面看起来更重要
+
+VS Code 1.141 没有引入新的语言支持，没有重设计 UI，也没有新的模型发布。它做的事情更基础：让 AI 智能体从"写代码时的玩具"变成"真正可管理的生产力组件"。会话清理负责卫生，沙盒负责安全，网格布局负责监控，harness 统一化负责连续性，多实例登录负责企业兼容性——单看每一条都是改进，合在一起是工作方式的转变。
+
+对比之下，Claude Code 和 Codex CLI 等工具主要在拼 Agent 的执行能力，而微软选择先搭基础设施：让 Agent 的运行环境安全、可控、可管理。当 AI 编码工具都在比"谁写代码更厉害"时，这个版本回答的是一个更朴素的问题——谁能让这些智能体有条不紊、安全可控地干活。对这个问题的回答，可能比下一个模型基准测试的排名更有长期影响（[钛媒体分析](https://www.tmtpost.com/agent/ai-article?id=20688)）。
+
+_（内容由AI生成，仅供参考）_
