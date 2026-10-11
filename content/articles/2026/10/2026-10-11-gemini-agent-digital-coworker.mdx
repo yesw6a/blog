@@ -1,0 +1,77 @@
+---
+title: 有工号的 AI 同事：Google 发布 Gemini agent，办公入口之争进入"数字劳动力"阶段
+description: 2026 年 10 月 8 日，Google Cloud 在 Gemini at Work 2026 上发布通用工作智能体 Gemini agent，可跨 Gmail、Docs、Sheets、Calendar 等持续执行目标，并支持拥有独立邮箱、日历与云端硬盘身份的 coworker agent。一周之内，OpenAI Dots、微软 Copilot 与 Google Gemini agent 相继把"常驻型 AI 数字同事"摆上牌桌。本文梳理三家的产品形态、身份治理与定价差异，以及"数字劳动力"对企业软件带来的变化。
+publishedAt: 2026-10-11
+category: tech-industry
+tags:
+  - Google
+  - Gemini
+  - OpenAI
+  - Dots
+  - 微软
+  - Copilot
+  - 智能体
+  - 企业软件
+  - 数字劳动力
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一周之内，三家巨头同时把"AI 同事"摆上牌桌
+
+当地时间 2026 年 10 月 8 日，Google Cloud 在 Gemini at Work 2026 大会上发布 Gemini agent，将其定位为"单一、通用的工作智能体"：用户只需给出目标而非指令，智能体负责规划、调用工具、连接系统并交付成品（[Google Cloud 官方博客](https://cloud.google.com/blog/products/ai-machine-learning/welcome-to-gemini-at-work-2026/)、[Google 台湾官方博客](https://blog.google/intl/zh-tw/products/cloud/google-cloud-gemini)）。
+
+这不是孤立事件。往前看四天：9 月 25 日微软更新 Copilot，把生产力、软件开发与持久自动化整合在一起；9 月 29 日 OpenAI 在 DevDay 2026 发布常驻型智能体 Dots；10 月 6 日 Anthropic 宣布 Claude 原生集成 Google Docs、Sheets 与 Slides。加上 Google 这次发布，头部玩家在不到两周内密集表态：AI 助手正在从"回答问题的聊天框"变成"长期在线、有身份、能交办任务的数字同事"（[VentureBeat](http://www.venturebeat.com/orchestration/google-cloud-unveils-persistent-gemini-agents-for-long-running-tasks-and-they-get-their-own-gmail-calendar-and-drive-storage)）。
+
+市场研究机构 IDC 的判断是，智能体正从功能型助手走向可规模化的"数字劳动力"，企业对智能体的采纳正从偶尔试用转向深度依赖（[今日头条报道](https://www.toutiao.com/a7694552200693006884)）。本文以 Gemini agent 为主，对比 OpenAI Dots 与微软 Copilot 的路线差异，梳理这场办公入口之争的现状。
+
+## Gemini agent：给目标，而不是给指令
+
+Gemini agent 的核心设计原则是"delegation"（委托）：员工描述想完成的结果，智能体自行规划步骤并在后台执行，而不是像传统助手那样逐条响应提示词（[Quartz](https://qz.com/google-gemini-universal-agent-enterprise-workplace-100826)）。
+
+官方披露的能力框架包括四个方面：
+
+- **统一智能体**：一个界面同时承担问答、知识工作、内容创作与代码编写执行，交付物直接落到文档、收件箱与开发环境（[Google Cloud 官方博客](https://cloud.google.com/blog/products/ai-machine-learning/welcome-to-gemini-at-work-2026/)）。
+- **无处不在的访问**：支持网页、iOS/Android、Windows/Mac、命令行，内嵌 Gmail、Docs、Slides、Sheets、Chat、Calendar，并可接入 Microsoft 365、Slack 及第三方应用，也能以无界面（headless）形式嵌入其他系统（[腾讯新闻](https://news.qq.com/rain/a/20261008A0BWBV00)、[Analytics Insight](https://www.analyticsinsight.net/news/meet-googles-new-gemini-coworker-built-to-handle-workplace-tasks)）。
+- **持久执行**：任务运行在云端，跨设备共享同一套记忆、上下文与个性化图谱；耗时数小时甚至数天的任务在用户关闭电脑后继续运行（[Google Cloud 官方博客](https://cloud.google.com/blog/products/ai-machine-learning/welcome-to-gemini-at-work-2026/)）。
+- **多智能体编排**：Gemini 可为复杂任务动态创建临时子智能体，各自拥有独立身份，按并行或串行流程协调；也可化身"同事智能体"（coworker agent）长期承担固定角色（[Google Cloud 官方博客](https://cloud.google.com/blog/products/ai-machine-learning/welcome-to-gemini-at-work-2026/)、[Windows Report](https://windowsreport.com/new-gemini-agent-unveiled-at-gemini-at-work-2026-expect-it-to-take-over-your-workload/)）。
+
+记忆被划分为四种类型：会话记忆（当前任务）、语义记忆（文档与对话沉淀）、程序性记忆（工作如何完成）与情节记忆（历史任务的执行记录），用于让智能体随使用逐步学习团队的工作方式（[Quartz](https://qz.com/google-gemini-universal-agent-enterprise-workplace-100826)）。
+
+## 同事智能体：拥有独立邮箱、日历与云端硬盘的"员工"
+
+Gemini agent 最有行业辨识度的设计是 coworker agent：管理者可以创建类似"活动策划智能体"的常驻角色，它拥有自己的 Workspace 账户——包括电子邮箱、日历、云端硬盘存储与公司目录身份——员工可以在 Google Chat 或文档中用 @ 提及它来指派任务，就像给真人同事布置工作一样（[INSIDE 报道](https://www.inside.com.tw/article/42603-google-cloud-gemini-coworker-agent)、[VentureBeat](http://www.venturebeat.com/orchestration/google-cloud-unveils-persistent-gemini-agents-for-long-running-tasks-and-they-get-their-own-gmail-calendar-and-drive-storage)）。
+
+权限边界是这套设计的重点：同事智能体只能访问团队显式分享的内容，不会自动继承组织内的全部数据权限。治理层配套了加密验证的独立身份、角色权限、行动审计记录（audit trail）、隔离执行环境 Agent Sandbox，以及统一流量的 Agent Gateway（AI 网络防火墙），企业设定一次策略即可应用到所有智能体（[INSIDE](https://www.inside.com.tw/article/42603-google-cloud-gemini-coworker-agent)、[Pulse 2.0](https://pulse2.com/google-cloud-introduces-gemini-agent-as-universal-ai-agent-for-work/)）。
+
+## 多模型路由与成本控制：不绑定单一模型
+
+与大多数厂商"自家模型优先"的做法不同，Gemini agent 会根据任务在多个模型之间路由：现阶段支持 Google 的 Gemini 系列与 Anthropic 的 Claude 系列，未来计划接入更多私有与开源模型。Smart Routing 按质量与成本的平衡为每个工作负载分配模型，管理员可设置项目级支出上限，达到限额后智能体自动暂停工作（[Quartz](https://qz.com/google-gemini-universal-agent-enterprise-workplace-100826)、[Google Cloud 官方博客](https://cloud.google.com/blog/products/ai-machine-learning/welcome-to-gemini-at-work-2026/)）。
+
+行业垂直版本同步推进：金融与法律版本已开放预览——金融版对接 FactSet 与 LSEG 数据并包含 50 余项技能，法律版集成 NetDocuments 与 iManage 等文档管理平台；政府、医疗与零售版本计划后续推出（[Quartz](https://qz.com/google-gemini-universal-agent-enterprise-workplace-100826)、[Reuters 转引 INSIDE](https://www.inside.com.tw/article/42603-google-cloud-gemini-coworker-agent)）。
+
+Google 给出的采纳数据是：近 80% 的 Google Cloud 客户正在使用其 AI 产品，近 90% 的 Fortune 100 企业采用 Gemini Enterprise；客户侧已有大规模部署案例，日本保险公司 SOMPO 构建了超过 1 万个自定义智能体，Tata Steel 部署了 300 余个专业智能体，Orange Spain 创建了超过 1000 个（[Windows Report](https://windowsreport.com/new-gemini-agent-unveiled-at-gemini-at-work-2026-expect-it-to-take-over-your-workload/)、[Pulse 2.0](https://pulse2.com/google-cloud-introduces-gemini-agent-as-universal-ai-agent-for-work/)）。Gemini agent 自发布日起对私有预览客户开放，并将随 Gemini Enterprise 免费提供，无需单独付费（[VentureBeat](http://www.venturebeat.com/orchestration/google-cloud-unveils-persistent-gemini-agents-for-long-running-tasks-and-they-get-their-own-gmail-calendar-and-drive-storage)）。
+
+## 对照：OpenAI Dots 与微软 Copilot 的路线
+
+**OpenAI Dots**（9 月 29 日 DevDay 2026 发布）是常驻型个人智能体：由 GPT-6 Astra 驱动，每个 Dots 拥有独立的云电脑与浏览器，可接入超过 4000 个应用，通过 ChatGPT、Slack、Microsoft Teams 触达，用户关闭笔记本后任务仍持续运行（[Decrypt](https://decrypt.co/379584/openai-ai-agents-computers-devday-2026-everything-announced)、[Business Standard](https://www.business-standard.com/technology/tech-news/openai-devday-2026-dots-gpt-6-1-sol-codex-developer-tools-126093000396_1.html)）。配套动作包括：面向企业角色的 specialist dots（拥有独立组织身份与内部系统权限，并与微软 Agent 365 的治理安全体系集成）、协同文档空间 ChatGPT Space，以及新的 Pro 500 订阅档（每月 500 美元，含最高额度与 Ultrafast 高速模式）；与此同时既有 200 美元档的 Codex/Work 额度从 Plus 的 20 倍下调至 10 倍（[Gate](http://gate.com/news/detail/openai-launches-dots-ai-agents-and-seeks-14t-valuation-24655651)、[Decrypt](https://decrypt.co/379584/openai-ai-agents-computers-devday-2026-everything-announced)）。同日发布的 GPT-6.1 Sol 主打性价比，上下文 105 万 token，官方称其智能接近 Astra 而 API 价格仅为后者的五分之一（[Business Standard](https://www.business-standard.com/technology/tech-news/openai-devday-2026-dots-gpt-6-1-sol-codex-developer-tools-126093000396_1.html)）。
+
+**微软 Copilot**（9 月 25 日更新）走的是整合路线：把生产力工作、软件开发与持久自动化合并进同一产品，延续其在 Microsoft 365 生态内的入口优势（[VentureBeat](http://www.venturebeat.com/orchestration/google-cloud-unveils-persistent-gemini-agents-for-long-running-tasks-and-they-get-their-own-gmail-calendar-and-drive-storage)）。它与 OpenAI 的合作延伸到企业级：Dots 的 specialist agents 将纳入微软 Agent 365 的治理与安全控制（[Gate](http://gate.com/news/detail/openai-launches-dots-ai-agents-and-seeks-14t-valuation-24655651)）。
+
+**Anthropic**（10 月 6 日）则以"模型进入对方阵地"的方式参战：Claude 原生集成 Google Docs、Sheets 与 Slides，用户可直接在 Workspace 文件内通过 Claude 编辑或调用（[VentureBeat](http://www.venturebeat.com/orchestration/google-cloud-unveils-persistent-gemini-agents-for-long-running-tasks-and-they-get-their-own-gmail-calendar-and-drive-storage)）。
+
+## 三条观察
+
+把这一周的产品动作放在一起，可以读出几个行业信号：
+
+- **竞争从"模型能力"转向"工作入口"**。各家不再只比拼基准分数，而是争夺员工每天打开的第一个界面：Google 押注 Workspace，微软押注 Microsoft 365，OpenAI 押注 ChatGPT 与 Pro 订阅，Anthropic 选择嵌入对手生态。
+- **"常驻"成为默认形态**。三家的核心叙事都是"持续运行、跨会话记忆、关闭电脑不停止"，这与过去"一问一答"的助手形态有本质区别，也意味着智能体的可靠性、权限与审计能力从加分项变成及格线。
+- **身份与治理决定企业买单意愿**。Google 给智能体发放"工号"（独立邮箱、日历、目录身份与审计轨迹），OpenAI 为 specialist dots 配备独立身份与 Agent 365 治理集成，说明在企业市场，可被审计、可授权、可回收的数字同事，才是可规模化的产品。
+
+值得留意的是定价信号的分歧：Meta 的 Muse 免费、面向消费者；OpenAI 把常驻智能体与 500 美元月费档绑定；Google 则将 Gemini agent 免费并入 Gemini Enterprise。三种策略背后是对"谁为数字劳动力付费"的不同判断，也是未来一年观察企业 AI 商业模型的关键变量。
+
+_（内容由AI生成，仅供参考）_
