@@ -1,0 +1,69 @@
+---
+title: 鸿蒙 PC 原生 AI 开发三件套公测：DevEco Studio、DevEco Code 与 DevEco CLI
+description: 2026 年 10 月 8 日，华为宣布 DevEco Studio 正式上线鸿蒙 PC 并开启公测，DevEco Code 与 DevEco CLI 同步迎来鸿蒙 PC 版首次公测。本文梳理三件套的分工定位、关键能力与对鸿蒙开发生态和 AI 编程工具趋势的意义。
+publishedAt: 2026-10-12
+category: tools-productivity
+tags:
+  - HarmonyOS
+  - DevEco
+  - AI 编程
+  - 开发者工具
+  - 智能体
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 鸿蒙电脑需要自己的原生开发工具链
+
+2026 年 10 月 8 日，华为官方宣布，可视化一站式 IDE 工具 DevEco Studio 正式上线鸿蒙 PC 并开启公测；一站式鸿蒙应用 AI 开发工具 DevEco Code 与 AI 开发能力套件 DevEco CLI，也同步迎来鸿蒙 PC 版首次公测（[IT时代网报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_2246ac79b5407552)、[百度百科鸿蒙PC词条](https://baike.baidu.com/item/%E9%B8%BF%E8%92%99PC/68389269)）。
+
+这次公测的背景是鸿蒙生态规模的快速增长：HarmonyOS 6、HarmonyOS 7 硬件终端规模已突破 9000 万，市场对优质应用与智能 Agent 应用的需求持续爆发（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。鸿蒙 PC 此前更多是"能运行鸿蒙应用"的终端，这次三件套齐发，让它进一步成为"能原生开发鸿蒙应用"的工作站。
+
+三款工具分工明确：DevEco Studio 主打集成开发与多端调试，承担基础 IDE 核心能力；DevEco Code 提供端到端一站式 Agentic 开发体验；DevEco CLI 对外输出鸿蒙开发能力，可无缝对接各类 Agent 工作流。公测版支持 HUAWEI MateBook Pro、HUAWEI MateBook Fold 非凡大师、HUAWEI MateBook 14 鸿蒙版、HUAWEI MateBook Pro S、HUAWEI MatePad Edge 等机型，要求 HarmonyOS 7.0.0.107 及以上版本、内存 16GB 及以上、硬盘空间 100GB 及以上（[IT时代网报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_2246ac79b5407552)）。
+
+## DevEco Studio：基于毕方底座的可视化 IDE
+
+DevEco Studio 由此前的邀测转为公测，定位是鸿蒙开发的核心生产底座。它依托华为自研毕方（BitFun）技术底座构建，具备快速启动与低资源占用特性，并整合了代码编辑、智能补全、语义分析及全链路调试能力（[百度百科鸿蒙PC词条](https://baike.baidu.com/item/%E9%B8%BF%E8%92%99PC/68389269)、[华为开发者联盟 DevEco Studio](https://devecostudio.huawei.com/)）。
+
+针对传统 IDE 的典型痛点，这一版本做了三方面优化：
+
+- **开发稳定性**：面向长时间编程场景优化启动速度与内存占用，减少卡顿与闪退，并搭载智能补全、错误提示、断点调试与内存分析能力（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。
+- **AI 能力内嵌**：新增集成 DevEco Code，开发者在 IDE 内即可使用鸿蒙领域知识、工具与 Skills，完成需求分析、方案设计、代码生成及验证修复，避免在 IDE 与外部 AI 工具之间来回切换（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。
+- **多端调试**：无需安装模拟器或仿真环境，即可在鸿蒙 PC 上秒级启动并调试手机、平板版本的鸿蒙应用；调试窗口支持手机、平板、折叠屏等设备形态切换与多窗口并行，一次代码修改可在多个窗口同步验证（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。此外还支持双向预览，可查看组件树与组件属性（[百度百科鸿蒙PC词条](https://baike.baidu.com/item/%E9%B8%BF%E8%92%99PC/68389269)）。
+
+## DevEco Code：可控的 Agentic 开发大脑
+
+DevEco Code 是面向鸿蒙应用、开箱即用的 AI Agent 一站式开发工具，核心是把 AI 能力同鸿蒙开发生态打通。它内置模型服务，默认提供 GLM5.3、GLM5.1 模型，并支持用户配置三方模型；同时集成鸿蒙专业知识库、Skills 与 MCP 工具（[百度百科鸿蒙PC词条](https://baike.baidu.com/item/%E9%B8%BF%E8%92%99PC/68389269)、[IT时代网报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_2246ac79b5407552)）。官方还提到通过 Harness 提升鸿蒙应用编译通过率和任务完成率（[百度百科鸿蒙PC词条](https://baike.baidu.com/item/%E9%B8%BF%E8%92%99PC/68389269)）。
+
+在"开发效率与安全可控同等重要"的考量下，DevEco Code 采用 Goal、Plan、Build 分层可控的开发模式（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）：
+
+- **Plan/Build 模式**：开发者先审阅方案，确认后再授权执行，对未知改动零容忍，保障每一步执行可控。
+- **Goal 模式**：直接依据需求 Spec 文档生成代码，自动完成验证与缺陷修复，直至开发目标达成。
+
+除了代码生成，DevEco Code 还可自主完成代码编译、应用运行与功能验证，把大量重复的检查与修复工作交给自动化流程，方向是"从生成代码走向交付可运行的应用"（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。
+
+## DevEco CLI：开放给外部 Agent 的执行手脚
+
+DevEco CLI 可以理解为 AI 可调用的命令行能力套件，解决的是"AI Agent 如何真正驱动鸿蒙开发能力"的问题。不同 Agent 工具的调用规范各不相同，要让 AI 掌握鸿蒙完整开发能力，以往需要手动配置大量环境、导入零散文档、编写适配脚本。DevEco CLI 的做法是把 HarmonyOS 工具集、官方知识库和 70 余项专业 Skills 封装为适合 AI 调用的命令行接口（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)、[百度百科鸿蒙PC词条](https://baike.baidu.com/item/%E9%B8%BF%E8%92%99PC/68389269)）。
+
+关键特性包括：
+
+- **低门槛接入**：一行 `init` 命令即可把配套的 DevEco CLI Skills 批量安装到本机多个 Agent 工具中，简单配置后 Agent 就能掌握调用 DevEco CLI 的能力（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。
+- **全链路能力**：覆盖工程创建、语法检查、编译构建、管理真机、推包到设备上运行、抓取调试日志等环节（[百度百科鸿蒙PC词条](https://baike.baidu.com/item/%E9%B8%BF%E8%92%99PC/68389269)）。
+- **官方语料**：内置完整的鸿蒙开发指南、API 参考、最佳实践、常见问题、版本说明与变更预告，让 AI Agent 输出更贴合规范的方案（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。
+
+安装方式为 npm 全局安装：`npm install -g @deveco/deveco-code` 与 `npm install -g @deveco/deveco-cli`（[华为开发者联盟 DevEco Studio](https://devecostudio.huawei.com/)）。开发者不必更换熟悉的开发环境，就能在原有工作流中完成鸿蒙应用的完整开发。
+
+## 底座、大脑与执行手脚协同的工程意义
+
+把 DevEco Studio、DevEco Code、DevEco CLI 放在一起看，它们构建的是一套全链路智能化开发体系：DevEco Studio 提供稳定流畅的可视化开发底座，DevEco Code 承担智能分析、方案生成与研发决策，DevEco CLI 负责自动化执行与能力落地（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。
+
+这套组合的行业价值在于两点。其一，它打破了工具孤岛：目前多数 AI 编程工具在输出代码后，编译、调测、多端验证仍需开发者手动完成，AI 难以介入完整工程链路；DevEco 三件套把系统知识、开发经验与调测能力整体封装进工具链内部，实现从需求拆解、方案规划、代码生成到编译构建、多端验证的端到端闭环（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。其二，它提供了一条"操作系统原生工具链"的路线：当 AI 编程工具要服务一个垂直系统时，官方把专业知识库、工具规范与最佳实践沉淀为 AI 可消费的标准接口，比通用编程助手更贴近系统本身的约束。
+
+对开发者而言，三件套的联动可以满足新手、个人开发者、企业团队与自动化研发等不同场景，降低鸿蒙 PC 应用的开发门槛与整体研发成本（[智东西报道](https://so.html5.qq.com/page/real/search_news?docid=70000021_0286aca30db83152)）。后续值得关注的是三款工具在真实项目中的落地效果，尤其是 Plan/Build 模式的可控性与 DevEco CLI 对第三方 Agent 的兼容深度。
+
+_（内容由AI生成，仅供参考）_
