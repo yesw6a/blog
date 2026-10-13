@@ -1,0 +1,102 @@
+---
+title: 决策模型的一周：当 AI 不再生成 token
+description: 2026 年 10 月上旬，Cloudflare、Perplexity、Liquid AI、Microsoft 相继发布决策模型——一种不做文本生成、单次前向传播直接返回校准概率的新模型类别。本文复盘这一周的密集发布，梳理决策模型的概念、各家定位与对 AI Agent 架构的深层影响。
+publishedAt: 2026-10-13
+category: essay-retrospective
+tags:
+  - 决策模型
+  - AI Agent
+  - Microsoft
+  - Liquid AI
+  - Cloudflare
+  - Perplexity
+  - 大模型
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一周之内，一个没有 token 输出的赛道爆发了
+
+2026 年 10 月上旬，AI 行业密集出现了一个此前还只是零星存在的新模型类别：决策模型（decision model）。它不做文本生成，输入一段状态与一组固定选项，直接返回每个选项的校准概率。一周多的时间里，至少有四家厂商相继下场：
+
+- 10 月 1 日，Cloudflare 发布开源决策模型 Clef 与轻量版 Clef-flash（[Cloudflare 官方公告](https://cfl.re/4s6nYeD)）；
+- 10 月初，Perplexity 上线 Decisions API，推出 pplx-decider-v1-27b，随后在 10 月 6 日升级为 pplx-decider-v1.1-27b，输入价格从 $0.04/百万 token 降至 $0.02（[Perplexity Changelog](https://docs.perplexity.ai/docs/resources/changelog)）；
+- 10 月 7 日，Liquid AI 开源 d1-3B 与 d1-omni-600M，主打"零输出 token"的边缘实时决策（[Liquid AI 官方博客](https://www.liquid.ai/blog/d1-open)）；
+- 10 月 9 日，Microsoft 发布 Microsoft-Decision-1，定价 $0.042/百万输入 token、输出免费，并宣布后续将基于 MAI 与 OpenAI 模型迭代（[LLM Reference](https://www.llmreference.com/model/microsoft-decision-1)）；同一天，Cloudflare 追加发布多模态决策模型 Clef-omni（[Cloudflare 官方公告](https://cfl.re/4s6nYeD)）。
+
+对长期关注大模型的人而言，这批发布最反直觉的地方在于：它们几乎不产出任何文字。决策模型把"AI 回答问题"这件事，从"生成一句话"改成了"给一个数字"。这篇文章复盘这一周的密集发布，聊聊决策模型是什么、为什么在现在爆发，以及它对 AI Agent 架构可能意味着什么。
+
+## 决策模型是什么：判断与写作的解耦
+
+理解决策模型，最好的类比是考试形式之差。生成式大模型像一道作文题：它从零开始写一段文字作为答案；决策模型则像一道选择题：它只在你给定的选项里打分，返回每个选项的概率，且不附带任何解释（[Gadgets Now 报道](https://gadgetsnow.indiatimes.com/tech-news/what-is-microsoft-decision-1-the-ai-model-that-picks-answers-instead-of-writing-them/articleshow/134889706.cms)）。
+
+技术上，决策模型通常支持三类问题（以 Liquid AI 的 d1 与 Microsoft 的官方文档为共同范式）：
+
+- **noul（是/否）**：对某个条件返回"是"的概率；
+- **choice（选择）**：从命名选项中选择，返回每个选项的概率；
+- **score（评分）**：在 2 到 10 档有序尺度上打分。
+
+它不逐 token 自回归生成，而是在单次前向传播后直接从模型输出分布上读取答案。Liquid AI 明确说，"d1 决策模型不产生 token，它们在一次前向传播中给出答案"（[Liquid AI 官方博客](https://www.liquid.ai/blog/d1-open)）。因为没有输出 token，也就没有 JSON 解析、没有提示词模板维护、没有生成失控的调试——结构化结果天然就是输出格式（[AI Weekly 报道](https://aiweekly.co/alerts/liquid-ai-opens-d1-3b-and-d1-omni-600m-decision-models)）。
+
+另一个关键概念是校准概率（calibrated probability）。微软对 Decision-1 的定义是：一个报告 90% 置信度的决策，应当在大量样本中大约 90% 为正确。这比"准不准"多一层含义：概率本身必须可信，因为上层应用要拿这个数字做自动化决策——置信度高于 95% 直接执行，60% 到 95% 转人工复核，低于阈值升级处理（[Gadgets Now 报道](https://gadgetsnow.indiatimes.com/tech-news/what-is-microsoft-decision-1-the-ai-model-that-picks-answers-instead-of-writing-them/articleshow/134889706.cms)）。
+
+## 一周大事记：四家厂商的三种打法
+
+把四家发布放在一起，可以看到决策模型赛道的三种典型策略：
+
+| 厂商 | 代表模型 | 发布 | 开放度 | 定价/运行形态 | 主打卖点 |
+|------|---------|------|--------|--------------|---------|
+| Cloudflare | Clef / Clef-flash / Clef-omni | 10/1 / 10/9 | 开源权重 | 轻量版输入 $0.038/百万 token | 极速发布、多模态、低价（[Cloudflare 官方公告](https://cfl.re/4s6nYeD)） |
+| Perplexity | pplx-decider-v1.1-27b | 10 月初 / 10/6 | API | 输入 $0.02/百万 token、输出免费 | Decisions API 快速接入（[Perplexity Changelog](https://docs.perplexity.ai/docs/resources/changelog)） |
+| Liquid AI | d1-3B / d1-omni-600M | 10/7 | 开源权重 | 本地/边缘部署 | 8ms 级延迟、零输出 token、边缘实时（[Liquid AI 官方博客](https://www.liquid.ai/blog/d1-open)） |
+| Microsoft | Microsoft-Decision-1 | 10/9 | 闭源 API | 输入 $0.042/百万 token、输出免费 | 企业护栏、鲁棒性、校准（[LLM Reference](https://www.llmreference.com/model/microsoft-decision-1)） |
+
+几个值得注意的数据点：
+
+**Liquid AI 打的是边缘牌。** d1-3B 基于 LFM2.5-VL-3B 主干训练，官方与 NVIDIA 联合测量的单次决策延迟为：RTX 4090 上 8 毫秒、Jetson AGX Thor 上 16 毫秒、Jetson Orin Nano 上 50 毫秒（[Liquid AI 官方博客](https://www.liquid.ai/blog/d1-open)）。在 Decision Index v0.2.1 上得分 48.57，官方称超过所有 10B 以下模型，与 12 倍参数量的 Decider 35B-A3B（47.11）持平（[Pivot News 报道](https://pivotnews.ai/five/liquid-ai-releases-two-open-weight-d1-decision-models-for)）。它开源的还有多模态实验版 d1-omni-600M，可处理文本配图像或文本配音频（[AI Weekly 报道](https://aiweekly.co/alerts/liquid-ai-opens-d1-3b-and-d1-omni-600m-decision-models)）。许可上用的是 LFM Open License v1.0，而非 Apache/MIT，商用有前置条件（[Traictory 报道](https://traictory.com/news/2026-10-09-liquid-ai-d1-3b-open-decision-models)）。
+
+**Microsoft 打的是企业与护栏牌。** Decision-1 在 Qwen3.5-9B 上后训练而成，微软声称在 36 个基准、近 15 万道题的盲测中准确率最高（83.5%），中位延迟比 GPT-6 Sol 快约 35 倍、比第二名 H2O-Lightning-4B v1.1 快 2.5 倍（[TechDogs 报道](https://www.techdogsnetwork.com/tech-news/td-newsdesk/microsoft-launches-decision-1-ai-model-built-on-qwen35-9b-for-faster-cheaper-decisions)）。鲁棒性数据更值得看：在 8 类提示扰动下平均决策翻转率仅 1.3%，选项改写、倒序、打乱时翻转率为 0（[Quantum Dispatch 报道](https://thequantumdispatch.com/articles/microsoft-decision-1-foundry-decision-model)）。微软内部团队已在使用：Xbox Research 用它把超 1 万条玩家反馈分类，质量与 GPT-6 Sol 相当、速度快 14 倍、成本约 1/200；Copilot 团队用它评估聊天与 Agent 回复，速度快约 100 倍（[AI Insiders 报道](https://aiinsiders.net/article/microsofts-decision-model-is-priced-to-grade-other-ais-work)）。
+
+**Cloudflare 打的是速度与低价牌。** 官方自述 Clef 从周五晚决定做、周末训练、下周四上线，一周内完成从想法到开源（[Cloudflare 官方公告](https://cfl.re/4s6nYeD)）。Clef-omni 更进一步支持音频与视频输入，把决策模型从纯文本扩展到多模态。
+
+## 为什么是现在：智能体把"小决策"变成了成本大头
+
+这批发布看似突然，背后是一个已经滚了很久的现实问题：AI Agent 工作流里的绝大部分调用，并不是"写一段话"，而是"做一个选择"。
+
+一个桌面 Agent 处理一次任务，要经过几十个微决策：这个文件是不是用户要的那个？命令是否执行成功？要不要重试？这个工具调用是否安全？（[MOOGH 报道](https://www.aimoogh.com/en/posts/microsoft-decision-1)）客服工单要分到哪个队列，评论要归到哪个主题，Agent 在走下一步之前需要一次"是或否"。微软自己算过一笔账：20 个顺序决策每个多耗 100 毫秒，整个工作流就多出 2 秒（[Quantum Dispatch 报道](https://thequantumdispatch.com/articles/microsoft-decision-1-foundry-decision-model)）。
+
+用生成式大模型做这些调用，本质是"雇小说家填表格"：慢、贵，还常常输出一大段没人读的推理文字。决策模型则把"判断"从"写作"里剥离出来，做成一个专门的、便宜的、可被软件直接消费的组件。这解释了为什么所有玩家都把定价压到接近零：输入 $0.02 到 $0.042/百万 token、输出免费的结构，让"每次内部检查都调一次模型"在经济上成为可能。AI Weekly 的评价很到位：零输出 token 省掉了解析 LLM 输出 JSON 的环节，模型直接从概率空间返回类型化答案（[AI Weekly 报道](https://aiweekly.co/alerts/liquid-ai-opens-d1-3b-and-d1-omni-600m-decision-models)）。
+
+## 对 Agent 架构的含义：judge 层会成为标配
+
+从这一周的发布可以读出几个更长期的趋势：
+
+**第一，Agent 栈会分化出专门的 judge 层。** LLM-as-a-judge 不再是大模型的兼职工作。决策模型天然适合做路由、分类、验证、护栏与评分：判断一个 Agent 的下一步行动是否越界、评估一次回复是否达标、决定一条消息进哪个队列。微软将 Decision-1 明确用于"AI 输出评估、Agent 护栏、内容安全筛查"（[AI/TLDR 报道](https://ai-tldr.dev/models/microsoft-decision-1)）。
+
+**第二，计费逻辑从"按 token"走向"按决策"。** 输出免费、输入极低，意味着开发者可以把决策调用塞进每个循环里而不心疼。Perplexity 一周内把 decider 输入价格直接砍半，正是这个赛道的价格战信号。
+
+**第三，开源与闭源并行，但许可条款值得细看。** Cloudflare、Liquid AI 走开源权重路线，Microsoft 走闭源托管路线。Liquid AI 的 LFM Open License v1.0 对商业使用有条件限制，并非 Apache 2.0（[TechJack Solutions 报道](https://techjacksolutions.com/ai-brief/liquid-ai-d1-open-weight-decision-models-edge-ai)），企业落地前需要评估。
+
+## 冷静一下：校准不等于正确
+
+决策模型最诱人的卖点——校准概率——恰恰也是最需要警惕的地方。
+
+其一，**一致性不等于正确性。** AI Insiders 指出，一个每次都给出同样错误分数的评分器，一致性满分但毫无价值。微软发布材料没有公布 rubric 任务上与人工评分的一致性数据（[AI Insiders 报道](https://aiinsiders.net/article/microsofts-decision-model-is-priced-to-grade-other-ais-work)）。
+
+其二，**基准多为厂商自报。** Microsoft 与 Liquid AI 的对比数据都基于自家评测，延迟口径也不完全对齐——微软在 Foundry 上实测自家模型，竞品则引用第三方榜单时间（[AI Insiders 报道](https://aiinsiders.net/article/microsofts-decision-model-is-priced-to-grade-other-ais-work)）。Liquid AI 也承认音频决策基准仍是开放问题，多模态能力尚无公开评测背书（[TUN 报道](https://www.tun.com/home/liquid-ai-releases-open-d1-decision-models-for-the-edge)）。
+
+其三，**选项由人定义，模型只认选项。** 决策模型无法处理它没见过的选项，也无法真正"理解"你的系统。如果候选文件本身就是错的，再高的置信度也只是把错误包装得更可信（[MOOGH 报道](https://www.aimoogh.com/en/posts/microsoft-decision-1)）。微软官方同样提示：不要把它作为涉及人的重大决策的唯一裁决者（[AI/TLDR 报道](https://ai-tldr.dev/models/microsoft-decision-1)）。
+
+## 复盘：一周看清一个赛道的形状
+
+回看这一周：Cloudflare 用一周时间从想法到开源，证明决策模型的门槛没有想象中高；Liquid AI 用 8 毫秒的延迟把战场拉到了边缘设备；Perplexity 用价格战把接入成本打到几乎为零；Microsoft 则用校准、鲁棒性与企业安全叙事，给这个赛道定了"可被信任的裁决层"的调子。
+
+四家打法不同，共识却很一致：生成式大模型不应该是 Agent 里每个小决策的默认答案。判断与写作正在解耦，而"给每个选择一个可用的概率"正在成为基础设施。对做 Agent 的团队来说，这一周最大的启示可能是：把那些"低难度、高频次、要个数字就行"的调用，从大模型上挪到决策模型上——省下的不止是钱，还有延迟和复杂度。
+
+值得继续跟踪的，是校准概率在真实工作负载上的表现、多模态决策模型的实际效果，以及各家基准能否被第三方独立复现。赛道刚刚成形，热闹还在后面。
+
+_（内容由AI生成，仅供参考）_
