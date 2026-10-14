@@ -1,0 +1,81 @@
+---
+title: Chrome DevTools 的 10 月更新：浏览器调试工具开始为 AI 智能体重构
+description: Chrome 153 与 154 稳定版带来的 DevTools 月度更新里，最值得注意的信号是 DevTools MCP server 新增面向编码智能体的安全控制、性能调优与内存分析能力。本文梳理 DevTools for agents 的具体能力，以及广告脚本跟踪、软导航测量、堆快照查询等各面板更新，并分析浏览器调试基础设施为何开始为 AI 智能体重构。
+publishedAt: 2026-10-14
+category: tools-productivity
+tags:
+  - Chrome
+  - DevTools
+  - MCP
+  - AI 智能体
+  - 开发工具
+  - 调试
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一次月度回顾，两种读者的更新
+
+Chrome 团队在 2026 年 9 月下旬发布了新一期"New in DevTools"月度回顾，覆盖刚进入稳定版的 Chrome 153 与 154：应用面板新增广告脚本跟踪、性能面板补齐软导航测量、元素面板改进样式检查、设备模式更新硬件预设（[官方发布说明](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+由于 Chrome 已改为每月发布两次，DevTools 系列也随之从版本更新转为月度回顾。真正值得开发者停下注意的不是某个具体功能，而是这一期最靠前的一节标题：**DevTools for agents**。浏览器调试工具第一次把"面向编码智能体的能力"当成头号发布内容。
+
+## DevTools MCP server：给编码智能体的调试能力补安全与内存
+
+Chrome DevTools MCP server 是编码智能体通过模型上下文协议（MCP）操控浏览器的桥梁。本次更新为它引入了一批面向 Agent 场景的新能力，集中在三类：安全控制、性能调优、内存分析（[官方发布说明 - DevTools for agents](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+**Agent Plugins 1.0 插件包**：支持 Agent 加载并执行模块化插件扩展，把自定义调试逻辑打包成可复用插件，而不是每次在提示词里重复指令。
+
+**JavaScript 执行控制**：新增 `--no-javascript-evaluation` 配置，或直接关闭 JavaScript 执行工具，让 Agent 可以在不评估脚本的情况下检查页面，该控制还会扩展到导航和初始化脚本。这对安全审查、静态分析类任务很关键——检查一个页面不再等于在页面里执行任意代码。
+
+**按需 Source Map**：可以停用 Source Map 并按需延迟加载，避免大型站点在 Agent 会话中占用过多内存。面向长会话的内存管理被提到了和功能本身同等重要的位置。
+
+**可配置的文件系统根目录与 CLI 路径权限**：CLI 默认包含 `--allow-unrestricted-paths`，同时支持配置可用的文件系统根目录。Agent 能碰到的本地文件范围开始变成显式配置项。
+
+**堆快照检查**：新增 `query_heapsnapshot` 工具，可以按保留大小或属性名称直接查询对象、查看边的自身大小与保留大小，还能检查 V8 执行上下文保留的内存。内存泄漏调查从"导出快照给人看"变成"Agent 直接查询"。
+
+**PWA 自动化工具**：为渐进式 Web App 的安装与生命周期检查提供专用工具，让 Agent 能验证 PWA 的可安装性与生命周期状态。
+
+**控制台堆栈追踪**：`list_console_messages` 列出控制台消息时可以附带可选堆栈轨迹，方便 Agent 定位错误来源。
+
+这些能力加在一起，说明 Chrome 团队对 Agent 使用 DevTools 的方式有了更清晰的模型：Agent 应该像谨慎的开发者一样读页面、查内存、找错误，但每一步都要有权限边界，不能默认拥有执行脚本和读写任意文件的能力。
+
+## 性能面板：软导航完整落地，硬件差异可以复现
+
+性能面板本次补齐了端到端的软导航测量。Chrome 152 先在实时指标和轨迹视图引入软导航支持，这次洞察（Insights）也加入软导航分析，性能面板内对软导航的测量链路至此完整（[官方发布说明 - Performance](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+更值得工程团队注意的是 CPU 性能层级覆盖：DevTools 现在支持通过 CDP 的 `Emulation.setCPUPerformanceOverride` 配置、计算并调度校准过的 CPU 性能层级覆盖，从而在不同硬件层级之间做可复现的性能测试。低端设备上暴露的性能问题，不再需要真的找一台低端设备复现。
+
+火焰图方面，`Ctrl+F` 搜索现在能匹配通过可扩展性 API 注册的自定义轨道条目，搜索其工具提示、属性和用户详情；仅包含 CPU profile 样本的线程（如 WebAssembly 后台线程）也会出现在时间轴视图中。
+
+## 应用面板：广告脚本从 CrUX 指标落到可调试面板
+
+Chrome 用户体验报告（CrUX）此前引入四项实验性广告指标——视口广告密度、视口广告数量、广告总 CPU 用量、广告总网络用量。这次新增的 Ads 子面板把它们从报告数字变成可调试入口：广告指标仪表盘、按广告元素细分 CPU 与网络用量、主框架广告脚本表，以及高亮页面广告的开关，让开发者能集中定位广告相关性能问题（[官方发布说明 - Application](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+## 元素与网络面板：检查体验与安全加固
+
+元素面板支持显示"非活动样式"：之前匹配但现在不再适用的 CSS 规则会继续显示，并用视觉指示器明确区分，可在设置中配置折叠行为；DOM 树中的交互式装饰器（查看来源、初始样式、滚动捕捉、显示）现在可通过键盘聚焦并用 Enter 或 Space 激活，补齐无障碍支持（[官方发布说明 - Elements](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+网络面板的安全加固更贴近实战：本地替换（Local Overrides）现在阻止路径遍历（`%2E%2E`）并禁止在 `data:`、`blob:`、`javascript:`、`about:` 等非 HTTP(s) 方案上创建替换项；复制为 curl 命令时对 Windows `cmd.exe` 做脱字符转义，避免粘贴到其他 shell 产生语法错误；任何网络请求都可以"在控制台中修改并重新发送为 fetch"，自动聚焦控制台并粘贴带参数注释和原始请求引用的 `fetch()` 表达式（[官方发布说明 - Network](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+## 内存面板：堆快照查询从人读变成可过滤可排序
+
+内存面板提供更细的堆快照分析能力：按最小保留大小过滤边缘、过滤掉 `null`/`undefined`/`true`/`false` 等原始值、按保留大小/自身大小/名称排序，支持按保留大小阈值或属性名称直接查询对象，并能计算 V8 执行上下文单独保持存活的内存总量；损坏的快照文件会显示明确错误而非解析挂起（[官方发布说明 - Memory](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+这与 DevTools MCP 的 `query_heapsnapshot` 形成呼应：内存分析正在从"在 UI 里翻快照"转向"用查询语言直接问问题"，而这一转变的受益者首先是编码智能体。
+
+## 设备模式与其他更新
+
+设备模式按设备规格重新分组预设：移动设备、可折叠设备、平板和桌面设备、智能显示屏四类，并更新硬件目录（新增 iPhone 16、Pixel 9、Pixel 10、Galaxy Z Fold 6、iPad Pro 13 英寸、Nest Hub Max，停用旧设备定义）。无障碍方面，VoiceOver 会播报 DOM 树展开/收起状态、问题计数器修复重复播报、新增 AccessibilityAnnouncementRecordingView 用于记录和调试实时公告与 `ariaNotify` 调用（[官方发布说明 - Device Mode](https://developer.chrome.com/blog/new-in-devtools-october-2026)）。
+
+## 调试工具的下一个用户：AI 智能体
+
+把这次更新放在近几周的上下文里看，信号是一致的：VS Code 1.141 在管理 Agent 会话与沙盒，GitHub 在给 Copilot 加本地沙箱与可执行边界，而 Chrome 在给编码智能体准备更安全、更可查询的浏览器调试接口。三者没有商量好，却指向同一个方向——AI 编码工具已经足够接近生产环境，基础设施层开始认真对待"Agent 也是工具用户"这件事。
+
+DevTools 过去二十年优化的对象是坐在屏幕前的人：布局要直观、信息要可读、操作要顺手。MCP server 的演进则说明第二个用户正在出现：Agent 不需要界面好看，需要的是明确的权限边界、可查询的内存视图和可复现的硬件校准。当调试工具开始为 AI 智能体重构接口，浏览器调试这件事本身，也正在从"人机交互"变成"机机交互"。
+
+_（内容由AI生成，仅供参考）_
