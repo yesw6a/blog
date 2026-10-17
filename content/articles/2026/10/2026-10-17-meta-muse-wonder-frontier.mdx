@@ -1,0 +1,68 @@
+---
+title: Meta 发布首款前沿模型 Muse Wonder：用"主动记忆"切入长程智能体竞争
+description: 2026 年 10 月 12 日，Meta 超级智能实验室发布首款前沿模型 Muse Wonder 与 Muse Wonder Full，主打跨会话主动记忆与长程任务聚焦，API 定价每百万输入 4 美元、输出 20 美元。本文梳理官方公告、定价、基准表现与记忆能力的行业含义。
+publishedAt: 2026-10-17
+category: ai-frontier
+tags:
+  - Meta
+  - Muse Wonder
+  - 主动记忆
+  - 智能体
+  - 前沿模型
+  - 大模型
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 时隔十四个月，Meta 重新进入前沿模型牌桌
+
+2026 年 10 月 12 日，Meta 超级智能实验室发布 Muse Wonder 与 Muse Wonder Full 两款模型，官方称其为"迄今能力最强的模型"，主打个人与专业智能体任务（[Meta 官方公告](https://about.fb.com/news/2026/10/introducing-muse-wonder-models/)）。TechCrunch 称这是 Meta 第一次尝试交付"前沿模型"，The Verge 认为 Meta 正在"追回失去的时间"（[AI 日报](https://sns.style/zh/news/2026/10/13/meta-releases-its-first-frontier-model-muse-wonder-pitched-on-active-memory-and-1)）。
+
+这次发布距离 Meta 全面重构 AI 工作已经十四个月：自 Scale AI 创始人 Alexandr Wang 于去年 8 月重组 Meta 的 AI 部门以来，Meta 先后推出轻量模型 Muse Spark 与 Muse 智能体，但始终没有参与 OpenAI、Anthropic 主导的顶级模型竞赛（[TechCrunch 转述](https://www.cornerforai.com/news/metas-superintelligence-lab-launches-muse-wonder-and-muse-wonder-full-its-first-frontier-ai-models)）。Muse Wonder 的发布标志着 Meta 正式入场。
+
+## 两个版本与定价：API 与订阅双轨
+
+Muse Wonder 系列包含两个版本，供应方式有明显差异（[Meta for Developers](https://latest.developer.meta.com/ai/resources/blog/build-with-muse-wonder)）：
+
+| 版本 | 获取方式 | 定价 |
+| ---- | ---- | ---- |
+| Muse Wonder | Meta Model API 与 Muse Code | 输入 4 美元/百万 token，输出 20 美元/百万 token，缓存输入 0.2 美元/百万 token（约 95% 折扣） |
+| Muse Wonder Full | 仅 Muse Code 订阅 | Power Usage 月费 50 美元起，另有 Maximum Usage 档（额度为 Everyday 的 80 倍） |
+
+TechCrunch 指出，Muse Wonder 的 API 价位大致对标 GPT-6 Sol 或 Claude Opus 5.5（[AI 日报](https://sns.style/zh/news/2026/10/13/meta-releases-its-first-frontier-model-muse-wonder-pitched-on-active-memory-and-1)）。值得注意的是，能力更强的 Full 版本不开放 API，只通过订阅提供，这与 OpenAI、Anthropic 把旗舰模型以 API 商品化出售的策略不同——Meta 把最强能力绑定在自家产品订阅上。
+
+两款模型均配备 100 万 token 上下文窗口，支持文本、图像、语音和视频多模态输入，在 Meta 位于俄亥俄州中部的千兆瓦级 Prometheus 数据中心完成训练（[AI/TLDR](https://ai-tldr.dev/models/muse-wonder)）。
+
+## 核心卖点：主动记忆与主动聚焦
+
+这次发布最受关注的能力是"主动记忆"（Active Memory）。Meta 将其定义为跨对话携带用户重要上下文的机制：模型能够在数天、数周乃至数月的交互跨度中持续存储并整合用户信息，并在当前任务需要时主动检索相关细节（[Meta 官方公告](https://about.fb.com/news/2026/10/introducing-muse-wonder-models/)）。研究科学家 Kavya Kopparapu 在发布视频中表示："我们投入了大量精力，确保模型能在数天、数周、数月乃至更长时间里记住对您而言重要的事情。"（[中华网](https://m.tech.china.com/article/20261013/202610131965047.html)）
+
+与主动记忆配套的是"主动聚焦"（Active Focus）：模型被训练为围绕目标长时间工作，任务变难时尝试替代方案、从错误中恢复、根据新信息调整，并在执行重要动作前主动请求澄清或确认（[Meta 官方公告](https://about.fb.com/news/2026/10/introducing-muse-wonder-models/)）。官方列举的应用场景包括处理保险理赔、理解租约、整理个人财务，以及法律、金融和健康等专业领域。
+
+这两个能力指向同一个判断：**可靠记忆是个人与专业智能体从"能聊"走向"能办事"的关键一步**。当前大多数 AI 助手的上下文每次对话都会重置，而长程智能体需要在持续数天的任务中保留先前决策与约束。
+
+## 基准表现：厂商自测领先，独立验证仍有限
+
+Meta 在模型卡中给出了多项基准结果：
+
+- **MemoryBench**：Muse Wonder 的得分超过 Fable、Opus 和 Astra（[Lumien AI](https://lumienai.com/news/meta-muse-wonder-frontier-model-pricing-benchmarks)），ChatTools 报道具体为 Muse Wonder 85.6 对 Claude Opus 5.5 的 81.5（[ChatTools](https://ai.chattools.top/article/68449)）。
+- **SWE-Marathon**：Muse Wonder Full 得分 57.5，对比 Claude Opus 5.5 的 46.3 与 GPT-6 Astra 的 42.5（[百度百科](https://baike.baidu.com/item/Muse%20Wonder/69364182)）。
+- **DeepSWE 1.1**：Muse Wonder Full 得分 79.0，Muse Wonder 78.8（[The Mainstream](https://themainstream.co.in/meta-unveils-muse-wonder-ai-models)）。
+- **Harvey 法律智能体基准**：Muse Wonder Full 13.1，Muse Wonder 10.0，GPT-6 Astra 8.6（[The Mainstream](https://themainstream.co.in/meta-unveils-muse-wonder-ai-models)）。
+- **Artificial Analysis 智能指数**：Muse Wonder 得分 52，Muse Wonder Full 56，对比此前 Muse Spark 1.3 的 48（[DQ India](https://www.dqindia.com/data-and-ai/metas-muse-wonder-brings-memory-and-focus-to-ai-agents-for-work-12671098)）。
+
+需要说明的是，除部分第三方运行外，多数对比来自 Meta 自测，独立评测机构的系统复现尚未公开。Wired 也提醒，基准测试并不总是衡量真实表现的可靠尺子（[AI 日报](https://sns.style/zh/news/2026/10/13/meta-releases-its-first-frontier-model-muse-wonder-pitched-on-active-memory-and-1)）。此外 The Verge 指出，Muse Wonder 与同期发布的 Google Gemini 4 Argon 相比表现如何，目前尚不清楚。
+
+## 记忆竞争：从上下文窗口到跨会话持久化
+
+Muse Wonder 的发布把"记忆"正式推上了前沿模型的竞争桌面。此前的记忆基准大多测试单次会话的长输入理解，而 MemoryBench 这类新基准转向测试模型能否在持续用户交互中积累与构建记忆（[HingeWise](https://hingewise.com/muse-wonder-meta-frontier-model)）。当高质量数据与测试期算力的边际收益递减，记忆与持续学习成为研究热门方向。
+
+对开发者而言，Muse Wonder 的定价与 GPT-6 Sol、Opus 5.5 处于同一区间，并不便宜；其差异化价值在于需要持久上下文的场景——长期健康管理、复杂项目规划、跨多轮的企业工作流。这些场景中，模型少问一次重复问题、不丢失先前决策，就是可量化的效率提升。
+
+不过记忆能力也带来新的数据治理问题：Meta 尚未公布用户如何查看、编辑或删除模型记住的内容（[Rush Commerce](https://rushcommerce.dev/blog/meta-muse-wonder-frontier-model-active-memory-decide-what-your-agent-remembers)）。对于把客户数据交给模型侧记忆的企业，这仍是落地前必须回答的问题。
+
+_（内容由AI生成，仅供参考）_
