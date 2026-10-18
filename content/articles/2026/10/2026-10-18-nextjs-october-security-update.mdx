@@ -1,0 +1,134 @@
+---
+title: Next.js 10 月安全更新解析：两个未认证 RCE 与一条必须执行的升级路径
+description: 2026 年 10 月 14 日，Vercel 发布带外安全更新 Next.js 16.4.1 / 15.5.28，修复两个 CVSS 9.5 的未认证远程代码执行漏洞（use cache 返回 typed arrays、SVG 图像优化）与一个 Server Actions 拒绝服务漏洞。本文梳理三个公告的影响范围与根因链路，重点说明 15.x 升级时 sharp 依赖的隐藏陷阱、依赖扫描盲区，以及自托管应用的修复与验证步骤。
+publishedAt: 2026-10-18
+category: engineering-practice
+tags:
+  - Next.js
+  - 安全
+  - RCE
+  - sharp
+  - Server Actions
+  - 前端工程化
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一次早有预告的带外安全更新
+
+2026 年 10 月 8 日，Vercel 预告了一次针对上游依赖漏洞的带外（out-of-band）安全更新，并说明其中两个修复因上游协调原因从 9 月安全版本推迟。10 月 14 日，Next.js 16.4.1 与 15.5.28 如期发布，一次性修复三个漏洞：两个被评为 CVSS 9.5 的**未认证远程代码执行（RCE）**，一个高严重度**拒绝服务（DoS）**（[Next.js 官方安全公告](https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw)）。
+
+三个漏洞都不需要登录，只要应用满足对应条件，任何人都能通过构造请求触达。截至 10 月 15 日，没有在野利用报告，也没有确认的公开 PoC。
+
+| 公告 | 严重度 | 触发条件 | 修复版本 |
+| --- | --- | --- | --- |
+| GHSA-673q-mjm6-r5xr | Critical 9.5 | App Router + Cache Components，`use cache` 函数返回多个 typed arrays | 16.4.1 |
+| CVE-2026-96889 / GHSA-2464-fhr4-w9xw | Critical 9.5 | glibc Linux 上通过 Image Optimization 处理 SVG | 15.5.28、16.4.1 |
+| GHSA-p3m5-59mp-jv5r | High 8.2 | App Router + 至少一个 Server Action | 15.5.28、16.4.1 |
+
+## 漏洞一：use cache 的 typed arrays 未认证 RCE
+
+第一个 RCE 追踪为 **GHSA-673q-mjm6-r5xr**，影响启用 Cache Components 的 Next.js 16.0.0 至 16.4.0。当一个标记了 `'use cache'` 的函数返回多个 typed arrays 时，攻击者可控的值可以触发远程代码执行。
+
+值得注意的根因在 React 而不是 Next.js 本身：对应的上游公告是 **GHSA-xqc2-xf4c-x3h3**，涉及 `react-server-dom-webpack`、`react-server-dom-parcel`、`react-server-dom-turbopack` 三个包在 19.0.0 至 19.3.0 的版本范围。React 官方将其描述为"响应传输多个 typed arrays 且存在攻击者可控值"的极罕见场景，但 Vercel 明确表示**没有可用的 workaround**，并建议"即使应用没有类似函数也应立即升级"——因为这个触发条件很难靠人工审计排除。
+
+## 漏洞二：SVG 图像优化链路里的 librsvg 内存漏洞
+
+第二个 RCE 是 **CVE-2026-96889 / GHSA-2464-fhr4-w9xw**，影响范围从 Next.js 10.0.0 一直到 15.5.27 和 16.4.0。Next.js 在 glibc 系 Linux 上处理 SVG 时，Image Optimization API 可能被触发远程代码执行。
+
+完整链路是 `next/image` 的优化器调用 **sharp**，sharp 捆绑 **libvips**，libvips 使用 **librsvg** 解析 SVG。漏洞本体是 librsvg 的 use-after-free：SVG 文档通过嵌套 XML 包含声明了两次相同实体时触发（[Red Hat CVE 记录](https://access.redhat.com/security/cve/CVE-2026-96889)）。sharp 0.35.5 于 9 月 27 日发布，捆绑的 libvips 携带 librsvg 2.63.2（此前为 2.62.91）；sharp 的对应公告 GHSA-wq5f-xc86-pv6w 于 9 月 30 日公开。
+
+工程上容易误判的两点：
+
+- **默认不暴露**：Next.js 默认不优化 SVG，需要通过 `dangerouslyAllowSVG` 显式开启才走这条路径；但 `next/og` 在 Node.js 运行时渲染社交预览图同样触及 librsvg，这是更隐蔽的暴露面。
+- **平台差异**：托管在 Netlify 时，Image Optimization 由 Netlify Image CDN 承担，函数侧不执行 sharp；但 `next/og` 的 ImageResponse 仍在函数内运行。自托管应用则整条链路都在自己进程里（[Netlify 影响评估](https://www.netlify.com/changelog/2026-10-14-nextjs-react-security-vulnerabilities/)）。
+
+## 漏洞三：Server Actions 拒绝服务
+
+第三个公告 **GHSA-p3m5-59mp-jv5r** 是高严重度 DoS：使用 App Router 且定义了至少一个 Server Action 的应用，构造请求可以把单个服务进程的 CPU 打到接近满载，阻塞同进程内后续请求。相关 React 上游公告为 GHSA-h3gv-c5rc-p453。
+
+**Pages Router 应用、或没有使用 Server Actions 的 App Router 应用不受此漏洞影响。**它不影响机密性与完整性，但单进程被拖死后整个应用可能失去响应；对于 Server Action 内部还调用模型供应商的 AI 应用，这同时也是账单攻击向量。
+
+## 升级路径与最容易踩的坑
+
+### 16.x 线：直接升级
+
+```bash
+npm install next@16.4.1
+```
+
+16.4.1 要求 `sharp@^0.35.5`，安装时会自动把 sharp 拉到修复版本。10 月 15 日发布的 16.4.2（Turbopack backports）同样携带这三个修复，`next@latest` 会得到它。
+
+### 15.x 线：升级 Next.js 之外，必须单独确认 sharp
+
+这里是最隐蔽的陷阱：**`next@15.5.28` 声明的 sharp 依赖范围是 `^0.34.3 || ^0.35.5`**。如果 lockfile 里已经解析了 sharp 0.34.x，这个范围同样满足，包管理器没有任何理由去动它——而 0.34.x 全系都没有修复版，唯一修复版本是 0.35.5。结果就是：15.x 应用升级到 15.5.28 后 `npm ls next` 显示已修复，但线上跑的仍是存在漏洞的 SVG 解码器。
+
+```bash
+npm install next@15.5.28
+npm install sharp@0.35.5
+npm ls next sharp   # 确认两个都到位
+```
+
+如果希望用一处声明锁死，可以在 package.json 加 override 后重装：
+
+```json
+// npm
+{
+  "overrides": {
+    "sharp": "0.35.5"
+  }
+}
+
+// pnpm
+{
+  "pnpm": {
+    "overrides": {
+      "sharp": "0.35.5"
+    }
+  }
+}
+```
+
+容器部署还要注意：Dockerfile 里执行 `npm ci` 安装的是 lockfile 记录的内容，必须先把更新后的 lockfile 提交进镜像再重建，否则升级不会生效。
+
+### 14.x 及更早：没有修复版本
+
+Image Optimization 公告覆盖从 10.0.0 开始的全部版本，但 14.x 没有补丁版本。仍在 14.x 及更早线的应用应立即把 sharp pin 到 0.35.5，并把迁移到 15.5.28 或 16.4.1 列入计划。15.x 线的安全支持将在 10 月 21 日结束，届时未迁移的 15.x 应用不再有安全维护。
+
+### 依赖扫描器的盲区
+
+截至 10 月 15 日，`use cache` 与 Server Actions 两个公告**都没有 CVE 编号**，也未进入 GitHub Advisory Database——而 npm audit、Dependabot、基于 OSV 的扫描器读的正是这个数据库。也就是说，一个运行在受影响版本上的项目，可能从所有依赖扫描器拿到"干净"报告。**主动检查自己的 Next.js 版本是唯一可靠的发现方式**：
+
+```bash
+npm ls next sharp
+```
+
+### 无法立即升级时的中间缓解
+
+- SVG 路径：确保 sharp >= 0.35.5；或在 sharp 中禁用 SVG 加载：`sharp.block({ operation: ["VipsForeignLoadSvg"] })`。
+- `use cache` 与 Server Actions 两个漏洞**没有 workaround**，只有升级能关闭。
+
+## 从这次事件看到的工程启示
+
+这次更新是继 8 月 AVIF（libheif）RCE、9 月 `next/og` RCE 之后，Next.js 图像管线在三个月内的第三个远程代码执行漏洞。图像处理库长期是供应链风险的集中区：框架本身没有改动优化代码，只是升级了捆绑的 sharp，从而带入了修复的 librsvg。
+
+对自托管团队，有三件事值得沉淀为常规动作：
+
+1. **检查运行产物而非 package.json**。`npm ls` 看到的是解析树，线上容器里实际跑的才是真相；lockfile 越老，`npm ci` 越可能把漏洞版本原样带上线。
+2. **把带外安全更新当作一等事件**。Vercel 10 月 8 日就预告了本次更新，期间存在从知晓到公开的时间窗口；依赖扫描器又不告警，只有主动订阅框架安全公告能补上这个盲区。
+3. **按运行平台评估暴露面**。同一版本在不同托管商的暴露不同（Image CDN 是否接管优化器、函数是否运行 `next/og`），"已升级"不等于"已修复"，"已修复"也不等于"已重新部署"。
+
+## 修复与验证清单
+
+- [ ] 16.x 应用升级到 `next@16.4.1`（或 16.4.2）
+- [ ] 15.x 应用升级到 `next@15.5.28`，并确认 `npm ls sharp` 为 0.35.5 或更新
+- [ ] 14.x 及更早应用：pin sharp 0.35.5，规划迁移
+- [ ] 独立使用 React Server Components 的应用：升级 `react-server-dom-webpack` / `react-server-dom-parcel` / `react-server-dom-turbopack` 至 19.0.9 / 19.1.10 / 19.2.9 / 19.3.1
+- [ ] 提交更新后的 lockfile，重建并重新部署容器镜像
+- [ ] 逐个删除仍运行旧版本的 preview / branch 部署
+
+_（内容由AI生成，仅供参考）_
