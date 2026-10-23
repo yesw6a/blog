@@ -26,6 +26,11 @@
 
 - 移除已无用途的 `@eslint/eslintrc` 开发依赖（`FlatCompat` 不再使用）。
 
+### 🐛 Fixed
+
+- 修复 Next.js `16.4.2` 下 Worker 全站返回 1101 的问题：`@opennextjs/cloudflare` 从 `1.20.1` 升级到 `1.20.13`（内部 `@opennextjs/aws` 由 `4.0.2` 升至 `4.1.12`），`wrangler` 由 `4.111.0` 升至 `4.152.0`。上游 peer 范围由 `>=15.5.18 <16 || >=16.2.6` 调整为 `>=15.5.28 <16 || >=16.4.1`，即把 Next 16.x 的基线明确提到 16.4.1，同时要求 `wrangler ^4.148.0`。
+- 故障现象记录：构建、缓存填充、资产上传、部署均成功（`Worker Startup Time: 17 ms`、gzip 2629 KiB 未超 3 MiB），但静态路由 `/` 与动态路由 `/api/steam/owned` 均返回 Error 1101，且 `workers.dev` 子域与自定义域一致失败，据此排除了缓存上传、构建号与域名绑定三类原因。
+
 ### ✅ Verify
 
 - `pnpm typecheck`、`pnpm lint`、`pnpm build` 全部通过；`opennextjs-cloudflare build` 已越过版本门禁，输出 `Next.js version : 16.4.2`，不再出现 `not supported by the Next.js team`。但该命令在本机 Windows 环境下的完整打包会长时间卡在 page data 采集阶段（OpenNext 自身提示 Windows 不受完整支持），因此打包与 deploy 阶段以 Cloudflare 侧 Linux 构建的首次运行结果为准。
@@ -34,6 +39,7 @@
 - `pnpm deps:policy` 输出 Next 16 剩余 364 天并正常退出；过期与临期分支用临时副本改写发布日期表验证，均返回退出码 1。
 - `pnpm lint` 为 0 error / 9 warning，warning 均来自 `react-hooks/set-state-in-effect` 与 `react-hooks/refs`，属既有组件写法，不阻断发布。
 - 运行时视觉、深浅色主题与 hydration 需在 `pnpm dev` 或 `opennextjs-cloudflare preview` 下确认，不在构建期断言范围内。
+- 1101 修复的本地验证受限：升级到 `@opennextjs/cloudflare@1.20.13` 后，`pnpm run build:cf` 的 Next 阶段通过（339 页、路由表与升级前一致），但 OpenNext 的 esbuild 打包阶段在 Windows 上因 `.open-next/server-functions/default/node_modules/.pnpm/...` 目录 `Access is denied`（并导致 `styled-jsx` 无法解析）而失败，属 OpenNext 明示的 Windows 不完整支持范围。该修复的运行时验证需在 WSL 或 Cloudflare 侧 Linux 构建中完成。
 
 ## v.0.7.0 (2026-08-31 ~ 2026-10-09)
 
