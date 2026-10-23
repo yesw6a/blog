@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## v.0.8.0 (2026-10-10 ~ 2026-10-22)
+
+### 📦 Version
+
+- 项目版本从 `0.7.0` 升级到 `0.8.0`。
+- 本窗口完成 Next.js 15 → 16 的主版本线迁移，并把依赖支持期巡检与生产构建入口脚本化，属于向后兼容的 Minor 级更新：站点 URL、路由结构、文章内容格式与 Cloudflare 部署形态均未改变。
+
+### 🎉 Added
+
+- 新增 `scripts/check-dependency-support.mjs` 与 `deps:policy` 脚本：按主版本「发布日 + 2 年」计算支持窗口，剩余不足 90 天或已过期时以非零码退出。
+- 新增 `build:cf` / `deploy:cf` 脚本，把生产构建与部署入口收敛到仓库，Cloudflare Workers Builds 后台后续只需转发到这两个脚本。
+- 新增 `docs/dependency-support-policy.md`，记录支持期口径、巡检命令、升级流程与构建命令归仓约定。
+- 发布 13 篇技术文章（2026-10-10 ~ 2026-10-22），涵盖 VS Code 1.141 智能体管理、Gemini 数字同事、DevEco HarmonyOS PC AI 工具链、决策模型周复盘、Chrome DevTools for agents、AI 基础设施资本市场、Next.js 16.4 Cache Components、Meta Muse Wonder、Next.js 十月安全更新、DGX Station 桌面 AI、前端工具链原生 Go/Rust 时代、GTC Berlin 物理 AI 与讯飞 1024 Spark X2.6。
+
+### 🔄 Changed
+
+- Next.js 从 `15.5.18` 升级到 `16.4.2`，`react` / `react-dom` 从 `19.1.0` 升级到 `19.3.1`，`eslint-config-next` 与 `@next/eslint-plugin-next` 对齐 `16.4.2`。触发原因：OpenNext 的 `checkNextVersionSupport()` 按「主版本发布日 + 2 年」校验，Next 15 的支持窗口在 2026-10-21 到期，导致 2026-10-22 的生产构建在版本门禁处失败；该检查只取主版本号，因此任何 `15.5.x` 补丁版本都无法通过。
+- `pnpm.overrides.sharp` 固定 `sharp@0.35.5`。原 lockfile 解析出的 `0.34.5` 属于 CVE-2026-96889（librsvg SVG RCE）未修复区间，且 `15.x`/`16.x` 声明的 `^0.34.3 || ^0.35.5` 范围不会自动跳版。
+- `next.config.ts` 的 `images.domains` 迁移为显式 `images.remotePatterns`（`wsrv.nl` 走 https，`media.steampowered.com` 保留 http/https 双协议），语义与原配置等价。
+- `eslint.config.mjs` 改为直接消费 `eslint-config-next@16` 导出的 flat config，移除 `FlatCompat` 转换。新启用的 `react-hooks/set-state-in-effect`、`react-hooks/refs` 暂降级为 `warning`，现有组件的挂载期 `setState` / ref 惯用法待单独重构。
+- `tsconfig.json` 由 Next 16 自动迁移：`jsx` 由 `preserve` 改为 `react-jsx`，`include` 增加 `.next/dev/types/**/*.ts`。
+
+### 🧰 Chore
+
+- 移除已无用途的 `@eslint/eslintrc` 开发依赖（`FlatCompat` 不再使用）。
+
+### ✅ Verify
+
+- `pnpm typecheck`、`pnpm lint`、`pnpm build` 全部通过；`opennextjs-cloudflare build` 已越过版本门禁，输出 `Next.js version : 16.4.2`，不再出现 `not supported by the Next.js team`。但该命令在本机 Windows 环境下的完整打包会长时间卡在 page data 采集阶段（OpenNext 自身提示 Windows 不受完整支持），因此打包与 deploy 阶段以 Cloudflare 侧 Linux 构建的首次运行结果为准。
+- 预渲染路由由 297 条变为 337 条，**缺失 0 条**；新增的 40 条为 10 月 15 日之后发布的 8 篇文章、对应分类分页与 Next 16 新增的 `/_global-error`。动态路由维持 7 条且清单完全一致。
+- `.next/static/chunks/*.css` 中 `@stylex` 残留为 0，唯一 `.x*` 规则 652 条，与升级前一致，StyleX 的 PostCSS 提取链路在 Next 16 下未断裂。
+- `pnpm deps:policy` 输出 Next 16 剩余 364 天并正常退出；过期与临期分支用临时副本改写发布日期表验证，均返回退出码 1。
+- `pnpm lint` 为 0 error / 9 warning，warning 均来自 `react-hooks/set-state-in-effect` 与 `react-hooks/refs`，属既有组件写法，不阻断发布。
+- 运行时视觉、深浅色主题与 hydration 需在 `pnpm dev` 或 `opennextjs-cloudflare preview` 下确认，不在构建期断言范围内。
+
 ## v.0.7.0 (2026-08-31 ~ 2026-10-09)
 
 ### 📦 Version
