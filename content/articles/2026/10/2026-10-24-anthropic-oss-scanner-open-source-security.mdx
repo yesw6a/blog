@@ -1,0 +1,88 @@
+---
+title: Anthropic 推出 OSS Scanner：AI 漏洞扫描开始免费服务开源项目
+description: Anthropic 发布 opt-in 开源漏洞扫描服务 OSS Scanner，用最强模型免费为关键开源项目提供定期安全审计，每份报告附带自包含复现器、bisection 定位与候选补丁。本文梳理服务机制、早期验证数据与维护者反馈，并讨论 AI 漏洞发现进入开源生态后的速度竞赛。
+publishedAt: 2026-10-24
+category: tools-productivity
+tags:
+  - Anthropic
+  - Claude
+  - 开源安全
+  - 漏洞扫描
+  - OSS-Fuzz
+  - CVE
+  - 开发工具
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## AI 漏洞发现能力正在跨过一条关键曲线
+
+Anthropic 在 2026 年 10 月下旬推出了一项面向开源生态的免费服务：OSS Scanner。它是一个 opt-in 的漏洞扫描器，用 Anthropic 最强的语言模型（包括 Claude Mythos）定期扫描开源项目代码，并把结果直接交给维护者（[官方公告](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source)，[The Hacker News 报道](https://thehackernews.com/2026/10/anthropic-launches-free-ai.html)）。
+
+这项服务建立在一条被反复引用的数据曲线上：在学术漏洞发现基准 CyberGym 上，大模型发现漏洞的比例从去年年初的不足 20%，上升到今年的 85% 以上（[CyberGym 论文](https://arxiv.org/abs/2506.02548)，[Anthropic 漏洞研究博客](https://www.anthropic.com/research/mythos-preview)）。Anthropic 自己的观察是，开源维护者收到的 AI 报告质量也在变化——从大量低质量"垃圾报告"变成真正可用的 bug 报告。
+
+这条曲线意味着什么？漏洞发现的人工成本正在被模型摊薄，而开源维护者长期依赖的"人工审计"瓶颈，第一次有了规模化替代的可能。
+
+## OSS Scanner 的定位：免费审计，而不是企业产品
+
+OSS Scanner 的灵感直接来自 Google 的 OSS-Fuzz——那个用模糊测试持续扫描开源项目、并极大改善开源生态安全状况的项目（[OSS-Fuzz 项目主页](https://google.github.io/oss-fuzz/)）。区别在于扫描器本身：OSS-Fuzz 靠 fuzzer 找崩溃与内存问题，OSS Scanner 靠最强的语言模型直接读代码找漏洞。
+
+需要注意它与 Anthropic 商业产品的边界：
+
+- **Claude Security** 是面向企业的通用代码扫描与修复产品，帮助客户防御自己的系统；
+- **OSS Scanner** 则是给开源项目免费提供的安全审计服务，输出报告完全由模型生成，不经过人工审查或分流。
+
+不经过人工审查意味着两件事：扫描可以更快、更频繁；同时报告可能出错或无效。Anthropic 明确承认这一点，并把"模型生成的原始输出"作为服务设计的一部分——维护者收到的是未经人工润色的第一手结果（[官方公告](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source)）。
+
+## 一份扫描报告里有什么
+
+从已经公开的样例看，OSS Scanner 的报告不是简单的"这里有漏洞"提示，而是接近安全研究员交付物的完整套件：
+
+- **自包含复现器**：报告附带可以独立运行的复现脚本，工程师拿到即可验证；
+- **漏洞说明与 bisection**：解释漏洞成因，并在可能的情况下定位该 bug 是哪个提交引入的；
+- **候选补丁**：能修复问题时附上建议修复方案。
+
+在早期验证阶段，Anthropic 用这条流水线扫描了几十个开源项目，产生了数百份 bug 报告，其中包含多组可以链式利用、最终形成未认证远程代码执行（RCE）的漏洞组合（[官方公告](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source)）。
+
+## 验证数据：88% 的报告达到人工披露标准
+
+服务上线前，Anthropic 请负责协调漏洞披露（CVD）流程的专家渗透测试人员，对扫描器产出的 97 个高危与严重漏洞进行了抽查，这些漏洞分布在 48 个项目里。结果：
+
+- 85 个（约 88%）达到了 Anthropic 自己的 CVD 流程标准；
+- 剩余 12 个里，11 个是真实漏洞但与其他已知发现重复；
+- 只有 1 个是真正无效的误报。
+
+已收到报告的维护者也很少把高危或严重发现判定为无效，不过有人反馈严重等级可能虚高，或者扫描器误解了项目的威胁模型（[官方公告](https://www.anthropic.com/research/launching-opt-in-vuln-finding-service-for-open-source)）。
+
+几位知名项目的维护者给出了具体反馈：
+
+- **PostgreSQL（Noah Misch）**：OSS Scanner 发现中"异常高比例"命中 PostgreSQL 缺陷，部分报告附带近乎可直接使用的修复，fast-track 通道让他们在 GA 发布前处理了最新问题；
+- **OpenSSL（Anton Arapov）**：Glasswing 之前的早期 AI 报告"糟糕透顶"，但 Anthropic 的原始模型输出与人工报告相当甚至更好，尤其是报告附带真实可利用 exploit 时，工程师可以立刻验证；
+- **wolfSSL（Todd Ouska）**：收到的 74 份报告中只有两份无效，其中 5 份最终成为 CVE；
+- **curl（Daniel Stenberg）**：OSS Scanner 帮 curl 找到了多个值得修复的问题，包括近几年来最严重的 curl 漏洞之一。
+
+## 加入方式与资格：向仓库提交 PR
+
+符合条件的项目核心维护者可以这样加入：向 `github.com/anthropics/oss-scanner` 仓库提交一个 PR，按照标准项目模板填写信息即可（[项目仓库](https://github.com/anthropics/oss-scanner)，[服务页面](https://red.anthropic.com/oss-scanner)）。
+
+资格标准与 OSS-Fuzz 类似：项目应"对基础设施和用户安全有重大影响"，具体由 Anthropic 逐案决定。换句话说，这不是面向所有开源项目的泛化服务，而是优先覆盖全球软件供应链里承担关键角色的那些项目。
+
+## 为什么这件事值得关注：维护者人力是真正的瓶颈
+
+把 OSS Scanner 放在更大的背景里看，最值得注意的不是"AI 又找到了漏洞"，而是 Anthropic 披露的一组对比数字：
+
+- 过去六个月，Anthropic 用最新模型扫描了一些全球最重要的软件项目，发现 **29,000 多个候选漏洞**；
+- 但人工只能审查和分流其中大约 **6,000 个**；
+- 已有近 **5,000 份未经人工验证的报告**，在维护者主动要求后直接批量发送给了他们。
+
+也就是说，模型发现漏洞的速度已经远超人类验证的速度。这与 Anthropic 在 n-day 研究中的另一个发现形成闭环：现代可利用漏洞可以在几分钟内被开发成 exploit（[Anthropic n-days 研究](https://www.anthropic.com/research/n-days)）。在攻击者也在用 AI 加速的背景下，开源项目"发现并修复漏洞"的速度本身，正在成为防御能力的一部分。
+
+Anthropic 表示会继续通过既有 CVD 流程人工披露经过验证的漏洞报告，尤其是那些没有资源自行分流报告的项目；OSS Scanner 则是给有能力接收原始报告的项目开出的快车道。配合同时公布的 Claude for OSS（为开源维护者提供免费 Claude Max 20x 订阅用于修复漏洞）和 Cyber Verification Program，这一整套动作属于 Anthropic Cyber Mission 的组成部分（[Anthropic Cyber Mission 公告](https://www.anthropic.com/news/anthropic-cyber-mission)）。
+
+从工具生态的角度看，OSS Scanner 的价值在于把"AI 安全审计"从企业订阅变成了开源基础设施。当最强模型可以免费、高频、带着复现器和补丁为开源项目服务时，开源安全的成本结构正在被重新定义——对维护者来说，收到一份带可验证 exploit 的 AI 报告，或许很快就和收到一份人工漏洞报告一样平常。
+
+_（内容由AI生成，仅供参考）_
