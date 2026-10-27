@@ -1,0 +1,92 @@
+---
+title: 十月开源大模型竞速：欧美三连发对标中国，效率取代参数成为新标尺
+description: 2026 年 10 月，欧美实验室四天内接连发布 Kolibri、Beam、Mistral Large 4 三款开源模型，并把标尺对准中国开源阵营；Meta 随后开源 816B 的 Muse Spark Open，月之暗面发布 3 万亿参数级 Kimi K3.1 Pro。本文盘点十月开源模型发布，拆解"激活参数"取代"总参数"的效率竞赛，并讨论闭源与开源差距收窄对选型的影响。
+publishedAt: 2026-10-27
+category: ai-frontier
+tags:
+  - 开源模型
+  - MoE
+  - Mistral
+  - Reflection AI
+  - Meta
+  - Kimi
+  - DeepSeek
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 四天三款：欧美开源阵营的密集回应
+
+2026 年 10 月的第一周，欧美开源模型阵营罕见地连续出手：10 月 3 日德国 Aleph Alpha 上线 780 亿参数的 Kolibri，10 月 5 日美国初创公司 Reflection AI 放出 Beam，10 月 6 日法国 Mistral 发布旗舰模型 Large 4 的公开预览版。四天之内三款开放权重模型接连发布，且不约而同地把对标对象指向了中国主流开源模型（[南方周末科创要闻](https://www.toutiao.com/article/7696213832217133622/)）。
+
+这不是巧合。过去一年，中国开源模型在参数规模和评测得分上持续领跑，周调用量数据更是一再刷新纪录；欧美实验室的这轮"三连发"，更像是被中国开源速度逼出来的一次集中回应。Beam 干脆自称"面向中国开源模型的美国本土替代方案"（[南方周末科创要闻](https://www.toutiao.com/article/7696213832217133622/)），Mistral 则把 Large 4 定位为"最强大的非中国开源权重 AI 系统"，发布附带对比表里列举的也主要是与中国模型的对比（[南方周末科创要闻](https://www.toutiao.com/article/7696213832217133622/)）。
+
+## 盘点：十月开源模型的"效率参数"
+
+把十月的开源发布放在一张表里看，最直观的变化是：各家都开始同时报两个参数——总参数和激活参数（每 token 实际参与计算的参数）。后者才是推理成本的真实标尺。
+
+| 模型 | 发布/开放时间 | 总参数 | 激活参数 | 上下文 | 授权 | 定位 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Aleph Alpha Kolibri | 10 月 3 日 | 780 亿 | 30 亿 | 100 万 token | Apache 2.0 | 英德双语深度推理，面向受监管关键任务 |
+| Reflection AI Beam | 10 月 5 日推出，10 月 16 日开放权重 | 5010 亿 | 230 亿 | — | Apache 2.0 | 推理、编程与智能体任务 |
+| Mistral Large 4 "Le Chonk" | 10 月 6 日公开预览 | 1.05 万亿 | 490 亿 | 100 万 token | 权重 10 月底公开 | 多模态通用，网络安全与代码 |
+| Meta Muse Spark Open | 10 月 15 日 | 8160 亿 | 420 亿 | 100 万 token | Muse Model License | 编码智能体，图文音视频多模态 |
+| Moonshot Kimi K3.1 Pro | 10 月 23 日 | 约 3 万亿级 | 1040 亿 | 100 万 token | 权重 11 月 4 日公开 | 长程编码、3D 创作、金融研究 |
+
+（数据来源：[南方周末科创要闻](https://www.toutiao.com/article/7696213832217133622/)、[AI 研究 HK 模型发布页](https://www.airesearch.hk/tag/%E6%A8%A1%E5%9E%8B%E7%99%BC%E5%B8%83/)、[AI 日报](https://www.163264.com/17083)、[科学网报道 Kimi K3.1 Pro](https://news.sciencenet.cn/htmlnews/2026/10/573535.shtm)、[No Code MBA 十月发布跟踪](https://www.nocode.mba/ai-release-tracker/2026/10)）
+
+几个细节值得单独标注：
+
+- **Beam** 是纯文本模型，在高级推理基准上与智谱 GLM-5.2 持平，在智能体编码任务上接近阿里 Qwen 3.8-Max，但原始能力仍不及 Kimi K3；其最大卖点是推理成本：官方称用三分之一到四分之一的计算量即可追平 GLM-5.2 的高级推理（[南方周末科创要闻](https://www.toutiao.com/article/7696213832217133622/)）。
+- **Mistral Large 4** 是 Mistral 史上最大的模型，原生支持多模态与百万 token 上下文，在网络安全与代码基准上超越中国开源模型，但在 Artificial Analysis 等综合基准上得分仍落后于多款中国模型；权重计划在 10 月底公开（[AI 研究 HK](https://www.airesearch.hk/tag/%E6%A8%A1%E5%9E%8B%E7%99%BC%E5%B8%83/)，[南方周末科创要闻](https://www.toutiao.com/article/7696213832217133622/)）。
+- **Muse Spark Open** 是 Meta 首次拿出的"最强大美国实验室开源模型"：混合专家架构、百万 token 上下文、图文音视频原生多模态，官方演示了两台搭载 M5 Ultra 的 Mac Studio 即可本地运行 8160 亿参数模型（[AI 日报](https://www.163264.com/17083)，[xiaoan.cc 开源大模型页](https://xiaoan.cc/article-tags/open-source-llm)）。
+- **Kimi K3.1 Pro** 是月之暗面 K3.1 系列首发模型，后训练算力大幅增加，在代码、3D 创作、金融研究等长程智能体能力上提升显著；官方称其为全球参数规模最大的开源模型，完整权重将于 11 月 4 日公开（[科学网](https://news.sciencenet.cn/htmlnews/2026/10/573535.shtm)，[ai-tldr 发布记录](http://ai-tldr.dev/releases/model)）。
+
+## 效率取代规模：激活参数成为新标尺
+
+把上表里"总参数"和"激活参数"两列并排看，十月开源竞赛的实质已经很清楚：**规模仍然在涨，但真正被拿来竞争的是激活参数和每 token 推理成本。**
+
+Mistral Large 4 总参数 1.05 万亿，激活参数只有 490 亿；Beam 总参数 5010 亿，激活 230 亿；Meta Muse Spark Open 总参数 8160 亿，激活 420 亿。而中国头部开源模型早已是同样的路线：Kimi K3.1 Pro 总参数约 3 万亿、激活 1040 亿，DeepSeek V4.1 Flash 则是 552B 总参数、每 token 激活 8B 到 16B（[ai-tldr](http://ai-tldr.dev/releases/model)，[The AI Frontier 周刊](https://aisengtech.com/issue-2026-10-18-long-outputs-and-agent-harnesses)）。
+
+这与去年"谁总参数大谁声量大"的叙事完全不同。稀疏 MoE 架构普及之后，总参数只是"知识容量"的近似指标，激活参数和推理吞吐才是"算力账单"。Beam 在高级推理上追平 GLM-5.2 而计算量只有三分之一到四分之一，Muse Spark Open 能在两台 Mac Studio 上跑起来，靠的都是把激活参数压下去。
+
+同期还有两个佐证：DeepSeek 于 10 月 17 日上线 V4.1 Flash 1017 版本，官方所有基准提升、输出变短、token 价格不变，并在同一天放出 552B 的 MIT 权重；其官方端点约 91.5% 的缓存命中率让有效输入成本低至每百万 token 约 0.017 美元（[local-ai-zone 十月模型更新](https://local-ai-zone.github.io/blog/October_2026_AI_Model_Updates.html)）。ARC Prize 公布的跑分显示 V4.1 Flash 在 ARC-AGI-1 拿到 94.5%、ARC-AGI-2 拿到 72.9%，分别比上一代提升 5.5 和 11.5 分，但单任务成本也上涨了约 250%（[tuikar 资讯](https://news.tuikar.cn/)）——推理换精度的权衡在开源侧同样存在。
+
+## 差距收窄：闭源对开源的领先只剩 3.3%
+
+这一轮开源密集发布的底气来自一个宏观数据：斯坦福 2026 年 AI 指数显示，最好的闭源模型只领先最好的开源模型 3.3%（[南方周末科创要闻](https://www.toutiao.com/article/7696213832217133622/)）。差距从"代际差"压缩到"百分点差"之后，叠加闭源 API 强制性的数据留存政策引发的担忧，越来越多客户开始把可自托管、可微调的开源模型当作替代方案。
+
+值得注意的细节是欧美内部的分化：
+
+- 美国巨头（OpenAI、Google、Anthropic、Meta 的 Muse Wonder 闭源线）主推闭源前沿模型，靠 API 变现；
+- 没有存量包袱的欧美初创（Reflection AI、Mistral、Aleph Alpha）则选择开源路线，借助社区放大声量。
+
+Beam 与 Mistral Large 4 都强调"开源透明度"和"供应商中立"作为企业采购的竞争筹码（[The AI Frontier 周刊](https://aisengtech.com/issue-2026-10-18-long-outputs-and-agent-harnesses)），Meta 则两头下注：Muse Wonder 系列走闭源付费，Muse Spark Open 走开放权重（[CSDN DAMO 盘点](https://damodev.csdn.net/6ace4795536f457592afa351.html)）。
+
+## 中国开源阵营的回应：更大、更快、更多调用
+
+欧美"三连发"之后，中国开源阵营在十月下旬给出自己的回答，方向上依然是大而全加场景深耕：
+
+- **Kimi K3.1 Pro（10 月 23 日）**：约 3 万亿参数、100 万 token 上下文，在多项国际评测中综合智能接近全球领先闭源模型；长程编码经大规模强化学习进一步增强，3D 创作与金融研究支持端到端交付，在两项国际金融测评中超过前沿闭源模型（[科学网](https://news.sciencenet.cn/htmlnews/2026/10/573535.shtm)）。
+- **DeepSeek V4.1 Flash 1017（10 月 17 日）**：更小激活参数（8B-16B）但更强编码与智能体得分，MIT 权重当天放出（[local-ai-zone](https://local-ai-zone.github.io/blog/October_2026_AI_Model_Updates.html)）。
+- **阶跃 Step 5**：10 月 15 日开源完整权重，落地腾讯 WorkBuddy 并开启限免（[CSDN DAMO 盘点](https://damodev.csdn.net/6ace4795536f457592afa351.html)）。
+
+调用量数据给出了更直观的对比。全球 AI 模型聚合平台 OpenRouter 的统计显示：上周（10 月 12 日至 18 日）全球大模型总调用量为 164 万亿 token，中国大模型周调用量连续 25 周超过美国，稳居全球首位，且全球调用量排名前五均为中国大模型（[科学网](https://news.sciencenet.cn/htmlnews/2026/10/573535.shtm)）。
+
+## 观察：开源竞赛进入"成本与场景"下半场
+
+把十月的发布串起来，能看到三个明确信号：
+
+**第一，竞争焦点从"模型最大"转向"每 token 干多少活"。** 激活参数、缓存命中率、单任务成本开始取代总参数成为宣传口径，这与闭源侧"按完成任务成本路由"的趋势同构——能力趋同之后，成本效率就是下一个护城河。
+
+**第二，开源与闭源的边界在重新划分。** 巨头继续靠闭源前沿模型定义能力上限，初创和小实验室靠开源换取生态位；但开源侧的追赶速度（3.3% 差距）意味着，多数企业级场景已经可以在自托管与 API 之间认真比较，而不是默认闭源。
+
+**第三，中国开源模型已经构成全球事实标准之一。** 连续 25 周调用量第一、前五名全是中国模型，欧美新模型发布时的对标对象也几乎都是中国模型。这既是压力，也是欧美开源阵营重新活跃的催化剂。
+
+对开发者而言，十月最大的变化不是又多了几个模型，而是选型逻辑变了：先看激活参数和成本，再看场景覆盖，最后才轮到"参数规模"这种宣传数字。开源竞赛的下半场，拼的是落地深度。
+
+_（内容由AI生成，仅供参考）_
