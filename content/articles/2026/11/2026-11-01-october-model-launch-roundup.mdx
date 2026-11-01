@@ -1,0 +1,92 @@
+---
+title: 一个月 7 款旗舰：2026 年 10 月大模型发布潮复盘
+description: 10 月大模型圈 14 天内密集发布 7 款旗舰模型，上下文窗口突破百万 token，价格持续下探，开源阵营集体发力。本文复盘这场发布潮的四个关键趋势。
+publishedAt: 2026-11-01
+category: ai-frontier
+tags:
+  - 大模型
+  - 行业观察
+  - Gemini
+  - GPT-6
+  - DeepSeek
+  - Mistral
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 14 天 7 款旗舰：一场罕见的密集发布
+
+2026 年 10 月，全球大模型厂商进入近年最密集的发布节奏。据[模型发布时间线整理](https://llmlineage.com/)与多家媒体统计，短短 14 天内有 7 款重磅模型先后登场：10 月 1 日 Google 的 Gemini 4 Argon 打头阵，随后 Mistral Large 4、OpenAI GPT-6 全家桶、Anthropic Claude Haiku 5.5、Meta 的 Muse 系列、MiniMax M3.1 Flash 相继落地[^toutiao]。
+
+| 日期 | 厂商 | 模型 | 关键信息 |
+| --- | --- | --- | --- |
+| 10-01 | Google | Gemini 4 Argon | 1M token 上下文，API 定价每百万 token 输入 2 美元、输出 10 美元[^lineage] |
+| 10-06 | Mistral | Large 4 "Le Chonk" | 1.05T 总参数、49B 活跃参数的 MoE，原生多模态与 1M 上下文[^airesearch] |
+| 10-07 | OpenAI | GPT-6 全家桶 | Astra / Sol / Luna 全量推送，按计划分层[^aitechmodel] |
+| 10-07 | Anthropic | Claude Haiku 5.5 | 平均成本较 Haiku 4.5 低约 75%[^aitechmodel] |
+| 10-13 | Meta | Muse Wonder / Muse Spark | 首款前缘级模型；开源 816B 模型支持 1M 上下文[^pondero] |
+| 10-15 | NVIDIA | Nemotron 3.5 Super VL / Bolt | 120B 开放智能体模型 + 74B 端侧模型，可在 24GB 内存运行[^pondero] |
+| 10-19 | MiniMax | M3.1 Flash | 推理速度提升近 3 倍，使用成本降低 70%[^stusc] |
+
+其中 Meta 的 Muse Spark Open 是 816B 参数、1M token 上下文的开放权重模型，授权条款允许其在两台 Apple M5 Ultra Mac Studio 上完整运行[^pondero]。月底 Google 又发布 Gemini 4 Carbon，在更难基准上超越 Claude Opus 5.5，并伴随 Token 价格对折[^csdn]。
+
+## 上下文破百万：从"装得下"到"不用切片"
+
+这场发布潮最卷的指标是上下文长度。Gemini 4 Argon 与 Muse Spark 均做到 100 万 token——相当于约 75 万字，一整部长篇小说可以直接整本交给模型；GPT-6.1 Sol 也达到 50 万[^toutiao]。一年前 128K 还是主流天花板，如今翻了约 8 倍。
+
+上下文变长的直接受益者是真实工作流：一整份合同、一整套代码库、一份财报可以整体输入，不必再手工切片。Google 官方把 1M 输出窗口称为"前端智能的新阶段"，其输出 token 上限从上代的 6.4 万提升到 100 万，在 DeepSWE v1.1 上得分 77.9%[^itsdw]。对开发者而言，长上下文也在改变工程架构——过去为规避输出长度限制而搭建的分块生成管线，正在被逐步拆除[^aiseng]。
+
+## 价格下探：AI 从"奢侈品"走向"日用品"
+
+性能提升的同时，成本在快速下降。Gemini 4 Argon 上线时 API 价格限时五折，定价为每百万 token 输入 2 美元、输出 10 美元[^stusc]；MiniMax M3.1 Flash 把 API 价格压到每百万 token 输入 1 元、输出 4 元[^stusc]；Claude Haiku 5.5 成本比上代低约 75%[^aitechmodel]。
+
+推理成本的持续走低，意味着模型服务正从"奢侈品"变成"日用品"。如同宽带资费下降催生了短视频与直播的繁荣，便宜的调用价格正在为应用层创新打开空间。
+
+## 开源阵营集体发力
+
+开放权重模型是本月另一条主线。DeepSeek V4.1 Flash-1017 于 10 月 17 日发布，以 MIT 协议开放权重，上下文 100 万 token，并报告在 DeepSWE 上得分 77.0[^aitechmodel][^stusc]；Mistral Large 4 承诺月底开放权重，被称为"中国以外最强开放模型"[^csdn]；Reflection AI 发布 501B 参数的 Beam，采用 Apache 2.0 授权[^airesearch]；腾讯也在 10 月 23 日公开了 Hy-Nomas 代码与 Apache-2.0 权重，支持多轮视频世界生成[^lineage]。
+
+开源阵营的集体动作正在把顶级能力"免费化"，闭源模型的护城河肉眼可见地变薄。对开发者和企业来说，可复现、可私有化部署的选项越来越多。
+
+## 风向变了：从"拼参数"到"拼干活"
+
+如果给这轮发布潮找一个共同关键词，那就是"干活"。
+
+过去两年，厂商比拼的是参数量与跑分；如今基础能力逼近平台期，单纯堆参数的边际收益越来越小。竞争焦点转向三个方向：多模态——能否同时看懂文字、图片、音频和视频；智能体——能否自己规划任务、调用工具、执行操作；长上下文——能否记住海量信息并精准调用[^stusc]。三者结合，才是从"聊天机器人"走向"通用助手"的关键。
+
+OpenAI 在 10 月 6 日上线了决策专用 API GPT-6 Luna Decisions，专门返回结构化决策答案[^aiproducthk]；Microsoft 发布只返回 yes/no 与选择题评分的 Decision-1[^pondero]。模型开始按用途分层——聊天、编程、深度推理、决策各司其职，"选模型像选手机档位"成为新的用户直觉[^toutiao]。
+
+## 结语
+
+2026 年 10 月的发布潮像一场行业压力测试：上下文破百万、价格腰斩、开源权重密集放出、能力从"聊天"转向"办事"。对普通用户，最值得关注的三件事是：长上下文让整本书级输入成为日常；模型按用途分层带来更细的选择粒度；开源阵营正在把顶级能力变成公共基础设施。下一次发布潮到来前，先想清楚自己要"干"什么活，再决定用哪款模型。
+
+---
+
+**主要资料来源**
+
+- [模型发布时间线 · Model Lineage](https://llmlineage.com/)
+- [大模型十月大爆发 · 思途小站](https://www.stusc.com/?p=421)
+- [#模型發布 · AI 研究 HK](https://www.airesearch.hk/tag/%E6%A8%A1%E5%9E%8B%E7%99%BC%E5%B8%83/)
+- [2026年10月最新科技热点：AI与算力合集 · IT时代网](https://www.itsdw.cn/news/36053.html)
+- [What Is New With AI in October 2026 · AI Tech Model](https://aitechmodel.com/?p=27461)
+- [Model release · Pondero](https://pondero.ai/news/category/model-release)
+- [每日 AI 研究简报 · CSDN](https://damodev.csdn.net/6ae4a056e5f4ca4eff8d73c1.html)
+- [2026年10月大模型横评 · AI产品库](https://aiproducthub.cn/wpnote/llm-comparison-october-2026-claude-opus-5-5-gemini-4-argon)
+- [一个月发7款大模型 · 今日头条](https://m.toutiao.com/article/7699368387419324943)
+
+[^toutiao]: https://m.toutiao.com/article/7699368387419324943
+[^lineage]: https://llmlineage.com/
+[^airesearch]: https://www.airesearch.hk/tag/%E6%A8%A1%E5%9E%8B%E7%99%BC%E5%B8%83/
+[^aitechmodel]: https://aitechmodel.com/?p=27461
+[^pondero]: https://pondero.ai/news/category/model-release
+[^stusc]: https://www.stusc.com/?p=421
+[^itsdw]: https://www.itsdw.cn/news/36053.html
+[^aiseng]: https://aisengtech.com/issue-2026-10-18-long-outputs-and-agent-harnesses/
+[^csdn]: https://damodev.csdn.net/6ae4a056e5f4ca4eff8d73c1.html
+[^aiproducthk]: https://aiproducthub.cn/wpnote/llm-comparison-october-2026-claude-opus-5-5-gemini-4-argon
+
+_（内容由AI生成，仅供参考）_
