@@ -1,0 +1,115 @@
+---
+title: 'Agent Experience：当用户变成 agent，CLI 和文档该怎么做测试'
+description: '2026 年 11 月初开源的 Gauge CLI 把「coding agent 能不能顺利用上你的 CLI、SDK、Skill 和文档」做成了一个本地可跑的爬山循环：跑真实 agent、收集会话证据、改完再跑。本文整理它的工作方式、五类典型摩擦、上手成本与目前还站不住的边界。'
+publishedAt: 2026-11-11
+category: tools-productivity
+tags:
+  - Agent Experience
+  - 开发工具
+  - CLI
+  - MCP
+  - AI 编程
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一个不太好回答的问题：你的工具 agent 会用吗
+
+做 CLI、SDK、MCP server，或者维护一份技术文档的人，这两年多了一个新的使用者：不是人，是替人干活的 coding agent。
+
+以前衡量一份文档好不好，标准是可读性——有没有概念总览、有没有最小示例、术语前后是否一致。但当调用方变成 agent 之后，评价标准悄悄换了：它能不能在没有人提示的情况下找到入口，能不能在报错之后自己走出来，会不会把一个交互式命令当成卡死。
+
+2026 年 11 月初，Gauge 开源了一个专门测这件事的 CLI。仓库自述的第一句话就是它的定位——[gauge-sh/gauge-cli](https://github.com/gauge-sh/gauge-cli)：一个用来「爬山」（hillclimb）Agent Experience 的开源命令行工具，MIT 许可。
+
+## AX 到底指什么
+
+Gauge 把这件事拆成两个可测量的量，写在[文档站](https://docs.withgauge.com/agents)里：
+
+| 度量 | 回答的问题 |
+| --- | --- |
+| Agent Experience（AX） | agent 能不能用你的产品把任务做完，失败卡在哪一步 |
+| Agent Preference | 面对一个真实的开发任务，agent 有多大概率推荐或选用你的产品 |
+
+前者的对象是 CLI、Skill、SDK、MCP 和文档；后者的对象更多是首页、定价页、`llms.txt` 这类「被选择」的入口。这个拆分本身值得注意：能被调用和能被选中，是两件不同的事，只是过去从来没人分开统计过。
+
+## 它的循环：跑真 agent，而不是跑语法检查
+
+Gauge 做的事情并不神秘，本质是把「体验测试」还原成可复现的会话。仓库 README 把循环拆成五步：
+
+1. **定义任务**。用 agent 保存 eval 或 preference prompt，每条带稳定 ID、可编辑默认值和可观测的判定结果；需要共享给同事或接进 CI 的，用 Markdown case 写成 `gauge-cases/` 下的文件。
+2. **测当前产品**。本地模式每次起一个干净的 Docker 会话，把工作区里当前版本的输入注入进去。
+3. **找摩擦**。它把 Claude Code、Codex、Pi、OpenCode 四个 harness 的会话事件归一化成同一种 transcript，再由你自己的 coding agent 读证据、逐条对判定标准给结论，用 `gauge run analysis save` 存下结构化的 Findings。
+4. **改完重测**。原 eval ID 不改，重跑一次，新批次会快照当前输入，基线批次保留。
+5. **对比证据**。`gauge run compare --local --baseline batch=<before-id> --candidate batch=<after-id>`，看原来的问题是否消失、任务是否成功、有没有引入新的摩擦。
+
+这里有个设计细节值得单独说：**被测的 agent 和分析的 agent 是同一个**。Gauge 自己在本地不做任何推理，会话在 Docker 沙箱里跑，用的是你已有的 Claude、Codex 订阅或 API key，费用由各自的 provider 结算。对写工具的人来说，这解决了一个很现实的顾虑——不用为了测自己的东西再买一份额度，也不用把私有仓库推到别人托管的环境里。
+
+对 npm 包，还有一步更实用的：先把 CLI 或 SDK 打成 tarball，在测试会话里安装，验证修复之后再发布。这比「发完版本看用户报 bug」快得多。
+
+## 它列出来的五类摩擦，值得对照自查
+
+README 里列举的典型 Findings，几乎每一条都能在真实项目里找到影子：
+
+- 一个交互式命令把 agent 直接卡死；
+- agent 伸手去用了已弃用的命令或过时的 API 写法；
+- Skill 明明该在这类任务里帮上忙，却始终没被调用；
+- agent 很自信地声称产品有一个其实不存在的限制；
+- 跨越多条命令的预期工作流，agent 拼不出来。
+
+第一条和第三条尤其有意思。交互式确认是为人设计的保护，对 agent 就是阻塞；Skill 没被用上，很多时候不是 agent 笨，而是描述写得像给人看的目录，没有写清「什么情况下该用我」。
+
+## 上手成本：比想象中低，但有几个硬前提
+
+按 README，前置条件只有四项：Node.js **22.13+**、npm、能跑 Linux 容器的 Docker，以及被测试 agent 的凭证。两条命令起步：
+
+```bash
+npm install -g @withgauge/cli
+gauge local runtime pull
+```
+
+`gauge local runtime pull` 拉的是与当前 CLI 版本绑定的镜像，里面装着 harness 和常用开发工具。之后在项目目录执行 `gauge init`，会生成一个私有的 `.gauge/` 工作区（含 SQLite 数据库和本地后端偏好），默认不动任何被跟踪的文件。加 `--cases` 才会额外写出 `gauge.json`、`gauge-cases/` 和 `AGENTS.md` 里的指引——这几个是打算提交的共享文件，`.gauge/` 则应该留在本地。
+
+一条保存过的 eval 大概长这样：
+
+```bash
+gauge eval create --local --name "Release notes" \
+  --agent codex --samples 1 \
+  --text "Write the release notes for version 1.2.0. We added dark mode and fixed a login crash." \
+  --criterion "Team format: RELEASE-NOTES.md has a version 1.2.0 title, dark mode under Added, and the login crash fix under Fixed."
+```
+
+拿到 eval ID 之后，先 `--dry-run` 预演一遍，检查本地运行时和凭证是否就绪，再正式跑。这一步的设计意图很明显：别让一次评测因为 Docker 没起或者 key 过期而白跑。
+
+## 本地与托管的边界是清楚的
+
+Gauge 没把本地模式包装成「全都能测」。README 的对照表里，本地支持 Skills、SDK、CLI 和文件类输入；docs、需要认证的 MCP、需要认证的 API 归托管。托管那侧还有定时测量、GitHub App 的 PR 检查、更多的并发。想同时验证一份还没上线的文档改动，本地可以用 web fixture 顶一下——替换页面或把站点路由到预览地址。
+
+另外要注意：托管 Gauge 是有账号和额度的，而本地模式不需要 Gauge 账号。
+
+## 遥测与隐私，作者写得很直白
+
+README 明说，安装后的 CLI **默认收集**命令使用信息：命令名、时间戳、CLI 版本和一个随机安装 ID；不收集参数、prompt、文件内容和账号标识。想彻底关掉，设 `GAUGE_TELEMETRY_DISABLED=1`。
+
+这段披露值得肯定，问题在于「默认开启、需要手动关」仍然是当下工具的通行做法。如果你的评测内容本身就涉及敏感工程信息，第一件事应该是把开关关掉，而不是相信字段清单。
+
+## 目前还站不住的地方
+
+把外部整理和官方材料放在一起看，这个工具还处在很早期。
+
+- 一份[英文技术博客的试用整理](https://zendot.org/en/posts/gauge-sh-gauge-cli)指出，Gauge CLI 用 TypeScript 编写、MIT 许可、GitHub 上的星标数还很少，属于极早期项目。
+- 同一份整理的核心批评是：文档列出了典型摩擦模式，但**没有给出量化基准**。也就是说，它告诉你「这里可能卡」，却不保证「改完一定更好」——改善与否仍然要你自己看证据。
+- 仓库 README 列出的 harness 是 Claude Code、Codex、Pi、OpenCode 四个，而文档站的支持列表里多了 Antigravity。两处口径不一致，这类不一致在快速迭代的工具里很常见，但意味着「支持清单」这件事目前不能当契约看。
+
+所以现阶段合理的用法不是「装上看分数」，而是：挑一个自己最熟的产品入口，写一条判定标准清晰的 eval，跑两批，读 transcript，只信自己看得到的那几条证据。
+
+## 一个更实际的判断
+
+agent 参与开发已经从「能不能写对代码」转向「能不能把一件有边界的事做完」，而这个能力的上限，很大一部分不由模型决定，由它面对的工具和文档决定。一个把确认弹窗当成必经步骤的 CLI，文档写得再漂亮，agent 也用不动。
+
+在这个意义上，AX 不是新瓶装旧酒的可读性指标，它把「工具设计」的验收对象换成了真实会话。Gauge 的做法未必是最终形态，但它至少给了一件以前只能靠感觉的事开了个口子——好坏可以被重跑、被对比、被留证据。
+
+_（内容由AI生成，仅供参考）_
