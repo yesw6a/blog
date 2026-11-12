@@ -1,0 +1,234 @@
+---
+title: 预训练数据越多，Muon 越不划算：微调遗忘差距逆转的机制精读
+description: CMU 团队在 500 多次预训练与 2.9 万次微调上发现，Muon 在预训练 loss 上始终领先，但预训练数据超过约 2.4B token 后，AdamW 模型的微调学习-遗忘权衡反而更好，且模型越大翻转越早。本文拆解这一逆转的实验证据，以及 margin-to-spread ratio 给出的解释：GD 与 Muon 的该比值以 1/γ 速率逼近 3π/8 约 1.18。
+publishedAt: 2026-11-12
+category: technical-foundations
+tags:
+  - 优化器
+  - Muon
+  - AdamW
+  - 灾难性遗忘
+  - 论文解读
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+Muon 这两年在预训练圈子的名声，建立在一个很单一的证据上：同样的算力预算，它能跑到更低的训练 loss。Kimi K2、GLM-4.5 这些模型把 Muon 或其变体用进了正式训练，社区讨论也随之把它当成 AdamW 的接班人。
+
+2026 年 11 月 2 日，卡内基梅隆大学的 Catherine Li、Jingchu Gai、Andrej Risteski、Jacob Mitchell Springer、Aditi Raghunathan 在 arXiv 上传了一篇论文，结论很不给面子：**在预训练 loss 上，Muon 全程领先；但在微调之后的知识保持与任务学习的权衡上，数据量一大，AdamW 就反超了**（[arXiv:2611.03633](https://arxiv.org/abs/2611.03633)）。
+
+论文的落点不是"谁更快"，而是"优化器给模型留下了什么样的权重结构"。这一点，预训练 loss 这个数字看不出来。
+
+## 被预训练 loss 掩盖的退化
+
+论文盯住的是灾难性遗忘问题在预训练阶段留下的伏笔。微调会让模型学到目标任务，同时损伤预训练知识，两件事此消彼长。只报微调 loss 是残缺的：一个基座可能学得更多，也可能忘得更多。
+
+作者把这件事形式化成一条曲线。对一个预训练好的模型，把所有微调超参数扫一遍能得到一堆微调后的检查点，每个检查点在坐标图上有一个位置——横轴是微调 loss（学得好不好），纵轴是预训练 loss（忘得多不多）。取左下包络，就是这篇论文反复使用的**学习-遗忘前沿**（learning-forgetting frontier）。前沿越靠左下，基座越适合微调。
+
+有了前沿，两个优化器的比较就变成一个数：**微调差距**（fine-tuning gap），定义为 AdamW 前沿到 Muon 前沿的有符号平均最小欧氏距离。负值表示 Muon 基座占优，正值表示 AdamW 占优。
+
+预训练数据预算则用 **TPR**（token–parameter ratio）度量，即预训练 token 数除以模型参数量。Chinchilla 的最优配比对应 TPR=20 量级，这篇论文把预算扫到 TPR 5 至 2560。
+
+## 两个更新规则差在哪
+
+要理解后面的理论，得先看清楚两个优化器在几何上做的是两件不同的事。
+
+### AdamW：每个坐标各自归一化
+
+AdamW 维护梯度的一阶、二阶指数移动平均，做偏差修正后按坐标除去梯度尺度，再单独施加解耦的权重衰减：
+
+```text
+m_t = b1 * m_{t-1} + (1 - b1) * g_t
+v_t = b2 * v_{t-1} + (1 - b2) * g_t^2      # 按坐标平方
+m_hat = m_t / (1 - b1^t)
+v_hat = v_t / (1 - b2^t)
+theta_{t+1} = theta_t - lr * m_hat / (sqrt(v_hat) + eps) - lr * wd * theta_t
+```
+
+每个坐标被自己近期的梯度幅度缩放，历史梯度大的方向步长自然被压小。权重衰减不经过这个缩放，所以所有坐标以同一速率衰减。
+
+### Muon：把动量矩阵压成极因子
+
+Muon 不逐坐标看，它把每个二维权重矩阵当整体。累积动量后，对动量矩阵做极分解：保留奇异向量，把所有奇异值强行拉成 1。
+
+```text
+M_t = mu * M_{t-1} + G_t
+theta_{t+1} = theta_t - lr * Orth(M_t)      # Orth(X) = U @ V^T，X = U S V^T
+```
+
+论文给了一句很实用的解释：这个更新可以读作"以谱范数度量步长大小时的最速下降方向"。也就是说，更新在所有奇异方向上的强度是一样的，不会像 AdamW 那样被某个方向的历史梯度主导。
+
+精确 SVD 每步做太贵，实现上用一个五次 Newton–Schulz 迭代逼近。Keller Jordan 的原始实现（[Muon 设计说明](https://kellerjordan.github.io/posts/muon/)）里，这段代码只有十几行：
+
+```python
+def newtonschulz5(G, steps=5, eps=1e-7):
+    assert G.ndim == 2
+    a, b, c = (3.4445, -4.7750, 2.0315)
+    X = G.bfloat16()
+    X /= (X.norm() + eps)
+    if G.size(0) > G.size(1):
+        X = X.T
+    for _ in range(steps):
+        A = X @ X.T
+        B = b * A + c * A @ A
+        X = a * X + B @ X
+    if G.size(0) > G.size(1):
+        X = X.T
+    return X
+```
+
+那个奇次矩阵多项式的作用，是把归一化后每个奇异值都往 1 推。它不需要真的算出 SVD，只要让矩阵在重复乘法中逐渐逼近正交。
+
+参数分工也需要说清：Muon 只负责隐藏层里的二维权重矩阵，embedding、输出层、归一化的增益这类一维参数仍然交给 AdamW，各自有独立学习率和权重衰减。
+
+| 维度 | AdamW | Muon |
+| --- | --- | --- |
+| 处理粒度 | 逐坐标 | 整个权重矩阵 |
+| 核心变换 | 除以 sqrt(v_hat) | 极分解，奇异值归一为 1 |
+| 隐式几何 | 坐标空间的各向异性缩放 | 谱范数下的等强度更新 |
+| 实现成本 | 两次指数移动平均 | 五次 Newton–Schulz 迭代 |
+| 适用参数 | 全部 | 仅二维隐藏层权重 |
+
+## 实验规模
+
+这部分的成本值得单独提，因为结论的分量来自覆盖面。
+
+- **预训练**：OLMo 风格的 decoder-only 模型，5 个尺寸（30M / 60M / 100M / 300M / 600M），数据是 [DCLM](https://arxiv.org/abs/2406.11794)，共 150M 到 154B token，配 OLMo 2 tokenizer 与架构（[OLMo 2 技术报告](https://arxiv.org/abs/2501.00656)）。序列长度 4096，全局批 2^20 token，Warmup–Stable–Decay 调度，权重衰减 0.1，梯度裁剪 1.0。AdamW 用 (0.9, 0.98)。Muon 只更新隐藏矩阵，其余参数用 AdamW。
+- **微调**：每个基座微调 20M token，四个数据集——Alpaca、GSM8K、MusicPile、StackMathQA。序列长度 1024，余弦调度加热身 20 步，AdamW 学习率从 1e-4 扫到 1e-2，Muon 学习率从 6e-4 扫到 2e-2。
+- **总量**：近 600 次预训练、约 29,000 次微调。
+
+作者用了两种设置。**最低预训练 loss 设置**是常规做法：每个优化器只取 loss 最优的那个基座，再把它的微调配置全扫一遍。**最佳前沿设置**承认前人的发现——loss 最优的基座不一定最适合微调，于是把预训练学习率网格上更靠上的几个基座也一起扫进来，拼成一条更靠左下的前沿。
+
+## 结果一：数据一多，Muon 就翻车
+
+以 StackMathQA 微调、60M 模型为例。在 2.4B token 的预训练预算下，Muon 的前沿压过 AdamW，微调差距为负。**预算继续加大，趋势翻转**：AdamW 基座在更低的微调 loss 上忘得更少，微调差距转为正。这个翻转在最佳前沿设置和另外几个微调数据集上都成立。
+
+反直觉之处在于：Muon 在每一个预算点上都拿到了更低的预训练 loss。低 loss 并没有兑换成更好的可微调性。
+
+## 结果二：模型越大，翻转越早
+
+交叉点 TPR 是关键指标——AdamW 前沿追上 Muon 前沿所需的最小 TPR。
+
+在 StackMathQA 上，30M 模型需要 320 TPR 才发生翻转，600M 模型只需要 10 TPR。具体数值随微调数据集变化，但"模型越大，交叉点 TPR 越小"这个趋势很稳。
+
+论文把最低 loss 设置下的这个现象拆成两个同时发生的因素：
+
+1. 固定 TPR 时，Muon 与 AdamW 的预训练 loss 差距随模型变大而缩小，Muon 作为"低 loss 基座"的优势在贬值；
+2. 固定 TPR 与微调 loss 时，Muon 模型遗忘得比 AdamW 越来越多。
+
+两条曲线交叉，AdamW 就在越来越小的数据预算上完成反超。作者也测了微调阶段加重正则（数据回放、EWC）的情形，翻转仍然存在。
+
+## 为什么会翻转：margin-to-spread ratio
+
+直觉上，微调改变的是模型的输出分布。那么可以问一个更可分析的问题：**哪个优化器训出的基座，对输出分布的扰动更不敏感？**
+
+论文用**margin-to-spread ratio（MSR）**量化这种敏感性。对一次预测，记正确 token 的 logit 与所有错误 token 的 logit 均值之差为 margin，错误 logit 的离散程度为标准差，二者之比就是 MSR：
+
+```text
+rho = mean_margin / mean_spread
+```
+
+MSR 越大，说明正确答案相对竞争对手的领先幅度，相对于错误答案之间的散布越明显，预测越抗扰动。它只依赖输出 logit，不需要知道微调数据是什么。
+
+为了能证明，作者搭了一个线性联想记忆模型：`N` 个键值对，键和值都从标准高斯采样，权重矩阵为 `d × d`，用 softmax 交叉熵训练，数据预算记为 `gamma = N / d`。
+
+### 单步定理
+
+从零初始化出发，比较一步 GD 与一步 Muon 之后的 MSR 比值。结论：
+
+- 当 `gamma` 足够大时，GD 的 MSR 大于 Muon 的；
+- 把数据预算提高任何固定百分比，比值 `R = rho_GD / rho_Muon` 依概率增大；
+- `R` 从下方以 `1/gamma` 的速率逼近 `3π/8 ≈ 1.18`：
+
+```text
+3π/8 - C/gamma  <=  R  <=  3π/8 - c/gamma
+```
+
+由于 `3π/8 > 1`，预算足够大时 GD 的 MSR 必然更大。这里的 GD 指全批梯度下降——一个可分析、但足以复现定性趋势的对照物。
+
+### 推导骨架
+
+关键一步是：MSR 对权重乘以正数不变，所以一步之后的权重可以直接写成
+
+```text
+W_GD = G,          W_Muon = polar(G) = U V^T
+```
+
+也就是"原始梯度矩阵"与"它的极因子"。剩下的工作是算这两个矩阵下 margin 的均值与标准差。
+
+均值的计算很干净。均匀查询权重下，对 `N` 个事实平均后，
+
+```text
+mean_margin_GD    = ||G||_F^2 / (N-1)      # Frobenius 范数的平方
+mean_margin_Muon  = ||G||_* / (N-1)        # 核范数，即奇异值之和
+```
+
+一个用全部奇异值的平方和，一个用奇异值本身之和。这是两条更新路线最本质的分歧点：Muon 把所有奇异值拉平，等于只保留"方向"，丢掉了梯度在各方向上的幅度信息。
+
+标准差才是决定胜负的量。对 GD，错误 logit 的方差来自两部分：其他事实贡献 `N·d^2`，查询与候选自身贡献 `2·d^3`，合起来
+
+```text
+(spread_GD)^2   = d^3 (gamma + 2) (1 + o_p(1))
+(spread_Muon)^2 = d [1 + O(gamma^(-3/2)) + o_p(1)]
+```
+
+一个随 `d^3` 增长，一个只随 `d` 增长。数据预算 `gamma` 变大时，GD 的离散度虽然也在涨，但均值的增长更快，比值最终收敛到常数 `3π/8`。
+
+把均值除以标准差，到 `1/gamma` 的一阶：
+
+```text
+rho_GD    ≈ sqrt(d/gamma) * (1 - 1/gamma)
+rho_Muon  ≈ (8/(3π)) * sqrt(d/gamma) * (1 - 1/(10 gamma))
+R = rho_GD / rho_Muon ≈ (3π/8) * (1 - 9/(10 gamma))
+```
+
+对线性联想记忆做多步模拟，趋势与单步分析一致：小预算下 Muon 的 MSR 更高，大预算下 GD 更高。
+
+## 在真实语言模型上核对
+
+理论用的是 GD，实际主线是 AdamW，中间隔着差距。作者的处理是直接测量。
+
+在 DCLM 的留出文本上，对每个 token 位置算正确 next-token logit 与全部词表 logit 之间的 margin 均值与标准差，取正确预测位置上的中位数，得到真实模型的 MSR。30M、60M、100M 三个规模的曲线上，规律与理论同向：
+
+- 小预算：Muon 的 MSR 更大；
+- 预算增大：AdamW 反超；
+- 比值 `rho_AdamW / rho_Muon` 在每个规模上都跨过 1。
+
+作者也说明，MSR 交叉点和微调交叉点不必落在同一个预算上，因为学习-遗忘权衡还受预训练 loss 本身影响。MSR 解释的是方向，不是精确位置。
+
+论文附录还补了一条连接：MSR 与"给权重加高斯噪声后 loss 上升多少"这类鲁棒性指标强相关，在线性记忆里可以证明更大的 MSR 保证更多竞争者被压在正确答案之下。
+
+## 这篇文章推不出什么
+
+几个边界必须说清楚，否则容易被读成"Muon 不值得用"。
+
+- **规模只到 600M 参数、154B token**。前沿模型的量级完全不同，趋势是否线性外推，论文没有证据。
+- **理论对照是精确正交化 vs 全批 GD**，不是 Muon vs AdamW。AdamW 在实证中呈现同向趋势，但定理本身不覆盖 AdamW 的自适应缩放与权重衰减。
+- **翻转依赖微调分布**。作者自己承认，如果在接近预训练数据的分布上微调，"本质上就是继续预训练"，翻转未必出现。
+- **交叉点 TPR 依赖数据集**。320 与 10 这两个数字来自特定微调集，不能当通用阈值。
+
+## 对实际工作的意义
+
+这篇论文真正的贡献，是把"优化器好不好"的评判标准从单一标量拆开了。
+
+预训练 loss 是当前所有优化器选型的公共货币，但它是**可适应性**的劣质代理，而且数据量越大越劣质。当预训练预算从几十 B 涨到几 T token 时，一个在 loss 上领先的优化器，可能在微调阶段悄悄变得更难驯服。
+
+作者给的方向有两个。一是把 MSR 这类只用输出 logit 就能算的指标纳入监控——它不需要跑微调，就能看出基座对输出扰动有多敏感。二是在预训练目标里显式优化可适应性，而不是把它当成低 loss 的副产品。
+
+对做后训练的人来说，可操作的一条是：**换优化器时，评估口径不要停在预训练 loss**。至少要在目标任务上扫一遍学习率，画出自己的学习-遗忘前沿；如果预算已经跨过 TPR 10 到 320 这个区间（具体值取决于模型规模），Muon 基座在微调后的表现值得单独验证，而不是默认更好。
+
+Muon 的预训练速度和 loss 优势是真的，这篇论文也没有否认。它只是补上了另一半账：账面上的训练效率，和模型被交付之后的可改造性，是两笔不同的开销。
+
+## 资料
+
+- Catherine Li, Jingchu Gai, Andrej Risteski, Jacob Mitchell Springer, Aditi Raghunathan. *Pretraining Data Scale Reverses the Muon–AdamW Fine-Tuning Gap*. arXiv:2611.03633，v1 2026-11-02，v2 2026-11-04。[abs](https://arxiv.org/abs/2611.03633) / [HTML 全文](https://arxiv.org/html/2611.03633v2)
+- Keller Jordan. *Muon: An optimizer for hidden layers in neural networks*。[文章](https://kellerjordan.github.io/posts/muon/)
+- Jeffrey Li 等. *DataComp-LM: In search of the next generation of training sets for language models*. [arXiv:2406.11794](https://arxiv.org/abs/2406.11794)
+- Team OLMo. *2 OLMo 2 Furious*. [arXiv:2501.00656](https://arxiv.org/abs/2501.00656)
+- Kimi Team. *Kimi K2: Open Agentic Intelligence*（使用 MuonClip 训练）。[arXiv:2507.20534](https://arxiv.org/abs/2507.20534)
+
+_（内容由AI生成，仅供参考）_
