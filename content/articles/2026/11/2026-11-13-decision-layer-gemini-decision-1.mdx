@@ -1,0 +1,127 @@
+---
+title: 判定不该生成：Gemini Decision 1 和正在成形的决策层
+description: 2026 年 11 月 11 日，Google 发布 Gemini Decisions API 与 gemini-decision-1：一次前向推理、最多 1000 个独立问题、只算输入 token。加上 OpenAI 十月的 GPT-6 Luna Decisions、Sarvam 开源的 Prism 和 TypeSafe 的 Jev，agent 里"要不要做这件事"的判定正在从提示词里剥离成独立一层。本文整理这一层的能力边界、定价形状、校准指标和被独立评测泼到的冷水。
+publishedAt: 2026-11-13
+category: ai-frontier
+tags:
+  - 决策模型
+  - Gemini
+  - Agent 基础设施
+  - API 设计
+  - 推理成本
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+一个 agent 跑完一次任务，真正花时间的地方往往不是"写"那部分。选哪个工具、这条输入要不要拦、这张工单该进哪个队列、这一步算不算成功——这些问题的答案只有一两个字，甚至只有一个数。但你得把整段上下文喂进去，然后等模型把这些判断一个字一个字解码出来，再用正则或者 JSON schema 把结果捞回来。
+
+Google 在 2026 年 11 月 11 日把这件事单独做成了一层。DeepMind 的 Min Choi 和 Felix Yu 发布 [Gemini Decisions API](https://blog.google/innovation-and-ai/technology/developers-tools/gemini-decisions-api/)，配套新模型 `gemini-decision-1`：给一份共享的多模态输入，挂上最多 1000 个独立问题，模型在一次前向推理里把所有问题打分，返回概率和置信度，输出 token 计费为零。
+
+Google 的开发者关系负责人 Philipp Schmid 在转述里把动机说得很直白：应用只需要挑个工具或者路由一个请求的时候，让 chat 模型吐 JSON 只会增加延迟，还留下一堆不该由你维护的脆弱解析代码（[DEV Community](https://dev.to/philschmid/fast-multimodal-control-flow-with-the-gemini-decisions-api-533b)）。
+
+## 这次发布的具体形状
+
+按 Google 官方博客的口径，这个端点的关键参数如下。
+
+| 项目 | 规格 |
+| --- | --- |
+| 模型 | `gemini-decision-1`，通过 Gemini API 在 Google AI Studio 提供 |
+| 单次输入 | 文本、图片、音频、视频、PDF，共享输入上限 256K token |
+| 单次问题数 | 最多 1000 个独立问题，互相不可见，并行打分 |
+| 题型 | `noul`（是/否概率）、`choice`（2–255 个选项）、`score`（有序评分量表） |
+| 延迟 | 模型计算中位数 50–100 ms，端到端 150–250 ms（16K token 上下文内） |
+| 1 题 vs 100 题 | 延迟"近乎持平" |
+| 定价 | 输入 $0.10 / 百万 token，输出 token 不收费 |
+| 免费层 | Google AI Studio 内提供试用额度 |
+
+考题类型的设计直接对应了生产里最常见的三种判断。`noul` 估计一个条件成立的概率，可以附带给"成立"和"不成立"写判定标准；`choice` 从 2 到 255 个带描述的标签里选一个，返回赢家和所有候选的归一化概率；`score` 在一段有序量表上打分，返回连续加权分数和每一档的概率。三个题型可以在同一个请求里混用，因为底层是同一份输入、同一次 prefill。
+
+Google 给的算例是抽查休息室台面：一张照片加一句"上午九点客户会议前检查"，同时问"台面有没有没擦掉的液体泼洒"（`noul`）和"这次清理该做多大动作"（`choice`）。这里值得注意的是模态组合——一通电话录音配账号元数据、一份扫描的理赔单配损坏照片，都在同一个 input 里。
+
+## 定价形状暴露了设计哲学
+
+$0.10/百万输入 token、输出零计费，这个组合不只是促销价，它是在用价格告诉你这个端点省掉了什么：没有逐 token 解码，没有思维链 token，没有单独的转写和 OCR 费用。共享输入每次请求只算一次，每个问题只加自己的指令和判据 token。
+
+Silicon Report 给了一个对照算例：一条 4000 token 的记录配 20 个 50 token 的检查，作为一次合并请求处理，1000 条记录约 0.50 美元；如果拆成 20 次独立调用、每次都重发原文，1000 条记录约 8.10 美元（[Silicon Report](https://www.siliconreport.com/google-launches-gemini-decisions-api-for-cost-efficient-ai-queries)）。价差几乎全部来自"重发上下文"这件事被消灭了。
+
+这也解释了为什么最高题数能到 1000。题目之间看不到彼此，所以它们天然可并行，加题目几乎不增加延迟，只增加指令 token。一个请求可以被当成一道闸门阵列来用：同一份证据，二十个检查，一次付费。
+
+Google 报的性价比基准是"在共享基准套件上比 Gemini 3.5 Flash-Lite 走 Interactions API 便宜近 5 倍"。这是自家口径，需要和其他厂商的账一起看。
+
+## 三家的写法并不一样
+
+决策这件事不是 Google 开的头。TypeSafe AI 的 Jev 在 2026 年 9 月中旬上线，TypeSafe 三周内拿到 8.7 亿美元融资、估值 75 亿美元，Jev 1.14 定价 $0.042/百万输入 token。OpenAI 在 10 月 22 日把 Decisions API 全面开放，底模是 GPT-6 Luna，基础价同样是 $0.10/百万未缓存输入，缓存读取 $0.01。印度 Sarvam 走的则是开源路线。
+
+把两家的接口契约并排放，差异比想象中具体：
+
+| 维度 | Gemini Decision 1 | OpenAI Decisions（GPT-6 Luna） |
+| --- | --- | --- |
+| 端点 | Gemini API v1beta | `POST /v1/decisions` |
+| 单请求问题数 | 最多 1000 | 最多 400（GA 时从 200 翻倍） |
+| 是/否题型 | `noul` | `predicate`，返回 0–1 概率 |
+| 选项题型 | `choice`，2–255 项 | `choice`，返回所给值之一 |
+| 评分题型 | `score`，0 起的有序量表 | `score`，返回等级索引的概率加权平均 |
+| 支持输入 | 文本、图片、音频、视频、PDF | 文本、图片、原生 JSON；**不支持**文件、音频 |
+| 计费 | $0.10/1M 输入，输出免费 | $0.10/1M 未缓存输入，缓存 $0.01，输出免费 |
+
+OpenAI 的官方文档把分工边界写得很清楚：需要按自己的 JSON schema 生成对象（比如抽字段、写解释）时用 Responses API 的 Structured Outputs；需要模型发起带参数的工具调用时用 function calling；只有当你要的就是"概率、选项、分数"这三种有界答案之一时，才该用 Decisions。文档还明确列出，输入可以是对话历史和工具调用输出，工具输出靠 `call_id` 和调用对应——判定层被摆在了 agent 循环里读轨迹的位置，而不是取代推理模型。
+
+## 校准才是这一层的真指标
+
+概率只有在它和实际命中率对得上时才值钱。这就是校准（calibration），工业上常用期望校准误差（ECE）衡量。Google 在内部测试里报 0.0250，称约为 Jev 0.0494 的一半；JevBench 上 Decision 1 得 92.2%，GPT-6 Luna 90.9%，Jev 1.14 为 90.0%；多模态侧 MMAU 音频 71.8%、Video-MME 69.1%，均高于 Gemini 3.5 Flash-Lite。
+
+置信度的用途也被写进产品逻辑：高置信直接走代码路径，低置信升级给推理模型或人工。这意味着判定层真正的输出不是"是"或"否"，而是"这件事我有多大把握"，把不确定性变成一个可以被代码消费的数字。
+
+## 独立评测泼的冷水
+
+Google 自报在七个共享基准里领先五个。放到外部评测里，画面立刻变复杂。
+
+Artificial Analysis 的 Decision Index v2.1 汇集文档评估、工具使用、推理和知识检索，Gemini Decision 1 排在第 9（共 18 个被测系统）；它在该指数的知识与推理类目领先，但任务专项基准上被拉开。AA-Paperclip 每题文档问 15 个问题（收据、发票、研究论文），Decision 1 只在 33% 的文档上全对，Jev 35.5%，Nace AI 的 Drex Max v1.1 达到 63%。When2Call 工具选择任务上，Drex Max 94.6%，Jev 80.8%，Decision 1 75.2%。
+
+这组数字值得抄在笔记本上。它说明"通用判定能力"和"某个任务上的判定专精"是两回事，前沿大厂做一个通用决策端点，并不自动等于在每个判定任务上都赢。选型的起点应该是你自己的标注集，而不是任何一家的自报表。
+
+## 另一条路：判定层可以很小
+
+Sarvam 的 Prism 是这半年最有意思的反例。它是在自研 Sarvam 105B 上做 LoRA 微调得到的判定模型，同样单次前向、同样给选项打分，不生成回复（[MartechAI](https://www.martechai.com/ai-news/sarvam-ai-introduces-prism-a-fast-decision-model-built-on-sarvam-105b-3759.html)）。
+
+- 44 毫秒响应，与 24 个判定模型在同一张 B200 上对比，公司在 100 毫秒以内的模型中平均分最高。
+- 三项基准得分：Jev Decision Index 67、Artificial Analysis 65.9、内部印度语评测 82.5，平均 71.8。
+- 置信度 ≥90% 时，英文题错误率 2.2%，印度语 4.4%。
+- agent 监控场景：识别"哪些 agent 活动需要人工复核"准确率 86.4%，判定"任务是否真的完成"准确率 75%。
+- 安全评估覆盖 5517 道题、9 类任务（钓鱼识别、越狱尝试、攻击分类），准确率 89%。
+- 单卡处理一整条 agent 活动轨迹约 0.5 秒，单题输入可到 131,072 token。
+- 权重按 Apache 2.0 在 Hugging Face 开放，FP8 精度下单卡 120 GB 显存即可运行。
+
+同一个月，Amazon 以 Apache 2.0 发布了 Strands Decider 2B。判定层的最小可行形态正在被压到 2B 参数级别——如果你的场景是固定几类判定，自托管的小判定模型在成本和数据边界上都可能更合适。
+
+## 工程上要小心的地方
+
+以下是基于这些公开材料形成的判断，不是任何一家的官方结论。
+
+**判定层不能站在不可回滚的动作前面。** 发送、购买、删除这类操作，前置的任何自动放行都必须有兜底。Google 把置信度交给调用方决定阈值，OpenAI 把"由应用执行答案选出的动作"写进文档分工里——两家的设计都把最终责任留给了使用方。阈值选多少、错判的代价谁承担，是在写代码时决定的，不是在挑模型时决定的。
+
+**输入是不可信的。** 判定层的输入里通常混着用户文本、工单正文、OCR 出来的票据内容。这些内容可以主动争取一个对自己有利的分类结果。凭空信任判定层的输出，等于把注入面从"模型回复"扩展到"不需要回复的模型"。上线前必须用对抗样本压测。
+
+**这一层不能当生成层用。** 它不支持 function calling、结构化生成、思考预算，也不支持缓存和批处理（在 Google 侧）。把判定层和推理层分开建，是因为两者的失败模式不同：判定层错得干脆利落，推理层错得拖泥带水。混在一个调用里，你分不清延迟和钱花在了哪。
+
+**先建标注集，再谈选型。** 自报基准的排序在外部评测里会重排，AA-Paperclip 和 When2Call 上 Decision 1 落后的幅度足以改变选型结论。用自己几百条真实样本量出每个候选模型的命中率与校准曲线，比看任何榜单都可靠。
+
+## 这一层真正的变化
+
+过去两年，agent 的"判断"一直寄生在提示词里：把规则写进 system prompt，祈祷模型每次都照着做，出问题就加一条约束。决策层把这个契约换掉了——你给候选集，模型给概率，代码按阈值分支。规则的表达从自然语言变成了可测试的数值边界。
+
+代价是责任转移得更彻底了。概率是被校准过的猜测，不是事实。这一层做得越好，越容易让人忘记它仍在猜。
+
+## 资料来源
+
+- Google. *Gemini Decisions API: Fast, calibrated multimodal decisions*，2026-11-11。[blog.google](https://blog.google/innovation-and-ai/technology/developers-tools/gemini-decisions-api/)
+- Philipp Schmid. *Fast multimodal control flow with the Gemini Decisions API*，DEV Community。[dev.to](https://dev.to/philschmid/fast-multimodal-control-flow-with-the-gemini-decisions-api-533b)
+- Silicon Report. *Google launches Gemini Decisions API for cost-efficient AI queries*，2026-11-12。[siliconreport.com](https://www.siliconreport.com/google-launches-gemini-decisions-api-for-cost-efficient-ai-queries)
+- OpenAI. *Decisions* API 指南（GPT-6 Luna、`POST /v1/decisions`、三种题型与分工建议）。[developers.openai.com](https://developers.openai.com/api/docs/guides/decisions)
+- MartechAI. *Sarvam AI Introduces Prism, a Fast Decision Model Built on Sarvam 105B*。[martechai.com](https://www.martechai.com/ai-news/sarvam-ai-introduces-prism-a-fast-decision-model-built-on-sarvam-105b-3759.html)
+
+_（内容由AI生成，仅供参考）_
