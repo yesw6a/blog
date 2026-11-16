@@ -1,0 +1,326 @@
+---
+title: Node 26 原生打开 Temporal，Safari 还在等：一次全栈日期处理实测
+description: Node.js 26 从 2026 年 10 月 28 日起进入 LTS，Temporal 默认启用；Chrome 144、Edge 144、Firefox 139 也已原生支持，而 Safari 稳定版仍未发布。本文用 temporal-polyfill 1.0.8 在本机跑了十几组 Date 与 Temporal 的对照用例，记录非法日期、解析歧义、月末加月、DST 加一天与加 24 小时、跨时区换算、RFC 9557 序列化往返的真实差异，并给出运行时能力分层时的职责切分与 polyfill 体积预算。
+publishedAt: 2026-11-16
+category: engineering-practice
+tags:
+  - Temporal
+  - Node.js 26
+  - 日期与时区
+  - 全栈实践
+  - polyfill
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+日期处理是前端最容易写出"看起来对"的代码的地方。加一天用 `+ 86400000`，取月份用 `getMonth() + 1`，格式化交给 `toLocaleDateString()`，测试用例全绿，上线三个月后在某个夏令时切换的凌晨出事。
+
+Temporal 就是为这件事准备的。它在 2026 年已经不是一个"未来提案"：Node.js 26 默认启用，Chrome 144、Edge 144、Firefox 139 也已原生可用。但 Safari 稳定版仍然没有。这意味着全栈项目第一次面对一个很具体的分层问题——**服务端已经能原生算时区，客户端一半的用户不能**。
+
+本文不转述 API 文档，而是把十几组容易出错的用例在本机跑了一遍，看 Date 和 Temporal 各自给出什么结果，再讨论在 Safari 缺席的情况下，这套能力该怎么切进真实项目。
+
+## 两条时间线，先对齐一下
+
+先把事实摆清楚。Node.js 26.0.0 于 2026 年 5 月 5 日发布，官方发布说明写明 Temporal API 默认启用，同批更新还包括 V8 14.6（Chromium 146）和 Undici 8.0.2（[Node.js 26.0.0](https://nodejs.org/en/blog/release/v26.0.0)）。版本页显示 Node.js 26 在 2026 年 10 月 28 日进入长期支持（[Node.js Releases](https://nodejs.org/zh-cn/about/previous-releases)），也就是说此刻它已经是 LTS 通道的推荐版本，不再是尝鲜版。
+
+浏览器侧的支持情况则是分片的（[Web Features Explorer: Temporal](https://web-platform-dx.github.io/web-features-explorer/features/temporal/)）：
+
+| 运行时 | 原生 Temporal | 起始时间 |
+| --- | --- | --- |
+| Chrome 144 / Chrome Android 144 | 支持 | 2026-01-13 |
+| Edge 144 | 支持 | 2026-01-21 |
+| Firefox 139 / Firefox for Android 139 | 支持 | 2025-05-27 |
+| Safari / iOS Safari | 不支持 | Baseline 自 2026-01 起被阻塞 |
+| Node.js 26+ | 支持（默认启用） | 2026-05-05 |
+
+真正麻烦的是最后一行和 Safari 那两行的组合。服务端、构建脚本、CI 全部跑在 Node 26 上时，代码可以完全不用 polyfill；但同一份逻辑一旦进入浏览器，就必须为 Safari 与 iOS 上所有浏览器（它们的内核都是 WebKit）准备降级路径。按 Web Features Explorer 的口径，Baseline 状态已经被 Safari 卡了 10 个月。
+
+一个细节值得注意：V8 里的 Temporal 并不是手写的引擎代码。V8 团队把独立的 Rust 实现 TemporalRS 集成进了引擎，4500 条一致性测试全通过后，才随 Chromium 144 出货（[State of the Browser 2026 演讲](https://2026.stateofthebrowser.com/speaker/jason-williams)）。这也是"标准已经定稿、只剩一个引擎没发"这个状态的技术背景。
+
+## 本机实测的边界条件
+
+先说清楚测量环境，不然后面的数字没有意义。
+
+- 本机两个 Node 版本共存：项目 `pnpm` 环境里是 v22.12.0，直接调起的是 v24.19.0。两者 `typeof Temporal` 都是 `undefined`——**都不在支持区间内**，这正是很多仓库的真实状态。
+- 因为本机没有原生 Temporal，全部用例通过 `temporal-polyfill` 1.0.8 执行。这个包的入口按用途拆开：`.` 与 `/implementation` 用于显式导入，`/global` 用于注入全局，`/fns/*` 提供函数式 API。
+- 时区相关用例统一设置 `TZ=America/New_York`，取 2026 年 3 月 8 日的夏令时切换作为测试点。
+
+由于 polyfill 与原生实现在复杂体量上的性能并不可比，**本文所有行为类结论对原生实现同样成立，但性能数字只代表 polyfill 层**，这一点后面会单独说明。
+
+## Date 的四种静默
+
+先跑 Date。四组用例，四次都"成功"返回了结果，没有一次报错。
+
+### 不存在的日期会被悄悄挪掉
+
+```js
+new Date('2026-02-30').toISOString(); // 2026-03-02T00:00:00.000Z
+new Date(2026, 1, 30).toDateString(); // Mon Mar 02 2026
+```
+
+两种写法都把 2 月 30 日滚动到了 3 月 2 日。没有异常，没有警告。这在做"用户输入的生日校验"时是致命的：前端的校验器可能把非法日期当成合法值提交上去。
+
+### 同一个日期字符串有两种含义
+
+```js
+new Date('2026-03-07').toISOString();    // 2026-03-07T00:00:00.000Z  ← UTC
+new Date('2026-03-07T00:00').toISOString(); // 2026-03-07T05:00:00.000Z ← 本地
+new Date('2026/03/07').toISOString();    // 2026-03-07T05:00:00.000Z ← 本地
+```
+
+只有日期没有时间的 ISO 字符串，ECMAScript 规定按 UTC 解析；带上时间部分，就按本地时区解析。差出来的 5 小时在东八区是 8 小时，在 UTC+13 的奥克兰是 13 小时。同一份后端数据，在不同时区的浏览器里落到不同的"那一天"。
+
+### 月末加一个月会跨到第三个月
+
+```js
+const d = new Date('2026-01-31T00:00:00Z');
+d.setMonth(d.getUTCMonth() + 1); // → 2026-03-03
+```
+
+1 月 31 日加一个月，得到的是 3 月 3 日，不是 2 月 28 日。因为 `setMonth` 先把月份设为 2 月，此时 31 日溢出，再顺延到 3 月。做账单周期、订阅续订这类逻辑，这里会直接产生错期的账单。
+
+### Date 其实能区分"加一天"和"加 24 小时"，只是很容易写错
+
+这一条值得单独说，因为它常被夸大成"Date 完全做不到"。实测结果是：
+
+```js
+const base = new Date('2026-03-07T14:00:00Z'); // 纽约 09:00 EST
+
+const plus24h = new Date(base.getTime() + 24 * 3600 * 1000); // 纽约墙钟 10:00
+const plusDay = new Date(base); plusDay.setDate(plusDay.getDate() + 1); // 纽约墙钟 09:00
+```
+
+`setDate()` 按本地日历推进，能保住 9 点；`getTime() + 86400000` 按绝对毫秒推进，会把 9 点变成 10 点。两个都能用，问题在于 API 把选择权藏在方法名里，没有任何编译期或运行期提示。团队里只要有一个人写成时间戳加法，行为就静默改变了。
+
+四种问题的共同点：**Date 不做判断，也不告诉你它做了判断**。
+
+## 同一批用例换 Temporal 跑
+
+同样的输入，polyfill 给出的结果：
+
+```js
+Temporal.PlainDate.from('2026-02-30');
+// RangeError: Invalid day: 30; must be between 1-28
+```
+
+非法日期直接抛错，不滚动。如果确实需要"夹取到月末"，得显式传入字段对象并声明溢出策略：
+
+```js
+Temporal.PlainDate.from({ year: 2026, month: 2, day: 30 }, { overflow: 'constrain' });
+// 2026-02-28
+
+Temporal.PlainDate.from({ year: 2026, month: 2, day: 30 }, { overflow: 'reject' });
+// RangeError: Invalid day: 30; must be between 1-28
+```
+
+这里有个实测出来的坑，文档里不显眼：**`overflow` 只对字段对象生效，对 ISO 字符串解析不生效**。`Temporal.PlainDate.from('2026-02-30', { overflow: 'constrain' })` 依然抛 RangeError，因为字符串解析是严格校验路径。想夹取就必须先拆成字段。
+
+月末加月同理，默认 constrain，可选 reject：
+
+| 操作 | 结果 |
+| --- | --- |
+| `PlainDate.from('2026-01-31').add({ months: 1 })` | `2026-02-28` |
+| `PlainDate.from('2026-01-31').add({ months: 1 }, { overflow: 'reject' })` | `RangeError` |
+| `Date` 的 `setMonth(+1)` | `2026-03-03` |
+
+对账单、发票、合同续期这类业务，`reject` 才是更安全的默认值——宁可让程序在"1 月 31 日续期"这个输入上崩掉，也不要悄悄生成一张 3 月的账单。
+
+## 加一天和加 24 小时，终于能写成两行
+
+这是 Temporal 设计上最实在的改进：时间推进的单位写在参数里，语义自己带出来。
+
+```js
+const start = Temporal.ZonedDateTime.from('2026-03-07T09:00:00[America/New_York]');
+
+start.add({ days: 1 }).toString();
+// 2026-03-08T09:00:00-04:00[America/New_York]   ← 墙钟仍是 9 点
+
+start.add({ hours: 24 }).toString();
+// 2026-03-08T10:00:00-04:00[America/New_York]   ← 绝对时间推进 24 小时
+```
+
+两天后的同一时刻，偏移量已经从 `-05:00` 变成 `-04:00`，字符串里看得见。这是 Date 无论如何都给不出的信息——`Date` 只有一个内部时间戳，偏移要靠 `getTimezoneOffset()` 另算。
+
+DST 开始的缺口也有明确语义。纽约 2026 年 3 月 8 日 02:00 到 03:00 这一小时不存在：
+
+```js
+Temporal.ZonedDateTime.from('2026-03-08T02:30:00[America/New_York]').toString();
+// 2026-03-08T03:30:00-04:00[America/New_York]   ← compatible：往后推
+
+Temporal.ZonedDateTime.from('2026-03-08T02:30:00[America/New_York]', { disambiguation: 'reject' });
+// RangeError: Ambiguous offset
+```
+
+默认 `compatible` 会顺延，但你也可以要求它报错。定时任务、闹钟、打卡这类"精确到某个墙钟时刻"的场景，`reject` 加日志比静默顺延可靠得多。
+
+再看跨 DST 的差值计算，单位选择直接决定答案：
+
+```js
+const a = Temporal.ZonedDateTime.from('2026-03-07T09:00[America/New_York]');
+const b = Temporal.ZonedDateTime.from('2026-03-08T09:00[America/New_York]');
+
+b.since(a, { largestUnit: 'hour' }).toString(); // PT23H
+b.since(a, { largestUnit: 'day' }).toString();  // P1D
+```
+
+同一个区间，问"多少小时"是 23，问"多少天"是 1 天。两者都对，因为 3 月 8 日那天只有 23 个小时。Date 只能给出 23 小时那个答案，而"1 天"这个答案根本表达不出来。
+
+顺带一提，跨时区换算也不再需要手工算偏移：
+
+| 目标时区 | `withTimeZone()` 结果 |
+| --- | --- |
+| America/New_York | 2026-03-07T09:00:00-05:00 |
+| Asia/Shanghai | 2026-03-07T22:00:00+08:00 |
+| UTC | 2026-03-07T14:00:00+00:00 |
+| Europe/Berlin | 2026-03-07T15:00:00+01:00 |
+
+本机时区数据里 `Intl.supportedValuesOf('timeZone')` 返回 418 个时区。写入不存在的时区会直接抛 `RangeError: Invalid time zone specified`，而不是悄悄退回本地时区——这类"错得明显"的行为，在跨时区业务里比"看起来正常"有用得多。
+
+## 序列化：toJSON 是字符串，读回来得自己 from
+
+全栈项目里比 API 语义更容易出事的是传输格式。Temporal 对象实现了 `toJSON()`，序列化走 RFC 9557（MDN 对格式的说明见 [Temporal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal)），实测行为：
+
+```js
+JSON.stringify({ d: Temporal.PlainDate.from('2026-03-07') });
+// {"d":"2026-03-07"}
+
+JSON.stringify({ z: Temporal.ZonedDateTime.from('2026-03-07T09:00:00[America/New_York]') });
+// {"z":"2026-03-07T09:00:00-05:00[America/New_York]"}
+
+JSON.stringify({ p: Temporal.Duration.from({ hours: 36 }) });
+// {"p":"PT36H"}
+```
+
+输出干净，ZonedDateTime 连偏移和时区 ID 都带着，客户端不需要再问"这是哪个时区的时间"。但反序列化是单向的：
+
+```js
+const parsed = JSON.parse(json);
+typeof parsed.z;                        // 'string'
+Temporal.ZonedDateTime.from(parsed.z);  // 必须手动转回来
+```
+
+**没有任何自动反序列化机制**。这意味着工程上必须锁定两件事：契约层只允许字符串出入，领域层只在解析后使用 Temporal 对象。中间任何一次"顺手塞进 state 或缓存"都会退化成字符串，后续再调用 `.add()` 就直接抛 `TypeError`。
+
+精度也有需要说清的地方。`Temporal.Instant` 能保留纳秒：
+
+```js
+Temporal.Instant.fromEpochNanoseconds(1794795044982123456n).toString();
+// 2026-11-16T02:10:44.982123456Z
+
+new Date(1794795044982).toISOString();
+// 2026-11-16T02:10:44.982Z   ← 只到毫秒
+```
+
+服务端两个运行的 `Instant` 相加相减时这个差别会显现；但一旦要进 `Date`、进数据库的 `timestamp`、进旧版 API，精度就在那一层被截断。用 Temporal 不代表整条链路都安全，链路里最弱的一环仍然是那个 `Date`。
+
+## polyfill 的预算：32 KB gzip 和 24 倍解析开销
+
+Safari 缺席意味着客户端必须有降级方案。降级方案要付两笔钱。
+
+**第一笔是体积。** 实测 `temporal-polyfill` 1.0.8 的产物：
+
+| 入口 / 文件 | 体积 | gzip |
+| --- | ---: | ---: |
+| `global.js`（注入全局，常用入口） | 181.3 KB | 32.2 KB |
+| `full/global.js`（含全部扩展能力） | 210.8 KB | 38.8 KB |
+| `chunks/internal.js` | 153.0 KB | 29.6 KB |
+| `chunks/classApi-basic.js` | 41.1 KB | 5.7 KB |
+| 包内全部 `.js` 合计 | 905.6 KB | — |
+
+包本身提供了多组入口（`.`、`/global`、`/shim`、`/implementation`、`/full`、`/fns/*`），可以按 API 面裁剪。但 32 KB gzip 已经和不少路由级 chunk 同量级，值得在预算表里单独占一行，而不是"顺手加个 polyfill"。
+
+**第二笔是执行开销。** 同一份循环，各跑 20 万次：
+
+| 操作 | 20 万次耗时 |
+| --- | ---: |
+| `Date.parse('2026-03-07')` | 11.46 ms |
+| `Temporal.PlainDate.from('2026-03-07')` | 277.59 ms |
+
+约 24 倍。必须强调：**这是 polyfill 与原生 `Date` 的对比，不是原生 Temporal 与 Date 的对比**。原生 Temporal 走的是引擎内实现，量级完全不同。这个数字真正说明的是——如果要在 Safari 上批量处理时间（比如给列表里 2000 条记录逐个做时区转换），polyfill 层的开销不能忽略，该把计算挪回服务端。
+
+还有一处容易被忽略的边界：Temporal 依赖 ICU 时区数据。Node 环境通常是 full-icu，浏览器端也基本齐全，但精简构建（小镜像、静态编译、部分无服务器运行时）里可能只剩 UTC。上线前用一行代码确认：
+
+```js
+Temporal.Now.timeZoneId();  // 期望输出真实时区，而不是 'UTC'
+```
+
+## Safari 缺席时，怎么切职责
+
+能力分层不是新问题，CSS 新特性处理了十几年，日期只是第一次以"语义正确性"而非"视觉退化"的形式出现。区别在于：布局降级错了能看出来，日期算错了半年后才发现。
+
+实际可操作的切法是三层。
+
+**第一层：能算的全在服务端算。** 时区换算、DST 判断、周期推进（加一个月、加一年）、跨区间差值，统一由 Node 26 上的 Temporal 完成，接口只输出 RFC 9557 字符串和已格式化的展示文本。客户端拿到的永远是确定结果，不含"待计算"的语义。这一层也顺带解决了前端 bundle 里那份 Timezone 数据库的体积问题。
+
+**第二层：客户端只做展示。** 用 `Intl.DateTimeFormat` 按用户 locale 格式化字符串，不做任何算术。格式化能力是 Baseline 特性，与 Temporal 是否可用无关。实测 polyfill 下的本地化输出也没有偏差：
+
+```js
+Temporal.PlainDate.from('2026-03-07').toLocaleString('zh-CN', { dateStyle: 'full' });
+// 2026年3月7日星期六
+
+Temporal.PlainDate.from('2026-03-07').toLocaleString('zh-CN-u-ca-chinese', { dateStyle: 'long' });
+// 2026丙午年正月十九
+```
+
+第二行说明 Temporal 自带非公历日历支持，这在做农历、佛历等展示时不必再引第三方库——但同样受 Safari 缺席的影响。
+
+**第三层：确实要在客户端算，就按需 polyfill。** 关键是"按需"，两种做法都可行：
+
+```js
+// 方案 A：只在需要时加载 polyfill
+const { Temporal } = globalThis.Temporal
+  ? { Temporal: globalThis.Temporal }
+  : await import('temporal-polyfill');
+
+// 方案 B：入口统一注入，让原生实现优先
+import 'temporal-polyfill/global';
+```
+
+方案 B 写法最省事，代价是所有浏览器都背上 32 KB gzip 的解析与执行成本，即使 Chrome 144 上根本不需要。方案 A 多一个异步边界，但把成本压在真正的缺口上——按当前浏览器份额，这个缺口主要是 WebKit。
+
+如果团队还有原生端或旧版 React Native，注意 polyfill 与原生实现的边界差异：`instanceof` 判断在不同实现之间不成立，跨边界传值一律走字符串，不要做对象层面的类型判定。
+
+## 版本与 CI 得跟着改
+
+这一层最容易被漏掉，但它是整件事的地基。
+
+Node 26 的 LTS 起点是 2026 年 10 月 28 日，Node 22（Jod）的维护窗口在 2026 年收尾。也就是说，"继续用 Node 22 + 自己装 polyfill"这个组合在未来一年会慢慢变成技术债，而"升到 26 直接删掉服务端 polyfill"是明确的净收益：少一个依赖、少一层实现差异、多纳秒精度。
+
+落地时值得同步三件事：
+
+- `package.json` 的 `engines` 明确写 `"node": ">=26"`，让 CI 和部署平台在早期就报错，而不是等到运行期发现 `Temporal is not defined`。
+- 测试矩阵显式覆盖两条路径：Node 26（原生）与 Node 24 以下 + polyfill。同一批用例两边都跑，才敢说"行为一致"。
+- 浏览器端补一条 WebKit 的 smoke test。Chrome 上全绿的用例，在 Safari 上很可能根本没跑到——因为原生分支根本不存在。
+
+另外注意 Node 26 是带着一串破坏性变更一起来的：`http.Server.prototype.writeHeader()` 被完全移除（改用 `writeHead()`），`_stream_*` 系列内部模块进入 EOL，`--experimental-transform-types` 标志被删除（[Node.js 26.0.0](https://nodejs.org/en/blog/release/v26.0.0)）。升级前先跑一遍依赖树的兼容检查，别让 Temporal 这个"新特性"掩盖了"旧接口消失"这件事。
+
+## 什么时候还不该换
+
+Temporal 不是无条件更好。它解决的问题集中在三类：跨时区、跨 DST、日历语义。如果项目只是"把时间戳格式化成 `2026-11-16 10:30`"，`Intl.DateTimeFormat` 一行就够，引入 Temporal 只是多一层抽象。
+
+反过来说，出现以下任一情况，就值得开始迁移：
+
+- 代码里出现过 `+ 86400000`、`- 8 * 3600 * 1000` 这类硬编码时区偏移。
+- 有业务依赖"每月那一天"、"每年那一天"的语义（账单、订阅、纪念日、报表周期）。
+- 需要在客户端展示用户自己时区之外的时间。
+- 出现过"同一天在两个时区被算成两天"的 bug 单。
+
+迁移也建议分步：先在服务端引入 Temporal（Node 26 原生，零体积成本），把边界收拢到接口层；等客户端 Safari 支持落地、Baseline 成立后，再删掉浏览器端的 polyfill 分支。按 WebKit 的公开信号，这一步只是时间问题，不需要现在就把客户端逻辑改成 polyfill 优先。
+
+## 一份可执行的检查清单
+
+1. 用 `node -p "typeof Temporal"` 确认运行环境的真实能力，别相信 `engines` 字段等于事实。
+2. 服务端的日期算术统一换成 Temporal，`overflow` 与 `disambiguation` 显式传值，不要依赖默认。
+3. 接口层的日期一律输出 RFC 9557 字符串，读取端显式 `from()`，禁止在对象与字符串之间混用。
+4. 客户端只做格式化和展示，需要算术的请求打通到服务端。
+5. 真要客户端 polyfill，按需动态导入，并把 32 KB gzip 写进体积预算。
+6. CI 覆盖原生与 polyfill 两条路径，外加一条 WebKit smoke test。
+7. 上线前确认时区数据可用：`Temporal.Now.timeZoneId()` 不应返回 `UTC`。
+
+第 3 条和第 6 条是最容易省掉也最容易先出事的：前者决定数据在链路里有没有被静默降级，后者决定你有没有在 Safari 上真正验证过一件事——你写的那些"已经支持"的路径，在那台设备上其实从来没执行过。
+
+_（内容由AI生成，仅供参考）_
