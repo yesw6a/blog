@@ -1,0 +1,142 @@
+---
+title: 包管理器开始替你把关发布时间：pnpm 默认值收紧后的安装链路
+description: pnpm 11 把 minimumReleaseAge 默认设为 1440 分钟、依赖构建脚本默认全拒、blockExoticSubdeps 默认开启；12.19.0 又补上 side-effects 缓存复用与实验性 lockfile v13。本文按官方文档与发布说明逐条拆这些默认值的实际语义、误用点和 CI 代价，重点讨论"安装行为不再只由版本号决定"之后的取舍。
+publishedAt: 2026-11-18
+category: tools-productivity
+tags:
+  - pnpm
+  - 供应链安全
+  - 包管理器
+  - CI
+  - 工程效率
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+2026 年 11 月 10 日，pnpm 发布 12.19.0（[官方发布说明](https://pnpm.io/blog/releases/12.19.0)）。这一版的头条是 `pnpm fund` 和实验性的 JSON 风格锁文件，节奏上属于常规的小版本。
+
+但把视线从 12.19 挪到整个 2026 年，真正的变化不在某个新命令上，而在默认值：从 pnpm 11 起，[官方发布说明](https://github.com/pnpm/pnpm/releases/tag/v11.0.0)列出的第一批条目几乎全是默认值翻转——`minimumReleaseAge` 默认 1440 分钟、`strictDepBuilds` 默认开、`blockExoticSubdeps` 默认开、依赖的构建脚本默认一律不执行。这些行没有一个新语法，却把"这条依赖会不会被装、装完之后会不会跑代码"从单纯看版本号，变成了看发布时间、看信任证据、看显式白名单。
+
+对每天要跑几十次 install 的人来说，这值得逐条拆开看：哪些是真的保护，哪些只是变更了失败方式，哪些会在 CI 上突然变成红灯。
+
+## 默认值转向：四个开关同时扳动
+
+官方文档里，[供应链安全专题](https://pnpm.io/supply-chain-security)把防护手段列成几张牌：拦住 postinstall、拦住异源传递依赖、推迟更新、信任策略、锁文件、registry 绑定。pnpm 11 的动作是把前四项里能设默认的全部设了默认：
+
+| 设置项 | 转向后的默认 | 作用点 |
+| ---- | ---- | ---- |
+| `minimumReleaseAge` | `1440`（24 小时） | 版本被解析进依赖图的时间门槛 |
+| `strictDepBuilds` | `true` | 有构建脚本但未批准时直接失败 |
+| `blockExoticSubdeps` | `true` | 禁止传递依赖走 git / 直链 tarball |
+| `allowBuilds` | 空映射，等于全拒 | 取代五个旧的构建白名单字段 |
+
+同时被改掉的还有几处日常习惯：`.npmrc` 只留认证与 registry，其余设置必须搬进 `pnpm-workspace.yaml` 或全局 `config.yaml`；不再读取 `npm_config_*` 环境变量，改用 `pnpm_config_*`；不再把未实现的命令透传给 npm CLI（`pnpm search`、`pnpm docs`、`pnpm team` 之类现在直接报错），`pnpm publish` 改成了原生实现。
+
+换句话说，2026 年的 pnpm 把"配置面"整体收窄了。以前那种在 `.npmrc` 里塞一堆行为开关、靠环境变量临时改行为的仓库，升级时会一次性暴露出来。
+
+## 第一道闸：24 小时的成熟度门槛
+
+`minimumReleaseAge` 的语义很直白：一个版本发布后必须经过多少分钟，pnpm 才会把它纳入解析（[设置文档](https://pnpm.io/settings/dependency-resolution)）。默认 1440 分钟，也就是一天。
+
+官方给的理由是这套防护里最实在的一句：投毒版本通常会在几小时内被社区和扫描服务发现并下架，把安装延后一天，大概率就跳过了整个窗口期。文档同时给出了"更保守"的写法——一周，也就是 `10080` 分钟。
+
+真正需要留意的是三个细节，它们决定了这个默认值在你仓库里到底有没有生效。
+
+**strict 是跟着配置走的。** `minimumReleaseAgeStrict` 控制"范围内没有任何版本满足成熟度"时的行为：`false` 时回落到不合规版本以便安装成功，`true` 时直接失败。它的默认值不是常数——只要你显式配置了 `minimumReleaseAge`（不管在 `pnpm-workspace.yaml`、全局 `config.yaml`、`PNPM_CONFIG_*` 还是命令行），strict 默认就打开；而内建的 1440 分钟默认是非 strict 的，官方说明了这是为了向后兼容。这意味着**一旦你亲手写了这个设置，行为会比你预期更硬**。
+
+**缺时间戳时，检查可能被跳过。** `minimumReleaseAgeIgnoreMissingTime` 默认为 `true`：registry 元数据里没有 `time` 字段时，pnpm 跳过成熟度检查而不是失败。私有 registry 和部分镜像恰好属于不保证提供该字段的一类。如果你的主 registry 是内网，这条默认值等于把第一道闸关掉了，需要显式设成 `false` 才会以失败拒绝。
+
+**排除是按包名、作用于所有版本的。** `minimumReleaseAgeExclude` 的设计意图是让某些包始终立刻装最新版，粒度是包名而非"这一次的版本"。临时给某个包开口子，实际等于对该包永久放弃成熟度保护，事后要有明确回收动作。
+
+第一道闸的真实代价也在这里：安全公告发布、你需要在十分钟内拿到补丁版本时，默认值会挡住你。这时正确的姿势是显式使用排除项并写明过期时间，而不是把全局的 `minimumReleaseAge` 改回 0——后者会顺带关掉所有依赖的这层保护，而且很容易忘记改回来。
+
+## 第二道闸：安装期脚本从"默认执行"到"默认拒绝"
+
+这是整套防护里最反直觉的一条：pnpm 默认**不执行**任何依赖的构建脚本。有 `postinstall` 的包如果没被声明在 `allowBuilds` 里，安装会直接失败（`strictDepBuilds` 默认开）。
+
+`allowBuilds` 是一个从包名模式到布尔值的映射，替换掉 `onlyBuiltDependencies`、`onlyBuiltDependenciesFile`、`neverBuiltDependencies`、`ignoredBuiltDependencies`、`ignoreDepScripts` 五个字段：
+
+```yaml
+allowBuilds:
+  electron: true
+  core-js: false
+  esbuild: false
+```
+
+写 `false` 和"不写"不是一回事。按官方文档的说法，被显式拒绝的包在任何情况下都不会被构建，包括不会从缓存里取出别人的构建结果。这条区分在排查"为什么同一份锁文件在两台机器上装出的东西不一样"时有意义。
+
+代价是明确的：任何带原生模块或安装期代码的包，在第一次进白名单之前都会让 install 变红；CI 上如果是全新环境，需要把白名单随仓库一起提交，而不能指望"上次跑过就行"。
+
+回报则集中在 12.19 这一版。`nodeLinker.type: loaded` 下，需要构建的包不必再列进 `nodeLinker.excluded`：被批准的包构建一次后，结果写入 side-effects 缓存，之后从 store 加载；连"构建但其实没改动任何文件"的情况也不会在别的项目里重跑。`sideEffectsCache` 本身默认就是 `true`，还可以写成对象分别控制读、写、远程与排除项：
+
+```yaml
+sideEffectsCache:
+  read: true
+  write: true
+  exclude:
+    - some-hook-installer
+```
+
+`sideEffectsCache.remote` 从 v12.0.0 起提供，用于把已签名的、按组织作用域限定的构建产物跨机器复用（需要 pnpm registry server 开启制品存储，或走 Turborepo Remote Cache API），默认关闭。与此同时，缓存不构成免检通道：签名与信任材料只能来自全局配置或环境变量，写进 `pnpm-workspace.yaml` 会被 `ERR_PNPM_WORKSPACE_REMOTE_SIDE_EFFECTS_TRUST` 直接拒绝——理由是克隆下来的仓库不是信任根。
+
+文档也主动列了该关掉 side-effects 缓存的两种情况：脚本修改了包目录之外的文件（pnpm 追踪不到），或者脚本的副作用与"构建这个包"无关。把它当成默认开启的加速器没问题，当成"批准过一次就永远安全"就不对了。
+
+## 第三道闸：比版本号更细的信任判定
+
+`trustPolicy` 是这套体系里最少被讨论、语义也最绕的一个。默认为 `off`，可设为 `no-downgrade`：当一个包的信任等级相比历史版本**下降**时——比如以前由受信发布者签名，现在只剩 provenance 或完全没有信任证据——安装失败。关键在于它按发布时间比较，而不按 semver 比较：只要历史上有更早发布、证据更强的版本存在，证据更弱的版本就装不上。预发布版本不参与与非预发布的比较，所以一个"可信 prerelease"不会把后面的稳定版卡死。
+
+这项检查还向上覆盖一层：项目在 `packageManager` 或 `devEngines.packageManager` 里钉住的 pnpm 版本本身也要过检查，pnpm 会在切换版本或写入锁文件之前失败。配套的 `trustPolicyExclude` 用于按包选择器开口子，`trustPolicyIgnoreAfter` 用于对"发布时间足够久远"的包忽略检查——后者实际是在处理历史包没有签名流程的遗留问题。
+
+同层的另外两条是默认开启的：`blockExoticSubdeps` 禁止传递依赖使用 git 仓库或直链 tarball 这类异源；`namedRegistries` 让多 registry 环境把包钉在指定 registry 上，锁文件里以 registry 限定键（形如 `name@registryName:version`）记录，这样另一个 registry 即使发布了同名同版本也无法静默顶替。
+
+## 12.19 里更直接影响 CI 的那几条
+
+小版本里通常藏着比头条更实际的东西。12.19.0 的发布说明里，对流水线有意义的包括：
+
+- **并发安装进全局虚拟存储不再互相等。** 需要构建的包在私有目录里构建完成后才移入存储，另一个项目永远链接不到半成品。
+- **反复失败的 tarball 不再双倍等待。** 以前会用第二套完整重试再跑一遍，把等待时间翻倍；现在按 `fetchRetries` 用完即失败，并且错误信息指向真实的下载失败原因。
+- **没有 manifest 的目录直接报错。** 在非 workspace 目录跑 `install` 会以 `ERR_PNPM_NO_PKG_MANIFEST` 失败，不再顺手创建 `package.json`、锁文件和 `node_modules`。脚本里拼错路径的老代码会在这里暴露。
+- **跨平台归档进存储。** 配了 `supportedArchitectures` 后，其它平台的归档及其依赖也会被存进 store（不链接），下次给该平台构建时无需重新下载。
+- **registry URL 里的 `${VAR}` 占位符现在报错。** 以前会被静默忽略，然后回落到 npmjs.org 去解析——这类"静默降级"是最难在 review 里发现的一类问题。
+- **锁文件出现实验格式 `lockfile.format: v13`。** `packages` 段改成每个包版本一条记录，peer 依赖版本作为该条目的属性，于是更新一个 peer 只改动记录它版本的那几行。文件仍是合法 YAML，设置切换不影响读取（两种格式都能读）。
+- **`pnpm fund`。** 按 npm fund 的树形结构列出已安装依赖声明的资助链接，支持 `--json`、`--recursive`、`--filter` 与 `--which`。
+
+把这几条放在一起看，12.19 的取向是把"安全默认值"的摩擦成本降下来：白名单不再意味着每次都要重跑构建，多包并发不再互相拖慢，出错时给的是真实原因。防护要能长期开着，前提就是它的日常代价足够低。
+
+## 审计侧的两个坑
+
+**双文档锁文件会让扫描器说谎。** pnpm 现在的锁文件是多文档 YAML，配置依赖、包管理器依赖等解析结果记录在另外的文档里。官方文档特别提醒：只读取第一个文档的漏洞扫描器或 SBOM 生成器，会得出"这个项目没有依赖、也没有漏洞"的结论——**并且不会报错**。这类静默错误比误报危险得多，接入任何 SBOM 工具时应该先拿一个已知有依赖的仓库验证一次。
+
+**缓存与服务端共同定义了信任边界。** 跨机器复用构建产物之后，"这次安装跑了什么代码"的答案分散在本地 store、远端制品存储和锁文件三处。审计对象也从"哪个包的 postinstall 做了什么"变成"谁批准了哪个包的构建、批准记录在哪"。这是更可持续的形态，但它要求白名单本身进 code review，而不是临时在某人机器上 `pnpm approve-builds` 过去就算了。
+
+## 该不该改这些默认值
+
+- **没事别把 `minimumReleaseAge` 设成 0。** 真要绕，针对具体包用排除项，并给它一个到期时间。
+- **内网 registry 要确认 `time` 字段。** 如果拿不到，就把 `minimumReleaseAgeIgnoreMissingTime` 设为 `false`，让检查以失败方式暴露，而不是静默跳过。
+- **`allowBuilds` 显式提交。** 尤其要把"明确拒绝"和"尚未裁决"分开写，前者能挡住缓存复用，后者只会在下一次 install 时继续报错。
+- **`trustPolicy: no-downgrade` 值得在核心服务仓库试点。** 它的成本主要来自历史包缺签名，用 `trustPolicyIgnoreAfter` 分层能平滑过去。
+- **实验性锁文件格式别急着上主干。** 一旦有人用旧版本 pnpm 回写，冲突排查成本不低。
+
+## 三点判断
+
+**第一，默认值比文档更能改变行为。** 上面这些开关，绝大多数团队不会主动去读、更不会主动去配。pnpm 选择把它们设成默认而不是写成建议，等于把"要不要做供应链防护"从决策题改成了"要不要退出"——门槛的方向变了，社区的基线也就跟着变。
+
+**第二，防护的成本被转移到了事件响应上。** 24 小时延迟在平时几乎无感，真正的考验出现在漏洞公告发布后的十分钟：你能否准确地把某个包放行、并且在事后收回来。能否做到这一点，比默认值设成 1440 还是 10080 重要得多。
+
+**第三，缓存把"安装"变成了"构建一次、信任一次"。** side-effects 缓存本地默认开、跨机需显式开启，配合 `allowBuilds` 的拒绝语义，安装链路正在从"每次执行脚本"变成"一次裁决、多次复用"。这会让 CI 更快，也会让裁决记录本身成为需要维护的资产。
+
+需要说明的是，本文涉及的默认值、语义和版本变更全部来自 pnpm 官方文档与发布说明，没有做实测对比；官方文档也明确提示，`minimumReleaseAge` 这类基于时间的防护只降低概率，不替代对依赖本身的审查。
+
+## 参考来源
+
+- pnpm 12.19.0 发布说明 — [pnpm.io](https://pnpm.io/blog/releases/12.19.0)
+- pnpm v11.0.0 发布说明 — [GitHub](https://github.com/pnpm/pnpm/releases/tag/v11.0.0)
+- Mitigating supply chain attacks — [pnpm 文档](https://pnpm.io/supply-chain-security)
+- Dependency Resolution Settings（`minimumReleaseAge`、`trustPolicy` 等） — [pnpm 文档](https://pnpm.io/settings/dependency-resolution)
+- Build Settings（`allowBuilds`、`sideEffectsCache`、`strictDepBuilds`） — [pnpm 文档](https://pnpm.io/settings/build)
+
+_（内容由AI生成，仅供参考）_
