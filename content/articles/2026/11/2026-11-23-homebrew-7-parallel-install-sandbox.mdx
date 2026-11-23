@@ -1,0 +1,173 @@
+---
+title: 包管理器把沙箱和漏洞库一起装进命令行：Homebrew 7.0.0 的并发改造与迁移账
+description: 2026 年 9 月 13 日发布的 Homebrew 7.0.0 把下载、准备、安装三个阶段改成重叠执行，brew bundle 批次共享同一份安装工作，同时内置 brew vulns 和官方漏洞库，Linux 侧用 Landlock 换掉 Bubblewrap。本文按官方发布说明与迁移指南逐条核对：哪些开关被直接禁用、Intel Mac 的到期日为何是 2027-09-01、非默认 prefix 的字节预算怎么算，以及升级当天该按什么顺序检查。
+publishedAt: 2026-11-23
+category: tools-productivity
+tags:
+  - Homebrew
+  - 包管理器
+  - 命令行工具
+  - 开发环境
+  - 供应链安全
+  - AIGC
+draft: false
+rss: true
+AIGC:
+  Label: '1'
+  ContentProducer: 001191440300708461136T1XGW3
+---
+
+## 一次大版本里塞了三件不相关的事
+
+Homebrew 7.0.0 的发布说明开头把重点列成五项：安装升级变快、沙箱更严、有了原生 macOS 应用、内置漏洞检查与官方漏洞库、停止支持 macOS 10.15 并把 Intel Mac 降级到 Tier 3（[release notes](https://brew.sh/2026/09/13/homebrew-7.0.0/)）。这五件事里，只有一件是"让命令变快"，其余都在改信任边界和平台承诺。
+
+对每天敲 `brew install` 的人，前一件最直接；对维护 CI、维护 tap、维护一批 Intel 机器的人来说，后几件才是真正的迁移工作量。而这次迁移的麻烦之处在于：很多旧开关不是"弃用告警"，而是**在 7.0.0 当天直接就拒绝使用**。
+
+官方在迁移指南里给了一个很清楚的语义约定：`Now` 就是 7.0.0，`Disabled` 表示拒绝使用，`Removed` 表示已经不存在，`Deprecated` 则会给告警直到表里写的禁用日期（[migration guide](https://brew.sh/7.0.0-migration-guide/)）。下面按这个约定拆。
+
+## 安装变快：把"等"从串行改成重叠
+
+官方描述的改法是"下载、准备、安装三个环节并发度更高，同时统一协调失败与汇总"。具体到命令层面，有几处是可验证的：
+
+- `brew install`、`brew reinstall`、`brew upgrade` 让**包准备与下载重叠**，`brew bundle` 的批次也走同一条路。也就是说，一个 Brewfile 里的几十个包，和一条命令里点名几十个包，现在享受的是同一份安装工作。
+- `brew config` 把本来就互不依赖的系统信息采集并发跑，编译器、操作系统、仓库检查不再是串行的子进程队列。
+- `brew tap-info --installed --json=v1` 并发收集 tap 元数据，但**保留脚本期望的输出顺序**——这一点对把它塞进 CI 的脚本很关键。
+- `brew cleanup` 不再重复扫描缓存目录，包多的机器收益更明显。
+- `brew fetch` 直接读 API 元数据里的下载信息，为拿 URL 和校验和而加载完整包定义这一步被省掉了。
+- 启动阶段少起子进程，并直接读终端尺寸，顺带绕开了 uutils `stty` 导致的挂起。
+- 暖启动时复用已解析的 API 数据，但**每次加载仍然校验签名**。这条是效率与真实性之间划的线：省的是解析，不是验签。
+
+这些改动共同点很清楚：Homebrew 过去的大量等待来自"一个包等另一个包下载完"，现在改成让准备好的包先动手。副作用是失败信息会变复杂——并发之后，"究竟是哪个包失败、剩下的包还做不做"必须有统一协调，否则报错会互相盖住。
+
+## 沙箱的位置被摆正了：它防意外，不防恶意
+
+7.0.0 修了一批安全问题，公告里列了 8 条安全通告，其中两条值得单独拎出来：
+
+- GHSA-rg9r-ppxp-87hm（High，6.0.12 修复）：未签名的 cask 移除元数据可以借 `sudo` 执行命令。修法是**直接删掉整段有问题的恢复代码和 API 访问器**，不是打补丁。
+- GHSA-5263-whxq-77hp（Moderate，7.0.0 修复）：恶意 cask 可以借 LaunchServices 逃出 macOS 安装沙箱。修法是限制应用启动、Mach 服务和 Unix socket 连接。
+
+但官方紧接着写了一段容易被跳过的限定：tap trust 仍然是防恶意第三方 cask 的主防线，**沙箱主要限制的是意外损害**，它不能让不可信的软件变得安全——应用最终以用户权限运行，厂商 `.pkg` 安装器也在沙箱之外，还可能要求 `sudo`（[Tap Trust](https://docs.brew.sh/Tap-Trust)）。
+
+这段限定比功能列表更有价值。它说明 Homebrew 没有把"沙箱"包装成安全承诺，而是把两道防线分工讲清楚：谁能进你的机器由 tap trust 决定，进来了能碰到什么由沙箱限制。对于要在内部维护私有 tap 的团队，这意味着真正该做的是把 `brew trust` 的审批记录管起来，而不是指望沙箱兜底。
+
+## brew vulns：漏洞库变成内置命令
+
+7.0.0 建立了官方的 advisory database，按 Homebrew 实际发布的 formula 版本和 revision 记录漏洞，包含回移的安全修复；同时内置 `brew vulns`，通过 OSV.dev 查已知漏洞，**不再需要额外 tap 或 gem**。
+
+这条的意义在于把"事后核查"变成流水线上的一个普通命令。过去要知道某个机器上的 brew 包有没有已知漏洞，通常得把 formula 清单导出去和别的漏洞源做交叉比对；现在这条路径被收进工具本身，版本口径也不容易走偏。
+
+需要留意的是覆盖范围：漏洞库里记的是 Homebrew 发布的东西，不是它安装的所有第三方二进制。上游没有发布版本的场景，仍然要回到上游公告核对——这一点和任何包管理器的漏洞扫描都一样，工具能覆盖的只是它能看见的那一层。
+
+## 平台时间表：Intel 的到期日写成了 2027-09-01
+
+官方这次把 macOS 的时间表一次性摊开了（下表按发布说明整理）：
+
+| 平台或接口 | 7.0.0 中的状态 | 时间 | 替代方案 |
+| --- | --- | --- | --- |
+| macOS Catalina 10.15 及更早 | 已移除 | 立即 | 升级到 Big Sur 11 或更高 |
+| Intel macOS（x86_64） | Tier 3，不再构建新 bottle | 立即 | Apple Silicon 或 MacPorts |
+| macOS Sonoma 14 | Tier 3，不再构建新 bottle | 立即 | Sequoia 15 或更高 |
+| macOS Golden Gate 27（Apple Silicon） | 支持，Tier 1 | 立即 | 无需迁移，有预编译 bottle |
+| Intel Mac 上继续运行 Homebrew | 即将移除 | 2027-09-01 | Apple Silicon 或换包管理器 |
+| Apple Silicon 上的 Big Sur 11 | 即将移除 | 2027-09-01 | Monterey 12 或更高 |
+
+官方给 Intel 降级的理由是"Apple 与 GitHub 对 Intel 支持的退坡，超出 Homebrew 志愿者能补上的程度"，并且明确写了：Intel 机器在 2027 年 9 月之前仍能运行，但**没有项目支持，也没有例行 bottle 构建**。
+
+对实际使用来说，"Tier 3" 比"停止支持"更麻烦：命令还能用，但越来越多包会退化成从源码编译，`brew install` 的时间从分钟级变成几十分钟，而这恰恰抵消了 7.0.0 在并发上省下来的那点时间。手里还有 Intel 机器的团队，现在该做的是清点装机清单，而不是等到 2027 年 8 月。
+
+Sonoma 14 同时降到 Tier 3 也容易被忽略——它不像 10.15 那样"已移除"，但同样没有新 bottle，等于被推入源码构建的慢路径。
+
+## Linux 侧：Bubblewrap 换成 Landlock
+
+6.0.0 引入的 Bubblewrap 沙箱有依赖和 Docker 权限问题，7.0.0 换成 Landlock（[PR #23425](https://github.com/Homebrew/brew/pull/23425)），官方说法是"不需要依赖，也不需要提权"。
+
+但有一个明确的降级路径需要知道：**没有 Landlock 的内核继续在不带 Linux 沙箱的老配置下工作**，`brew doctor` 只会把缺失的保护报成建议项。换句话说，安全水平取决于内核；容器里跑 Homebrew 的场景，应该先确认内核版本再谈沙箱。
+
+配套的开关也跟着变了：
+
+- `HOMEBREW_SANDBOX_LINUX` 立即禁用，Landlock 可用时自动启用；
+- `HOMEBREW_NO_SANDBOX_LINUX` 弃用，禁用于 2027-12-11，且**没有替代的退出开关**，Landlock 不可用只作建议提示；
+- `HOMEBREW_ARCH` 弃用（同为 2027-12-11），默认改成本机 CPU 优化。
+
+## 迁移清单：这些开关在 7.0.0 当天就被关掉
+
+迁移指南里"禁用"的条目比想象中多，其中几类会直接影响 CI 脚本：
+
+**信任与环境**
+
+- `HOMEBREW_EVAL_ALL`，以及 `brew deps`、`desc`、`info`、`options`、`readall`、`search`、`uses`、`tap` 上的 `--eval-all`：禁用。可信 tap 求值与 tap 校验已成为默认。
+- `HOMEBREW_NO_EVAL_ENV_SCRUBBING` 禁用（默认就是清洗环境变量），`HOMEBREW_BUNDLE_NO_SECRETS` 禁用（默认清洗 secrets）。
+- 真实 UID 与有效 UID 不一致的 setuid wrapper 被禁用——共享安装场景不再有兜底。
+
+**命令与配置**
+
+- `brew install`、`brew reinstall`、`brew upgrade` 的 `--ask` 与 `HOMEBREW_ASK` 禁用：安装计划展示与交互确认变成默认行为。
+- `HOMEBREW_BUNDLE_JOBS` 与 `HOMEBREW_BUNDLE_NO_JOBS` 禁用，改用 `HOMEBREW_DOWNLOAD_CONCURRENCY` 控制下载并发。
+- `brew bundle install --cleanup` 禁用，先装再单独跑 `brew bundle cleanup`。
+- `brew list --installed-as-dependency` 禁用，改用 `brew list --no-installed-on-request`。
+- `brew update --merge` 禁用，没有替代的合并式更新。
+- `HOMEBREW_USE_INTERNAL_API` 禁用：内部 API 已是默认。
+- `brew analytics regenerate-uuid` 直接移除。
+
+**分支**：`Homebrew/brew` 的 `master` 分支在 7.0.0 里变成冻结的兼容引导，2027-03-01 移除，应切到 `main`。任何脚本里硬编码 `master` 的地方都该改。
+
+对 CI 来说，最典型的失败模式是：脚本里带着 `--ask` 或 `HOMEBREW_BUNDLE_JOBS`，升级 runner 镜像后命令直接报错退出。这类改动不会给"警告期"，只有在跑的时候才会暴露。
+
+## 非默认 prefix 的字节预算
+
+7.0.0 让兼容的 bottle 可以重定位到更短的 prefix，避免在非默认安装位置退化成源码构建。官方给出的上限是：
+
+- Apple Silicon macOS：13 字节；
+- Linux：26 字节；
+- 现有 Intel macOS bottle：10 字节。
+
+这三个数字**算的是完整路径，包含斜杠**，而且 Cellar 目录本身也必须落在构建时长度的范围内。标记为 `:any` 或 `:any_skip_relocation` 的 bottle 才能重定位到任意 prefix。
+
+后续计划用 padded builds 把可重定位范围推到 64 字节（Apple Silicon 与两种 Linux 架构），但目前非默认 prefix 仍属不支持场景，也没有公布铺开日期。想在 `/opt/homebrew` 之外安装的人，先按字节数算一遍再决定。
+
+## 维护者侧：几个能直接省事的改动
+
+对写 formula、维护 tap 的人来说，7.0.0 里有几处改动值得注意：
+
+- `brew benchmark` 把冷装、暖装、fetch 分开计时，`--runs=` 控制重复次数，`--exec` 支持自定义 Hyperfine 命令。以前改一处优化、只能看一个混合计时来猜是下载快了还是命令开销小了，现在能分开看。
+- `brew tap-new` 会为新 tap 生成自动更新工作流（按计划检查上游版本并开 PR），并**默认生成带 attestation 的 bottle 发布工作流**，`--no-attestations` 可关掉。
+- `brew audit --strict` 能识别已安装的 homebrew/core formula 里下载来的预编译 npm 可执行文件，帮助维持"从源码构建"的要求。
+- `brew audit --cask --online --fix` 修正 macOS 版本要求与应用名大小写。
+- `brew style --fix` 合并平台相关的 cask 校验和并排序依赖；`brew style` 还会拒绝过于宽泛的 `com.install4j.*` uninstall/zap 模式。
+- `brew bump-formula-pr` 能处理版本即 commit hash 的 Git 资源，让版本与 pin 住的 revision 同步。
+- formula 可用 `stop_timeout` 给有状态服务更长的优雅退出时间，例如 `stop_timeout 60`。
+- formula 与 cask 可以写 `homepage ..., browsed: "YYYY-MM-DD"`，在站点能被浏览器正常访问但拦截自动请求时，暂停一年自动可用性检查，同时保证人工检查会过期。
+
+安装钩子也在收口：formula 的 `post_install` 和 cask 的 `preflight`/`postflight`/`uninstall_preflight`/`uninstall_postflight` 被弃用（禁用于 2027-12-11），改为声明式的 `*_steps`。官方 tap 已经拒绝旧钩子，第三方 tap 只给告警。
+
+这一步的动机写得很直白：显式操作与路径才能被校验、被沙箱限制、被签名 API 下发，也避免重复求值。换句话说，先前的 Ruby 钩子是一段任意代码，现在要变成可被检查的声明。
+
+## 升级当天的检查顺序
+
+如果把这篇当清单用，顺序建议是：
+
+1. **先查脚本**：搜 CI 与 dotfiles 里的 `--ask`、`HOMEBREW_BUNDLE_JOBS`、`HOMEBREW_EVAL_ALL`、`--eval-all`、`--installed-as-dependency`、`HOMEBREW_USE_INTERNAL_API`、`master` 分支引用。这些在 7.0.0 已经直接拒绝或已是冻结引导。
+2. **再确认平台**：Intel Mac 与 Sonoma 14 已无新 bottle，安装慢的包要提前判断是继续源码构建还是换机器。macOS 10.15 及更早已经跑不了。
+3. **然后看容器**：Linux 侧沙箱是否生效取决于内核有无 Landlock，没有就只得到建议提示。`brew doctor` 的告警要当真看一遍。
+4. **补一条新流程**：把 `brew vulns` 纳入定期检查，顺手确认 advisory database 覆盖到的版本口径。
+5. **最后才是性能**：并发改造的收益在有几十个包的机器上最明显；包少的机器，感觉会更接近"没变化"。
+
+## 三点判断
+
+第一，**这次大版本的主角不是速度，是边界**。并发是体验层，真正会卡住团队的是被直接禁用的开关、被移除的旧钩子、和被写进时间表的平台承诺。发布说明把五件事并列，但迁移成本几乎全在后四件。
+
+第二，**包管理器正在承担安全责任，同时谨慎地不承诺安全**。内置漏洞库、默认 tap trust、沙箱收紧都指向同一方向；而官方明确说沙箱防的是意外、恶意软件仍以用户权限运行，这种诚实比功能列表更值得抄。它把"信任"从隐式默认变成需要审批、需要记录的动作。
+
+第三，**平台支持时间表比版本号更能决定技术债**。Intel Mac 的 2027-09-01、Sonoma 14 的 Tier 3、`master` 分支的 2027-03-01，都是可以写进日程表的日期。等到命令报错才处理，代价是整批机器同时退化成源码构建。
+
+### 参考资料
+
+- [Homebrew 7.0.0 发布说明](https://brew.sh/2026/09/13/homebrew-7.0.0/)
+- [Homebrew 7.0.0 迁移指南](https://brew.sh/7.0.0-migration-guide/)
+- [Homebrew Tap Trust 文档](https://docs.brew.sh/Tap-Trust)
+- [Landlock 替代 Bubblewrap 的 PR #23425](https://github.com/Homebrew/brew/pull/23425)
+- [可重定位 bottle 计划](https://github.com/Homebrew/brew/blob/main/Library/Homebrew/plans/relocatable-bottles.md)
+- [Homebrew 漏洞库仓库](https://github.com/Homebrew/advisory-database)
+- [Homebrew 6.0.0 发布说明（Bubblewrap 引入）](https://brew.sh/2026/06/11/homebrew-6.0.0/)
+
+_（内容由AI生成，仅供参考）_
